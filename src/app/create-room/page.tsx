@@ -121,6 +121,13 @@ user.uid
 
 
 
+console.log("💰 VERIFICATION SOLDE:");
+console.log("Solde actuel:", balance, "HTG");
+console.log("Mise demandée:", betAmount, "HTG");
+
+
+
+
 if(balance < betAmount){
 
 throw new Error(
