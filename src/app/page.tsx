@@ -1,12 +1,20 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import {
+  useRouter
+} from "next/navigation";
+
+import {
+  useEffect,
+  useState
+} from "react";
 
 
 export default function Home(){
 
+
 const router = useRouter();
+
 
 
 const [board,setBoard] = useState([
@@ -20,7 +28,7 @@ const [board,setBoard] = useState([
 useEffect(()=>{
 
 
-const animation=setInterval(()=>{
+const timer = setInterval(()=>{
 
 
 setBoard([
@@ -36,7 +44,9 @@ setBoard([
 ]);
 
 
+
 setTimeout(()=>{
+
 
 setBoard([
 "X",
@@ -50,6 +60,7 @@ setBoard([
 "X"
 ]);
 
+
 },1200);
 
 
@@ -58,10 +69,13 @@ setBoard([
 
 
 
-return()=>clearInterval(animation);
+return ()=>clearInterval(timer);
 
 
 },[]);
+
+
+
 
 
 
@@ -84,11 +98,16 @@ px-5
 >
 
 
-{/* lumières animées */}
+
+{/* Lumières de fond */}
 
 <div
+
 className="
 absolute
+top-10
+left-1/2
+-translate-x-1/2
 w-96
 h-96
 bg-blue-600/30
@@ -96,20 +115,26 @@ rounded-full
 blur-3xl
 animate-pulse
 "
-/>
+
+></div>
+
 
 
 <div
+
 className="
 absolute
 bottom-0
+right-0
 w-80
 h-80
-bg-cyan-400/20
+bg-green-500/20
 rounded-full
 blur-3xl
 "
-/>
+
+></div>
+
 
 
 
@@ -121,7 +146,7 @@ className="
 relative
 w-full
 max-w-sm
-rounded-[35px]
+rounded-[40px]
 p-8
 bg-white/10
 border
@@ -136,14 +161,66 @@ animate-[fadeIn_1s_ease]
 
 
 
+
+
+{/* LOGO X + O */}
+
 <div
+
 className="
+relative
+w-32
+h-32
+mx-auto
+flex
+items-center
+justify-center
+"
+
+>
+
+
+<span
+
+className="
+absolute
+text-9xl
+font-black
+text-blue-500/40
+animate-pulse
+"
+
+>
+
+X
+
+</span>
+
+
+
+<span
+
+className="
+relative
 text-7xl
 animate-bounce
+drop-shadow-[0_0_30px_rgba(0,200,255,0.9)]
 "
+
 >
+
 ⭕
+
+
+</span>
+
+
+
 </div>
+
+
+
+
 
 
 
@@ -151,6 +228,7 @@ animate-bounce
 
 className="
 mt-3
+text-center
 text-5xl
 font-black
 bg-gradient-to-r
@@ -169,8 +247,13 @@ TI TA TO
 
 
 
+
+
+
 <p
+
 className="
+text-center
 mt-3
 text-gray-300
 text-sm
@@ -186,7 +269,10 @@ text-sm
 
 
 
-{/* plateau animé */}
+
+
+
+{/* Plateau */}
 
 <div
 
@@ -197,21 +283,22 @@ grid-cols-3
 gap-3
 p-4
 rounded-3xl
-bg-black/40
+bg-black/50
 border
 border-white/10
 "
 
 >
 
+
 {
 
-board.map((cell,i)=>(
+board.map((cell,index)=>(
 
 
 <div
 
-key={i}
+key={index}
 
 className="
 aspect-square
@@ -223,21 +310,27 @@ justify-center
 text-4xl
 font-black
 transition-all
-duration-500
-scale-100
+duration-700
 hover:scale-110
 "
 
 >
 
+
 <span
 
 className={
+
 cell==="X"
+
 ?
-"text-blue-400 drop-shadow-[0_0_15px_blue]"
+
+"text-blue-400 drop-shadow-[0_0_15px_#00aaff]"
+
 :
+
 "text-green-400 drop-shadow-[0_0_15px_lime]"
+
 }
 
 >
@@ -245,6 +338,7 @@ cell==="X"
 {cell}
 
 </span>
+
 
 
 </div>
@@ -262,6 +356,12 @@ cell==="X"
 
 
 
+
+
+{/* Boutons */}
+
+
+
 <button
 
 onClick={()=>router.push("/register")}
@@ -276,7 +376,7 @@ text-lg
 bg-gradient-to-r
 from-blue-600
 to-cyan-400
-shadow-[0_0_30px_rgba(0,150,255,0.8)]
+shadow-[0_0_35px_rgba(0,180,255,0.8)]
 animate-pulse
 hover:scale-105
 transition
@@ -284,9 +384,10 @@ transition
 
 >
 
-🚀 COMMENCER À JOUER
+🚀 CRÉER UN COMPTE
 
 </button>
+
 
 
 
@@ -313,9 +414,12 @@ transition
 
 >
 
-🔐 J'ai déjà un compte
+🔐 CONNEXION
 
 </button>
+
+
+
 
 
 
@@ -349,7 +453,14 @@ text-gray-400
 
 
 
+
+
+
 </section>
+
+
+
+
 
 
 
@@ -357,23 +468,34 @@ text-gray-400
 
 @keyframes fadeIn {
 
-from{
+from {
+
 opacity:0;
+
 transform:translateY(40px);
+
 }
 
-to{
+
+to {
+
 opacity:1;
+
 transform:translateY(0);
+
 }
 
 }
+
 
 `}</style>
+
+
 
 
 </main>
 
 );
+
 
 }
