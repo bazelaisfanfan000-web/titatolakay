@@ -2,12 +2,9 @@ import {
   NextResponse
 } from "next/server";
 
-
 import {
   adminDB
 } from "@/lib/firebaseAdmin";
-
-
 
 
 
@@ -30,38 +27,28 @@ winnerUid
 
 
 
-
-if(
-!roomId ||
-!winnerUid
-){
-
+if(!roomId || !winnerUid){
 
 return NextResponse.json(
-
 {
 error:"Informations manquantes"
 },
-
 {
 status:400
 }
-
-
 );
-
 
 }
 
 
 
 
+const db = adminDB();
 
 const roomRef =
-adminDB().ref(
+db.ref(
 `rooms/${roomId}`
 );
-
 
 
 
@@ -70,28 +57,18 @@ await roomRef.once("value");
 
 
 
-
-
 if(!roomSnap.exists()){
 
-
 return NextResponse.json(
-
 {
 error:"Partie introuvable"
 },
-
 {
 status:404
 }
-
-
 );
 
-
 }
-
-
 
 
 
@@ -102,47 +79,37 @@ roomSnap.val();
 
 
 
-// Protection double paiement
+// éviter double paiement
 
 if(
 room.game?.paymentDone === true
 ){
 
-
 return NextResponse.json({
+
+success:true,
 
 message:"Paiement déjà effectué"
 
-
 });
-
 
 }
 
 
 
-
-
-// Vérifier que la partie est terminée
 
 if(
 room.game?.status !== "finished"
 ){
 
-
 return NextResponse.json(
-
 {
-error:"La partie n'est pas terminée"
+error:"Partie non terminée"
 },
-
 {
 status:400
 }
-
-
 );
-
 
 }
 
@@ -150,53 +117,65 @@ status:400
 
 
 
-// Mise
+// ===============================
+// CALCUL DU GAIN
+// ===============================
+
 
 const bet =
+Number(room.bet || 0);
 
-Number(
-room.bet || 0
+
+
+if(bet <= 0){
+
+return NextResponse.json(
+{
+error:"Mise invalide"
+},
+{
+status:400
+}
 );
 
+}
 
 
 
-// Gain x1.80
+
+// exemple:
+// mise 100 HTG
+// gagnant reçoit 180 HTG
 
 const reward =
-
 Math.floor(
-bet * 1.80
+bet * 1.8
 );
 
 
 
 
-// Commission plateforme
 
 const commission =
-
 Math.floor(
-
-Number(room.pot || 0)
-
--
-reward
-
+(room.pot || 0) - reward
 );
 
 
 
 
 
-// Vérifier joueur gagnant
+
+
+// ===============================
+// VERIFICATION JOUEUR
+// ===============================
+
 
 const userRef =
-
-adminDB().ref(
+db.ref(
 `users/${winnerUid}`
 );
-
 
 
 
@@ -205,28 +184,18 @@ await userRef.once("value");
 
 
 
-
-
-
 if(!userSnap.exists()){
 
-
 return NextResponse.json(
-
 {
 error:"Utilisateur introuvable"
 },
-
 {
 status:404
 }
-
-
 );
 
-
 }
-
 
 
 
@@ -239,27 +208,23 @@ userSnap.val();
 
 
 const oldBalance =
-
 Number(
 user.balance || 0
 );
 
 
 
-
 const newBalance =
+oldBalance + reward;
 
-Math.floor(
-oldBalance + reward
-);
+
 
 
 
 
 const transactionId =
+Date.now().toString();
 
-Date.now()
-.toString();
 
 
 
@@ -270,13 +235,13 @@ const updates:any = {};
 
 
 
+// ===============================
+// AJOUT ARGENT AU JOUEUR
+// ===============================
 
-// Nouveau solde gagnant
 
 updates[
-
 `users/${winnerUid}/balance`
-
 ]
 =
 newBalance;
@@ -285,48 +250,100 @@ newBalance;
 
 
 
-// Marquer paiement effectué
+// si tu utilises wallet
 
 updates[
+`wallets/${winnerUid}/balance`
+]
+=
+newBalance;
 
+
+
+
+
+
+// ===============================
+// HISTORIQUE
+// ===============================
+
+
+updates[
+`transactions/${winnerUid}/${transactionId}`
+]
+={
+
+amount:reward,
+
+type:"WIN",
+
+gameId:roomId,
+
+createdAt:Date.now()
+
+};
+
+
+
+
+
+
+
+// ===============================
+// COMMISSION
+// ===============================
+
+
+updates[
+`platform/commission/${transactionId}`
+]
+={
+
+amount:commission,
+
+gameId:roomId,
+
+createdAt:Date.now()
+
+};
+
+
+
+
+
+
+
+// ===============================
+// FIN PARTIE
+// ===============================
+
+
+updates[
 `rooms/${roomId}/game/paymentDone`
-
 ]
 =
 true;
 
 
 
-
-
 updates[
-
 `rooms/${roomId}/game/reward`
-
 ]
 =
 reward;
 
 
 
-
-
 updates[
-
 `rooms/${roomId}/game/commission`
-
 ]
 =
 commission;
 
 
 
-
-
 updates[
-
 `rooms/${roomId}/game/paidAt`
-
 ]
 =
 Date.now();
@@ -335,65 +352,15 @@ Date.now();
 
 
 
-// Transaction gagnant
-
-updates[
-
-`transactions/${transactionId}`
-
-]
-={
-
-
-uid:winnerUid,
-
-
-amount:reward,
-
-
-type:"WIN",
-
-
-gameId:roomId,
-
-
-createdAt:Date.now()
-
-
-};
 
 
 
-
-
-// Transaction commission plateforme
-
-updates[
-
-`platform/commission/${transactionId}`
-
-]
-={
-
-
-amount:commission,
-
-
-gameId:roomId,
-
-
-createdAt:Date.now()
-
-
-};
-
-
-
-
-
-await adminDB()
+await db
 .ref()
 .update(updates);
+
+
+
 
 
 
@@ -405,9 +372,13 @@ success:true,
 
 reward,
 
-commission
+commission,
+
+newBalance
 
 });
+
+
 
 
 
@@ -415,8 +386,10 @@ commission
 catch(error:any){
 
 
-console.error(error);
-
+console.error(
+"PAYMENT ERROR",
+error
+);
 
 
 
@@ -430,9 +403,7 @@ error:error.message
 status:500
 }
 
-
 );
-
 
 
 }
