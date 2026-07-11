@@ -8,6 +8,8 @@ import {
 
 
 
+
+
 export async function POST(
 request:Request
 ){
@@ -27,6 +29,7 @@ winnerUid
 
 
 
+
 if(!roomId || !winnerUid){
 
 return NextResponse.json(
@@ -43,6 +46,7 @@ status:400
 
 
 
+
 const db = adminDB();
 
 const roomRef =
@@ -52,8 +56,11 @@ db.ref(
 
 
 
+
 const roomSnap =
 await roomRef.once("value");
+
+
 
 
 
@@ -69,6 +76,8 @@ status:404
 );
 
 }
+
+
 
 
 
@@ -98,6 +107,7 @@ message:"Paiement déjà effectué"
 
 
 
+
 if(
 room.game?.status !== "finished"
 ){
@@ -118,20 +128,23 @@ status:400
 
 
 // ===============================
-// CALCUL DU GAIN
+// CALCUL DU POT TOTAL
 // ===============================
 
 
-const bet =
-Number(room.bet || 0);
+const pot =
+Math.floor(
+Number(room.pot || 0)
+);
 
 
 
-if(bet <= 0){
+
+if(pot <= 0){
 
 return NextResponse.json(
 {
-error:"Mise invalide"
+error:"Pot invalide"
 },
 {
 status:400
@@ -143,25 +156,24 @@ status:400
 
 
 
-// exemple:
-// mise 100 HTG
-// gagnant reçoit 180 HTG
+
+// ===============================
+// CALCUL GAIN (pot total x 0.80)
+// ===============================
+
 
 const reward =
 Math.floor(
-bet * 1.8
+pot * 0.80
 );
 
 
 
 
-
-const commission =
-Math.floor(
-(room.pot || 0) - reward
-);
-
-
+console.log("💰 PAIEMENT DETAILS:");
+console.log("Pot total:", pot, "HTG");
+console.log("Gain gagnant (pot x 0.80):", reward, "HTG");
+console.log("Gagnant UID:", winnerUid);
 
 
 
@@ -179,8 +191,11 @@ db.ref(
 
 
 
+
 const userSnap =
 await userRef.once("value");
+
+
 
 
 
@@ -200,6 +215,7 @@ status:404
 
 
 
+
 const user =
 userSnap.val();
 
@@ -208,16 +224,17 @@ userSnap.val();
 
 
 const oldBalance =
-Number(
-user.balance || 0
+Math.floor(
+Number(user.balance || 0)
 );
 
 
 
+
 const newBalance =
-oldBalance + reward;
-
-
+Math.floor(
+oldBalance + reward
+);
 
 
 
@@ -229,14 +246,14 @@ Date.now().toString();
 
 
 
-
 const updates:any = {};
 
 
 
 
+
 // ===============================
-// AJOUT ARGENT AU JOUEUR
+// TRANSACTION ATOMIQUE SOLDE
 // ===============================
 
 
@@ -250,34 +267,24 @@ newBalance;
 
 
 
-// si tu utilises wallet
-
-updates[
-`wallets/${winnerUid}/balance`
-]
-=
-newBalance;
-
-
-
-
-
-
 // ===============================
-// HISTORIQUE
+// HISTORIQUE TRANSACTION
 // ===============================
 
 
 updates[
 `transactions/${winnerUid}/${transactionId}`
 ]
-={
+=
+{
+
+type:"game_win",
 
 amount:reward,
 
-type:"WIN",
-
 gameId:roomId,
+
+userId:winnerUid,
 
 createdAt:Date.now()
 
@@ -287,34 +294,8 @@ createdAt:Date.now()
 
 
 
-
-
 // ===============================
-// COMMISSION
-// ===============================
-
-
-updates[
-`platform/commission/${transactionId}`
-]
-={
-
-amount:commission,
-
-gameId:roomId,
-
-createdAt:Date.now()
-
-};
-
-
-
-
-
-
-
-// ===============================
-// FIN PARTIE
+// MARQUER PARTIE PAYEE
 // ===============================
 
 
@@ -326,19 +307,22 @@ true;
 
 
 
+
+updates[
+`rooms/${roomId}/game/status`
+]
+=
+"paid";
+
+
+
+
 updates[
 `rooms/${roomId}/game/reward`
 ]
 =
 reward;
 
-
-
-updates[
-`rooms/${roomId}/game/commission`
-]
-=
-commission;
 
 
 
@@ -352,7 +336,9 @@ Date.now();
 
 
 
-
+// ===============================
+// EXECUTION ATOMIQUE
+// ===============================
 
 
 await db
@@ -361,6 +347,14 @@ await db
 
 
 
+
+
+console.log("✅ PAIEMENT EFFECTUE:",{
+winnerUid,
+reward,
+newBalance,
+pot
+});
 
 
 
@@ -372,13 +366,11 @@ success:true,
 
 reward,
 
-commission,
+newBalance,
 
-newBalance
+pot
 
 });
-
-
 
 
 
@@ -387,7 +379,7 @@ catch(error:any){
 
 
 console.error(
-"PAYMENT ERROR",
+"❌ PAYMENT ERROR",
 error
 );
 

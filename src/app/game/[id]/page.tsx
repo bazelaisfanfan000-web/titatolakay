@@ -408,6 +408,7 @@ loserUid = uid;
 
 if(winnerUid){
 
+console.log("📊 Ajout victoire pour:", winnerUid);
 await addPlayerWin(
 winnerUid
 );
@@ -418,6 +419,7 @@ winnerUid
 
 if(loserUid){
 
+console.log("📊 Ajout défaite pour:", loserUid);
 await addPlayerLose(
 loserUid
 );
@@ -435,18 +437,21 @@ loserUid
 // ======================
 
 
+console.log("💰 Lancement paiement pour winnerUid:", winnerUid);
+console.log("💰 Pot actuel:", room.pot);
+
 await finishGamePayment(
 
 id,
 
-room.game.winner
+winnerUid
 
 );
 
 
 
 console.log(
-"🏆 Classement mis à jour"
+"🏆 Classement mis à jour et paiement effectué"
 );
 
 

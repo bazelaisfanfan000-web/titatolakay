@@ -17,6 +17,7 @@ import {
 
 
 
+
 // =====================================
 // JOUER UN COUP
 // =====================================
@@ -42,8 +43,10 @@ database,
 
 
 
+
 const snap =
 await get(roomRef);
+
 
 
 
@@ -57,12 +60,15 @@ throw new Error(
 
 
 
+
+
 const room =
 snap.val();
 
-
 const game =
 room.game;
+
+
 
 
 
@@ -76,6 +82,8 @@ throw new Error(
 
 
 
+
+
 if(game.status === "finished"){
 
 throw new Error(
@@ -86,6 +94,8 @@ throw new Error(
 
 
 
+
+
 if(game.turn !== symbol){
 
 throw new Error(
@@ -93,6 +103,8 @@ throw new Error(
 );
 
 }
+
+
 
 
 
@@ -132,13 +144,13 @@ checkWinner(newBoard);
 
 
 
+
 const updates:any = {
 
 [`game/board`]:
 newBoard
 
 };
-
 
 
 
@@ -156,8 +168,11 @@ updates["game/status"] =
 "finished";
 
 
+
+
 updates["game/winner"] =
 winner;
+
 
 
 
@@ -166,18 +181,22 @@ Date.now();
 
 
 
+
 updates["game/paymentDone"] =
 false;
 
 
 
+
 updates["game/finalPot"] =
-Number(room.pot || 0);
+Math.floor(
+Number(room.pot || 0)
+);
+
 
 
 
 }
-
 
 
 else{
@@ -194,8 +213,11 @@ symbol === "X"
 
 
 
+
 updates["game/turnStartedAt"] =
 Date.now();
+
+
 
 
 
@@ -215,10 +237,8 @@ updates
 
 
 
+
 }
-
-
-
 
 
 
@@ -232,7 +252,7 @@ export async function finishGamePayment(
 
 roomId:string,
 
-winnerSymbol:"X"|"O"
+winnerUid:string
 
 ){
 
@@ -246,8 +266,10 @@ database,
 
 
 
+
 const snap =
 await get(roomRef);
+
 
 
 
@@ -258,6 +280,8 @@ throw new Error(
 );
 
 }
+
+
 
 
 
@@ -285,46 +309,8 @@ message:
 
 
 
-let winnerUid = "";
-
-
-
-
-
-Object.entries(
-room.players || {}
-)
-.forEach(
-
-([uid,player]:any)=>{
-
-
-if(
-player.symbol === winnerSymbol
-){
-
-winnerUid = uid;
-
-}
-
-
-}
-
-);
-
-
-
-
-
-if(!winnerUid){
-
-throw new Error(
-"Gagnant introuvable"
-);
-
-}
-
-
+console.log("💰 finishGamePayment appelé avec winnerUid:", winnerUid);
+console.log("💰 Pot dans la salle:", room.pot);
 
 
 
@@ -351,17 +337,18 @@ body:JSON.stringify({
 
 roomId,
 
-winnerUid,
+winnerUid
 
-pot:Number(room.pot || 0)
 
 })
 
 
 }
 
-);
 
+
+
+);
 
 
 
@@ -385,23 +372,8 @@ data.error ||
 
 
 
-await update(
 
-roomRef,
-
-{
-
-"game/paymentDone":
-true,
-
-
-"game/paidAt":
-Date.now()
-
-
-}
-
-);
+console.log("✅ Paiement terminé:",data);
 
 
 
@@ -411,11 +383,8 @@ return data;
 
 
 
+
 }
-
-
-
-
 
 
 
@@ -454,17 +423,19 @@ time:Date.now()
 
 }
 
+
+
 }
+
+
+
 
 );
 
 
 
+
 }
-
-
-
-
 
 
 
@@ -490,8 +461,10 @@ database,
 
 
 
+
 const snap =
 await get(roomRef);
+
 
 
 
@@ -502,6 +475,7 @@ throw new Error(
 );
 
 }
+
 
 
 
@@ -521,7 +495,6 @@ length:10
 
 
 
-
 await update(
 
 roomRef,
@@ -536,6 +509,7 @@ Date.now(),
 
 
 rematch:null,
+
 
 
 
@@ -566,17 +540,19 @@ finishedAt:null
 }
 
 
+
+
 }
+
+
+
 
 );
 
 
 
+
 }
-
-
-
-
 
 
 
@@ -604,10 +580,12 @@ database,
 {
 
 rematch:null
-
 }
 
+
+
 );
+
 
 
 
