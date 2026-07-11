@@ -99,7 +99,7 @@ px-5
 
 
 
-{/* Lumières de fond */}
+{/* Fond animé */}
 
 <div
 
@@ -140,6 +140,7 @@ blur-3xl
 
 
 
+
 <section
 
 className="
@@ -163,18 +164,16 @@ animate-[fadeIn_1s_ease]
 
 
 
-{/* LOGO X + O */}
+{/* LOGO O X */}
 
 <div
 
 className="
-relative
-w-32
-h-32
-mx-auto
 flex
 items-center
 justify-center
+gap-3
+h-32
 "
 
 >
@@ -183,28 +182,9 @@ justify-center
 <span
 
 className="
-absolute
-text-9xl
-font-black
-text-blue-500/40
-animate-pulse
-"
-
->
-
-X
-
-</span>
-
-
-
-<span
-
-className="
-relative
 text-7xl
 animate-bounce
-drop-shadow-[0_0_30px_rgba(0,200,255,0.9)]
+drop-shadow-[0_0_25px_rgba(0,200,255,0.9)]
 "
 
 >
@@ -216,7 +196,28 @@ drop-shadow-[0_0_30px_rgba(0,200,255,0.9)]
 
 
 
+
+<span
+
+className="
+text-8xl
+font-black
+text-blue-500
+animate-pulse
+drop-shadow-[0_0_30px_rgba(0,120,255,1)]
+"
+
+>
+
+X
+
+
+</span>
+
+
+
 </div>
+
 
 
 
@@ -250,6 +251,7 @@ TI TA TO
 
 
 
+
 <p
 
 className="
@@ -271,8 +273,7 @@ text-sm
 
 
 
-
-{/* Plateau */}
+{/* Plateau animé */}
 
 <div
 
@@ -325,11 +326,11 @@ cell==="X"
 
 ?
 
-"text-blue-400 drop-shadow-[0_0_15px_#00aaff]"
+"text-blue-400 drop-shadow-[0_0_20px_#008cff]"
 
 :
 
-"text-green-400 drop-shadow-[0_0_15px_lime]"
+"text-green-400 drop-shadow-[0_0_20px_lime]"
 
 }
 
@@ -357,10 +358,7 @@ cell==="X"
 
 
 
-
-{/* Boutons */}
-
-
+{/* Bouton créer compte */}
 
 <button
 
@@ -376,7 +374,7 @@ text-lg
 bg-gradient-to-r
 from-blue-600
 to-cyan-400
-shadow-[0_0_35px_rgba(0,180,255,0.8)]
+shadow-[0_0_40px_rgba(0,150,255,0.8)]
 animate-pulse
 hover:scale-105
 transition
@@ -392,6 +390,9 @@ transition
 
 
 
+
+
+{/* Bouton connexion */}
 
 <button
 
@@ -417,7 +418,6 @@ transition
 🔐 CONNEXION
 
 </button>
-
 
 
 
@@ -476,7 +476,6 @@ transform:translateY(40px);
 
 }
 
-
 to {
 
 opacity:1;
@@ -487,8 +486,8 @@ transform:translateY(0);
 
 }
 
-
 `}</style>
+
 
 
 
