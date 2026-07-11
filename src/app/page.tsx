@@ -4,11 +4,6 @@ import {
   useRouter
 } from "next/navigation";
 
-import {
-  useEffect,
-  useState
-} from "react";
-
 
 export default function Home(){
 
@@ -17,202 +12,212 @@ const router = useRouter();
 
 
 
-const [board,setBoard] = useState([
-"X","","O",
-"","X","",
-"O","","X"
-]);
-
-
-
-useEffect(()=>{
-
-
-const timer = setInterval(()=>{
-
-
-setBoard([
-"",
-"X",
-"O",
-"O",
-"",
-"X",
-"X",
-"O",
-""
-]);
-
-
-
-setTimeout(()=>{
-
-
-setBoard([
-"X",
-"",
-"O",
-"",
-"X",
-"",
-"O",
-"",
-"X"
-]);
-
-
-},1200);
-
-
-
-},2500);
-
-
-
-return ()=>clearInterval(timer);
-
-
-},[]);
-
-
-
-
-
-
 return (
 
 <main
 
 className="
-relative
 min-h-screen
-overflow-hidden
-bg-black
+bg-[#050505]
 text-white
 flex
 items-center
 justify-center
-px-5
+px-4
 "
 
 >
-
-
-
-{/* Fond animé */}
-
-<div
-
-className="
-absolute
-top-10
-left-1/2
--translate-x-1/2
-w-96
-h-96
-bg-blue-600/30
-rounded-full
-blur-3xl
-animate-pulse
-"
-
-></div>
-
-
-
-<div
-
-className="
-absolute
-bottom-0
-right-0
-w-80
-h-80
-bg-green-500/20
-rounded-full
-blur-3xl
-"
-
-></div>
-
-
-
-
-
 
 
 <section
 
 className="
-relative
 w-full
-max-w-sm
-rounded-[40px]
-p-8
-bg-white/10
-border
-border-white/20
-backdrop-blur-2xl
-shadow-[0_0_80px_rgba(0,120,255,0.35)]
-animate-[fadeIn_1s_ease]
+max-w-xs
+text-center
 "
 
 >
 
 
 
-
-
-
-{/* LOGO O X */}
+{/* LOGO */}
 
 <div
 
 className="
-flex
-items-center
-justify-center
-gap-3
-h-32
-"
-
->
-
-
-<span
-
-className="
-text-7xl
-animate-bounce
-drop-shadow-[0_0_25px_rgba(0,200,255,0.9)]
-"
-
->
-
-⭕
-
-
-</span>
-
-
-
-
-<span
-
-className="
-text-8xl
-font-black
-text-blue-500
+mb-8
 animate-pulse
-drop-shadow-[0_0_30px_rgba(0,120,255,1)]
 "
 
 >
 
-X
+<h1
 
+className="
+flex
+justify-center
+items-center
+gap-1
+font-black
+"
 
+>
+
+<span className="text-lg">
+⭕
 </span>
+
+
+<span
+
+className="
+text-lg
+text-blue-500
+"
+
+>
+X
+</span>
+
+
+
+<span
+
+className="
+text-sm
+text-blue-400
+"
+
+>
+TI TA TO
+</span>
+
+
+</h1>
+
+
+<p
+
+className="
+text-[10px]
+text-gray-400
+mt-2
+"
+
+>
+
+Le jeu rapide entre amis 🎮
+
+</p>
+
+
+</div>
+
+
+
+
+
+{/* CARTE */}
+
+<div
+
+className="
+bg-white/5
+border
+border-white/10
+rounded-2xl
+p-5
+backdrop-blur-xl
+"
+
+>
+
+
+
+<h2
+
+className="
+text-sm
+font-bold
+mb-3
+"
+
+>
+
+Bienvenue 👋
+
+</h2>
+
+
+
+<p
+
+className="
+text-[11px]
+text-gray-400
+leading-5
+mb-5
+"
+
+>
+
+Crée ton compte et joue à Ti Ta To
+avec des joueurs du monde entier.
+
+</p>
+
+
+
+
+
+<button
+
+onClick={()=>router.push("/register")}
+
+className="
+w-full
+py-3
+rounded-xl
+bg-blue-600
+text-xs
+font-bold
+mb-3
+animate-pulse
+shadow-lg
+shadow-blue-600/30
+"
+
+>
+
+🚀 Créer un compte
+
+</button>
+
+
+
+
+
+<button
+
+onClick={()=>router.push("/login")}
+
+className="
+w-full
+py-3
+rounded-xl
+bg-white/10
+border
+border-white/10
+text-xs
+font-bold
+"
+
+>
+
+🔐 Connexion
+
+</button>
 
 
 
@@ -223,29 +228,103 @@ X
 
 
 
+{/* FEATURES */}
 
-
-<h1
+<div
 
 className="
-mt-3
-text-center
-text-5xl
-font-black
-bg-gradient-to-r
-from-blue-400
-via-cyan-300
-to-green-400
-bg-clip-text
-text-transparent
+grid
+grid-cols-3
+gap-2
+mt-5
 "
 
 >
 
-TI TA TO
 
-</h1>
+<div
 
+className="
+bg-white/5
+rounded-xl
+p-3
+"
+
+>
+
+<p className="text-sm">
+
+⚡
+
+</p>
+
+<p className="text-[9px] text-gray-400">
+
+Rapide
+
+</p>
+
+</div>
+
+
+
+
+
+<div
+
+className="
+bg-white/5
+rounded-xl
+p-3
+"
+
+>
+
+<p className="text-sm">
+
+🏆
+
+</p>
+
+<p className="text-[9px] text-gray-400">
+
+Classement
+
+</p>
+
+</div>
+
+
+
+
+
+<div
+
+className="
+bg-white/5
+rounded-xl
+p-3
+"
+
+>
+
+<p className="text-sm">
+
+🎮
+
+</p>
+
+<p className="text-[9px] text-gray-400">
+
+Jeu
+
+</p>
+
+</div>
+
+
+
+</div>
 
 
 
@@ -255,246 +334,25 @@ TI TA TO
 <p
 
 className="
-text-center
-mt-3
-text-gray-300
-text-sm
+text-[9px]
+text-gray-600
+mt-8
 "
 
 >
 
-🔥 Le duel stratégique nouvelle génération
+🧪 Version bêta
 
 </p>
-
-
-
-
-
-
-
-{/* Plateau animé */}
-
-<div
-
-className="
-mt-8
-grid
-grid-cols-3
-gap-3
-p-4
-rounded-3xl
-bg-black/50
-border
-border-white/10
-"
-
->
-
-
-{
-
-board.map((cell,index)=>(
-
-
-<div
-
-key={index}
-
-className="
-aspect-square
-rounded-2xl
-bg-white/10
-flex
-items-center
-justify-center
-text-4xl
-font-black
-transition-all
-duration-700
-hover:scale-110
-"
-
->
-
-
-<span
-
-className={
-
-cell==="X"
-
-?
-
-"text-blue-400 drop-shadow-[0_0_20px_#008cff]"
-
-:
-
-"text-green-400 drop-shadow-[0_0_20px_lime]"
-
-}
-
->
-
-{cell}
-
-</span>
-
-
-
-</div>
-
-
-))
-
-}
-
-
-</div>
-
-
-
-
-
-
-
-{/* Bouton créer compte */}
-
-<button
-
-onClick={()=>router.push("/register")}
-
-className="
-mt-8
-w-full
-py-4
-rounded-2xl
-font-black
-text-lg
-bg-gradient-to-r
-from-blue-600
-to-cyan-400
-shadow-[0_0_40px_rgba(0,150,255,0.8)]
-animate-pulse
-hover:scale-105
-transition
-"
-
->
-
-🚀 CRÉER UN COMPTE
-
-</button>
-
-
-
-
-
-
-
-{/* Bouton connexion */}
-
-<button
-
-onClick={()=>router.push("/login")}
-
-className="
-mt-4
-w-full
-py-4
-rounded-2xl
-font-bold
-text-lg
-bg-white/10
-border
-border-white/20
-hover:bg-white/20
-hover:scale-105
-transition
-"
-
->
-
-🔐 CONNEXION
-
-</button>
-
-
-
-
-
-
-
-<div
-
-className="
-mt-7
-flex
-justify-center
-gap-2
-text-xs
-text-gray-400
-"
-
->
-
-<span>🧪 Bêta</span>
-
-<span>•</span>
-
-<span>🏆 Compétition</span>
-
-<span>•</span>
-
-<span>🎮 Online</span>
-
-
-</div>
-
-
-
 
 
 
 </section>
 
 
-
-
-
-
-
-<style jsx>{`
-
-@keyframes fadeIn {
-
-from {
-
-opacity:0;
-
-transform:translateY(40px);
-
-}
-
-to {
-
-opacity:1;
-
-transform:translateY(0);
-
-}
-
-}
-
-`}</style>
-
-
-
-
-
 </main>
 
-);
 
+);
 
 }
