@@ -48,6 +48,7 @@ useState<any[]>([]);
 
 
 
+
 useEffect(()=>{
 
 
@@ -65,13 +66,12 @@ database,
 
 
 
-
 const unsubscribe =
 onValue(
 
 roomRef,
 
-(snapshot)=>{
+async(snapshot)=>{
 
 
 const data =
@@ -79,11 +79,8 @@ snapshot.val();
 
 
 
-if(!data){
-
+if(!data)
 return;
-
-}
 
 
 
@@ -104,7 +101,6 @@ Object.values(data.players)
 
 
 
-
 setPlayers(
 list as any[]
 );
@@ -113,18 +109,14 @@ list as any[]
 
 
 
-
-
-// ===============================
-// SALLE COMPLETE
-// CREATION PARTIE
-// ===============================
-
+// =================================
+// CREER LE COMPTE A REBOURS
+// =================================
 
 
 if(
 
-list.length === data.maxPlayers
+list.length >= data.maxPlayers
 
 &&
 
@@ -145,7 +137,6 @@ const playersWithSymbol:any = {};
 
 playersWithSymbol[player.uid]={
 
-
 ...player,
 
 
@@ -161,7 +152,6 @@ index === 0
 
 "O"
 
-
 };
 
 
@@ -171,15 +161,13 @@ index === 0
 
 
 
-
-
 const board =
 
 Array.from(
 
-{length:10},
+{length:9},
 
-()=>Array(10).fill("")
+()=>Array(3).fill("")
 
 );
 
@@ -188,8 +176,7 @@ Array.from(
 
 
 
-
-update(
+await update(
 
 ref(
 
@@ -244,6 +231,8 @@ paymentDone:false
 
 
 
+return;
+
 }
 
 
@@ -253,11 +242,9 @@ paymentDone:false
 
 
 
-
-// ===============================
-// REDIRECTION COMPTE A REBOURS
-// ===============================
-
+// =================================
+// ALLER AU COMPTE A REBOURS
+// =================================
 
 
 if(
@@ -271,13 +258,11 @@ data.countdownStart
 ){
 
 
-
 router.push(
 
 `/countdown/${id}`
 
 );
-
 
 
 return;
@@ -291,11 +276,9 @@ return;
 
 
 
-
-// ===============================
-// REDIRECTION JEU
-// ===============================
-
+// =================================
+// ALLER AU JEU
+// =================================
 
 
 if(
@@ -314,9 +297,7 @@ router.push(
 
 return;
 
-
 }
-
 
 
 
@@ -328,14 +309,11 @@ return;
 
 
 
-
-
 return ()=>unsubscribe();
 
 
 
 },[id,router]);
-
 
 
 
@@ -368,9 +346,7 @@ Chargement...
 
 );
 
-
 }
-
 
 
 
@@ -413,8 +389,6 @@ text-center
 
 
 
-
-
 <h1
 
 className="
@@ -433,7 +407,6 @@ font-bold
 
 
 
-
 <p className="mt-4">
 
 💰 Mise :
@@ -443,8 +416,6 @@ font-bold
 HTG
 
 </p>
-
-
 
 
 
@@ -470,9 +441,6 @@ HTG
 
 
 
-
-
-
 <div className="mt-5">
 
 
@@ -481,7 +449,6 @@ HTG
 players.map(
 
 (player:any,index:number)=>(
-
 
 
 <div
@@ -547,7 +514,6 @@ player.symbol==="X"
 </div>
 
 
-
 )
 
 )
@@ -594,10 +560,9 @@ text-gray-400
 
 
 
-
 {
 
-players.length === room.maxPlayers &&
+players.length >= room.maxPlayers &&
 
 
 <p
@@ -612,7 +577,9 @@ font-bold
 
 ✅ Salle complète
 
-Préparation de la partie...
+<br/>
+
+Préparation...
 
 </p>
 
