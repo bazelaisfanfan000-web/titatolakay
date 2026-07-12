@@ -5,7 +5,6 @@ import {
   useState
 } from "react";
 
-
 import {
   useRouter
 } from "next/navigation";
@@ -52,7 +51,6 @@ useState(true);
 
 
 
-
 useEffect(()=>{
 
 
@@ -86,7 +84,6 @@ setLoading(false);
 return;
 
 }
-
 
 
 
@@ -127,17 +124,13 @@ setRooms(list);
 setLoading(false);
 
 
-
 }
-
-
 
 );
 
 
 
 return ()=>unsubscribe();
-
 
 
 },[]);
@@ -172,10 +165,8 @@ throw new Error(
 
 
 
-
 const betAmount =
 Number(room.bet);
-
 
 
 
@@ -187,8 +178,6 @@ const balance =
 await checkUserBalance(
 user.uid
 );
-
-
 
 
 
@@ -204,13 +193,16 @@ throw new Error(
 
 
 
-// éviter double entrée
+
+// empêcher double entrée
 
 if(room.players?.[user.uid]){
+
 
 router.push(
 `/room/${room.id}`
 );
+
 
 return;
 
@@ -221,8 +213,7 @@ return;
 
 
 
-
-// retirer mise UNE FOIS
+// retirer la mise
 
 await deductBet(
 
@@ -233,8 +224,6 @@ betAmount,
 room.id
 
 );
-
-
 
 
 
@@ -288,7 +277,17 @@ serverTimestamp()
 
 
 
-// augmenter joueurs + pot
+const newPlayersCount =
+(room.playersCount || 0) + 1;
+
+
+
+
+
+
+
+
+// mise à jour partie
 
 await update(
 
@@ -304,11 +303,46 @@ database,
 
 
 playersCount:
-(room.playersCount || 0)+1,
+newPlayersCount,
+
 
 
 pot:
-Math.floor((room.pot || 0) + betAmount)
+Math.floor(
+(room.pot || 0) + betAmount
+),
+
+
+
+
+status:
+
+newPlayersCount >= room.maxPlayers
+
+?
+
+"started"
+
+:
+
+"waiting",
+
+
+
+
+
+gameStartAt:
+
+newPlayersCount >= room.maxPlayers
+
+?
+
+Date.now()
+
+:
+
+null
+
 
 
 }
@@ -329,8 +363,14 @@ router.push(
 
 
 
+
 }
 catch(error:any){
+
+
+console.error(
+error
+);
 
 
 alert(
@@ -351,8 +391,8 @@ error.message || "Erreur"
 
 
 
-
 return(
+
 
 <main className="
 min-h-screen
@@ -368,6 +408,7 @@ mx-auto
 ">
 
 
+
 <h1 className="
 text-2xl
 font-bold
@@ -378,7 +419,6 @@ mb-6
 🎮 Rejoindre une partie
 
 </h1>
-
 
 
 
@@ -430,7 +470,6 @@ text-center
 
 
 
-
 <div className="
 space-y-4
 ">
@@ -453,8 +492,8 @@ rounded-3xl
 p-5
 "
 
-
 >
+
 
 
 <h2 className="
@@ -469,12 +508,14 @@ text-xl
 
 
 
+
 <p className="mt-2">
 
 💰 Mise :
 {room.bet} HTG
 
 </p>
+
 
 
 
@@ -488,6 +529,7 @@ text-xl
 {room.playersCount}/{room.maxPlayers}
 
 </p>
+
 
 
 
@@ -510,7 +552,6 @@ font-bold
 >
 
 🚀 Rejoindre
-
 
 </button>
 
