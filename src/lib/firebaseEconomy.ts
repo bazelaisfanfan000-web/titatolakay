@@ -12,30 +12,29 @@ import {
 
 
 
-
-
 // ===============================
 // CREER USER
 // ===============================
 
-async function getOrCreateUser(uid:string){
+async function getOrCreateUser(
+uid:string
+){
 
 
-const userRef = ref(
+const userRef =
+ref(
 database,
 `users/${uid}`
 );
 
 
 
-
-const snap = await get(userRef);
-
+const snap =
+await get(userRef);
 
 
 
 if(!snap.exists()){
-
 
 
 const user = {
@@ -46,10 +45,11 @@ balance:1000,
 
 currency:"HTG",
 
+uid,
+
 createdAt:Date.now()
 
 };
-
 
 
 
@@ -60,20 +60,16 @@ user
 
 
 
-
 return user;
 
+
 }
-
-
 
 
 
 return snap.val();
 
 }
-
-
 
 
 
@@ -85,19 +81,32 @@ export async function checkUserBalance(
 uid:string
 ){
 
+
 const user =
 await getOrCreateUser(uid);
 
 
 
-
-return Math.floor(
+const balance =
+Math.floor(
 Number(user.balance || 0)
 );
 
+
+
+console.log(
+"💰 SOLDE UTILISATEUR:",
+{
+uid,
+balance
 }
+);
 
 
+
+return balance;
+
+}
 
 
 
@@ -112,8 +121,14 @@ gameId:string
 ){
 
 
-console.log("💸 RETRAIT MISE",{uid,amount,gameId});
-
+console.log(
+"💸 DEMANDE RETRAIT",
+{
+uid,
+amount,
+gameId
+}
+);
 
 
 
@@ -122,7 +137,6 @@ ref(
 database,
 `users/${uid}/balance`
 );
-
 
 
 
@@ -141,42 +155,83 @@ Number(current || 0)
 
 
 
+console.log(
+"🔎 VERIFICATION SOLDE",
+{
+balance,
+amount
+}
+);
+
+
 
 if(balance < amount){
 
-return;
+
+console.log(
+"❌ SOLDE INSUFFISANT",
+{
+balance,
+amount
+}
+);
+
+
+
+return null;
+
 
 }
 
 
 
+const newBalance =
+Math.floor(
+balance - amount
+);
 
-return Math.floor(
-balance - amount);
+
+
+console.log(
+"✅ NOUVEAU SOLDE",
+newBalance
+);
+
+
+
+return newBalance;
 
 
 }
-
-
 
 );
+
 
 
 
 
 if(!result.committed){
 
+
 throw new Error(
 "Solde insuffisant"
 );
+
 
 }
 
 
 
 
-console.log("✅ Mise retirée avec succès",{uid,amount,newBalance:result.snapshot});
-
+console.log(
+"✅ MISE RETIREE",
+{
+uid,
+amount,
+nouveauSolde:
+result.snapshot.val()
+}
+);
 
 
 
@@ -195,15 +250,22 @@ gameId
 
 
 
+return {
+
+success:true,
+
+balance:
+result.snapshot.val()
+
+};
+
 
 }
 
 
 
-
-
 // ===============================
-// TRANSACTION
+// CREER TRANSACTION
 // ===============================
 
 async function createTransaction(
@@ -230,31 +292,20 @@ database,
 
 ),
 
-
-
 {
-
 
 type,
 
-
 amount,
 
-
 gameId,
-
 
 createdAt:
 serverTimestamp()
 
-
-
 }
 
-
 );
-
-
 
 
 }
