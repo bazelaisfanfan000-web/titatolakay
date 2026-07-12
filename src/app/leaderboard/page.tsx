@@ -8,8 +8,8 @@ import {
 
 
 import {
-  useRouter
-} from "next/navigation";
+  motion
+} from "framer-motion";
 
 
 import {
@@ -23,21 +23,38 @@ import {
 } from "@/lib/firebase";
 
 
+import BackButton from "@/components/BackButton";
+
+
+
+
 
 
 
 export default function LeaderboardPage(){
 
 
-const router = useRouter();
+
+const [
+
+players,
+
+setPlayers
+
+]=useState<any[]>([]);
 
 
-const [players,setPlayers] =
-useState<any[]>([]);
+
+const [
+
+loading,
+
+setLoading
+
+]=useState(true);
 
 
-const [loading,setLoading] =
-useState(true);
+
 
 
 
@@ -49,10 +66,16 @@ useEffect(()=>{
 
 
 const usersRef =
+
 ref(
+
 database,
+
 "users"
+
 );
+
+
 
 
 
@@ -62,13 +85,19 @@ const unsubscribe =
 
 onValue(
 
+
 usersRef,
+
 
 (snapshot)=>{
 
 
+
 const data =
+
 snapshot.val() || {};
+
+
 
 
 
@@ -80,11 +109,14 @@ Object.entries(data)
 
 .map(([uid,user]:any)=>({
 
+
 uid,
 
 ...user
 
+
 }))
+
 
 .filter(
 
@@ -100,7 +132,6 @@ player.wins !== undefined
 
 
 
-// Trier par victoires
 
 const sorted =
 
@@ -123,7 +154,9 @@ Number(a.wins || 0)
 
 
 setPlayers(
+
 sorted.slice(0,50)
+
 );
 
 
@@ -134,7 +167,10 @@ setLoading(false);
 
 }
 
+
+
 );
+
 
 
 
@@ -154,28 +190,168 @@ return()=>unsubscribe();
 
 
 
+
 return(
+
 
 
 <main
 
+
 className="
+
 min-h-screen
-bg-[#050505]
+
+relative
+
+overflow-hidden
+
+bg-gradient-to-br
+
+from-[#020617]
+
+via-[#07152f]
+
+to-black
+
 text-white
+
 px-4
-py-8
+
+py-10
+
 "
 
 >
+
+
+
+
+
+
+
+
+<motion.div
+
+
+animate={{
+
+x:[0,40,0],
+
+y:[0,20,0]
+
+}}
+
+
+transition={{
+
+duration:6,
+
+repeat:Infinity
+
+}}
+
+
+
+className="
+
+absolute
+
+w-56
+
+h-56
+
+bg-blue-500/20
+
+rounded-full
+
+blur-3xl
+
+top-0
+
+left-[-60px]
+
+"
+
+/>
+
+
+
+
+
+
+
+
+
+<motion.div
+
+
+animate={{
+
+x:[0,-40,0],
+
+y:[0,-20,0]
+
+}}
+
+
+
+transition={{
+
+duration:7,
+
+repeat:Infinity
+
+}}
+
+
+
+className="
+
+absolute
+
+w-56
+
+h-56
+
+bg-purple-500/20
+
+rounded-full
+
+blur-3xl
+
+bottom-10
+
+right-[-60px]
+
+"
+
+/>
+
+
+
+
+
+
+
+
+
 
 
 
 <div
 
+
 className="
-max-w-md
+
+relative
+
+z-10
+
+max-w-sm
+
 mx-auto
+
 "
 
 >
@@ -185,46 +361,70 @@ mx-auto
 
 
 
-<button
+<BackButton />
 
-onClick={()=>router.back()}
+
+
+
+
+
+
+
+
+<motion.h1
+
+
+animate={{
+
+y:[0,-5,0]
+
+}}
+
+
+
+transition={{
+
+duration:3,
+
+repeat:Infinity
+
+}}
+
+
 
 className="
-mb-6
-bg-white/10
-border
-border-white/10
-px-4
-py-2
-rounded-xl
-text-sm
-"
 
->
+text-xl
 
-⬅️ Retour
-
-</button>
-
-
-
-
-
-
-
-<h1
-
-className="
-text-3xl
 font-black
+
 text-center
+
+mb-3
+
+bg-gradient-to-r
+
+from-blue-400
+
+to-cyan-300
+
+bg-clip-text
+
+text-transparent
+
 "
 
 >
+
 
 🏆 Classement Ti Ta To
 
-</h1>
+
+</motion.h1>
+
+
+
+
 
 
 
@@ -233,17 +433,25 @@ text-center
 <p
 
 className="
+
 text-center
+
+text-xs
+
 text-gray-400
-text-sm
-mt-2
+
+mb-6
+
 "
 
 >
 
-Les meilleurs joueurs par victoires
+
+Les meilleurs joueurs par victoires 🎮
+
 
 </p>
+
 
 
 
@@ -254,23 +462,31 @@ Les meilleurs joueurs par victoires
 
 {
 
-loading &&
+loading && (
 
 
 <p
 
 className="
+
 text-center
-mt-10
+
 text-gray-400
+
+mt-10
+
 "
 
 >
 
+
 Chargement...
+
 
 </p>
 
+
+)
 
 }
 
@@ -281,11 +497,17 @@ Chargement...
 
 
 
+
 <div
 
 className="
-mt-8
-space-y-4
+
+flex
+
+flex-col
+
+gap-4
+
 "
 
 >
@@ -293,47 +515,135 @@ space-y-4
 
 {
 
-players.map(
 
-(player,index)=>(
-
+players.map((player,index)=>(
 
 
-<div
+
+<motion.div
+
 
 key={player.uid}
 
+
+
+initial={{
+
+opacity:0,
+
+y:30
+
+}}
+
+
+
+animate={{
+
+opacity:1,
+
+y:0
+
+}}
+
+
+
+transition={{
+
+delay:index*0.05
+
+}}
+
+
+
+whileHover={{
+
+scale:1.02,
+
+y:-3
+
+}}
+
+
+
 className="
-bg-white/5
+
+bg-white/10
+
+backdrop-blur-2xl
+
 border
-border-white/10
-rounded-2xl
+
+border-white/20
+
+rounded-3xl
+
 p-5
+
+shadow-xl
+
 flex
+
 items-center
+
 justify-between
+
 "
 
 >
 
 
 
+
+
+
+
+
+
 <div
 
 className="
+
 flex
+
 items-center
+
 gap-3
+
 "
 
 >
 
 
+
+
+
+
 <div
 
 className="
+
+w-12
+
+h-12
+
+rounded-2xl
+
+bg-blue-500/20
+
+border
+
+border-blue-400/30
+
+flex
+
+items-center
+
+justify-center
+
 text-xl
+
 font-black
+
 "
 
 >
@@ -341,19 +651,26 @@ font-black
 
 {
 
-index === 0 ?
+
+index===0
+
+?
 
 "🥇"
 
 :
 
-index === 1 ?
+index===1
+
+?
 
 "🥈"
 
 :
 
-index === 2 ?
+index===2
+
+?
 
 "🥉"
 
@@ -365,7 +682,9 @@ index === 2 ?
 }
 
 
+
 </div>
+
 
 
 
@@ -376,37 +695,26 @@ index === 2 ?
 <div>
 
 
-<h2
+<h2 className="font-bold text-sm">
 
-className="
-font-bold
-"
-
->
 
 {player.username || "Joueur"}
+
 
 </h2>
 
 
 
-<p
 
-className="
-text-xs
-text-gray-400
-"
+<p className="text-xs text-gray-400 mt-1">
 
->
 
 🎮 {player.games || 0} parties
 
+
 </p>
 
 
-</div>
-
-
 
 </div>
 
@@ -415,41 +723,35 @@ text-gray-400
 
 
 
-
-<div
-
-className="
-text-right
-"
-
->
+</div>
 
 
-<p
 
-className="
-text-yellow-400
-font-black
-"
 
->
+
+
+
+
+
+<div className="text-right">
+
+
+<p className="text-yellow-400 font-black">
+
 
 🏆 {player.wins || 0}
 
+
 </p>
 
 
-<p
 
-className="
-text-xs
-text-gray-400
-"
+<p className="text-[10px] text-gray-400">
 
->
 
 victoires
 
+
 </p>
 
 
@@ -461,14 +763,12 @@ victoires
 
 
 
-</div>
+
+</motion.div>
 
 
 
-)
-
-
-)
+))
 
 
 }
@@ -476,6 +776,60 @@ victoires
 
 
 </div>
+
+
+
+
+
+
+
+
+
+<motion.p
+
+
+animate={{
+
+opacity:[0.4,1,0.4]
+
+}}
+
+
+
+transition={{
+
+duration:3,
+
+repeat:Infinity
+
+}}
+
+
+
+className="
+
+text-center
+
+text-[10px]
+
+text-cyan-300
+
+font-bold
+
+mt-8
+
+"
+
+
+>
+
+
+🧪 Ti Ta To - Version bêta
+
+
+</motion.p>
+
+
 
 
 
@@ -491,6 +845,7 @@ victoires
 
 
 );
+
 
 
 }

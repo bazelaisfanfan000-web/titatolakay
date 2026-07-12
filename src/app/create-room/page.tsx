@@ -8,61 +8,40 @@ import {
   useRouter
 } from "next/navigation";
 
-
 import {
   ref,
   push,
   set,
-  update,
   serverTimestamp
 } from "firebase/database";
-
 
 import {
   database,
   auth
 } from "@/lib/firebase";
 
-
 import {
   checkUserBalance,
   deductBet
 } from "@/lib/firebaseEconomy";
 
-
-
+import BackButton from "@/components/BackButton";
 
 
 export default function CreateRoomPage(){
 
-
 const router = useRouter();
 
 
-const [name,setName] =
-useState("");
+const [name,setName] = useState("");
 
+const [bet,setBet] = useState("");
 
-const [bet,setBet] =
-useState("50");
+const [mode,setMode] = useState("1v1");
 
+const [loading,setLoading] = useState(false);
 
-const [mode,setMode] =
-useState("1v1");
-
-
-const [type,setType] =
-useState("public");
-
-
-const [loading,setLoading] =
-useState(false);
-
-
-const [error,setError] =
-useState("");
-
-
+const [error,setError] = useState("");
 
 
 
@@ -70,12 +49,10 @@ useState("");
 
 async function createRoom(){
 
-
 try{
 
 
 setError("");
-
 
 
 const user = auth.currentUser;
@@ -92,22 +69,24 @@ throw new Error(
 
 
 
-
-const betAmount =
-Number(bet);
+const betAmount = Number(bet);
 
 
 
 if(
+!betAmount ||
 betAmount <= 0
 ){
 
 throw new Error(
-"Mise invalide"
+"Entre une mise valide"
 );
 
 }
 
+
+
+setLoading(true);
 
 
 
@@ -117,13 +96,6 @@ const balance =
 await checkUserBalance(
 user.uid
 );
-
-
-
-
-console.log("💰 VERIFICATION SOLDE:");
-console.log("Solde actuel:", balance, "HTG");
-console.log("Mise demandée:", betAmount, "HTG");
 
 
 
@@ -140,15 +112,6 @@ throw new Error(
 
 
 
-setLoading(true);
-
-
-
-
-
-
-// créer salle
-
 const roomRef =
 push(
 ref(database,"rooms")
@@ -164,18 +127,13 @@ roomRef.key;
 if(!roomId){
 
 throw new Error(
-"Erreur création salle"
+"Impossible de créer la partie"
 );
 
 }
 
 
 
-
-
-
-
-// retirer la mise UNE SEULE FOIS
 
 await deductBet(
 
@@ -192,10 +150,23 @@ roomId
 
 
 
+const board =
+
+Array.from(
+
+{
+length:10
+},
+
+()=>Array(10).fill("")
+
+);
 
 
 
-// créer room
+
+
+
 
 await set(
 
@@ -205,54 +176,106 @@ roomRef,
 
 
 name:
-name || "Ti Ta To",
+
+name.trim() ||
+
+"Ti Ta To",
 
 
-game:
+
+gameType:
+
 "titato",
 
 
+
 bet:
+
 betAmount,
+
 
 
 mode,
 
 
-type,
+
+type:
+
+"public",
+
 
 
 status:
+
 "waiting",
 
 
 
 maxPlayers:
+
 mode==="1v1"
+
 ?
+
 2
+
 :
+
 4,
 
 
 
 playersCount:
+
 1,
 
 
 
 creatorId:
+
 user.uid,
 
 
 
 pot:
-Math.floor(betAmount),
+
+betAmount,
 
 
 
 createdAt:
-serverTimestamp()
+
+serverTimestamp(),
+
+
+
+
+
+game:{
+
+
+board,
+
+
+turn:"X",
+
+
+winner:null,
+
+
+status:"waiting",
+
+
+turnStartedAt:null,
+
+
+turnDuration:30,
+
+
+paymentDone:false
+
+
+}
 
 
 
@@ -266,9 +289,6 @@ serverTimestamp()
 
 
 
-
-// ajouter joueur créateur
-
 await set(
 
 ref(
@@ -279,6 +299,7 @@ database,
 
 ),
 
+
 {
 
 
@@ -286,20 +307,29 @@ uid:user.uid,
 
 
 name:
-user.displayName || "Joueur",
+
+user.displayName ||
+
+"Joueur",
+
 
 
 symbol:"X",
 
 
+
 ready:true,
+
 
 
 betPaid:true,
 
 
+
 joinedAt:
+
 serverTimestamp()
+
 
 
 }
@@ -312,25 +342,31 @@ serverTimestamp()
 
 
 router.push(
+
 `/room/${roomId}`
+
 );
 
 
 
 
+
 }
+
 catch(err:any){
 
 
-console.log(err);
-
-
 setError(
-err.message || "Erreur"
+
+err.message ||
+
+"Erreur création"
+
 );
 
 
 }
+
 finally{
 
 
@@ -340,10 +376,7 @@ setLoading(false);
 }
 
 
-
 }
-
-
 
 
 
@@ -353,77 +386,130 @@ setLoading(false);
 
 return(
 
-<main className="
+
+<main
+
+className="
 min-h-screen
-bg-black
+bg-gradient-to-br
+from-[#020617]
+via-[#07152f]
+to-black
 text-white
-flex
-items-center
-justify-center
-p-4
-">
+px-5
+pt-16
+"
 
 
-<div className="
-w-full
-max-w-md
+>
+
+
+<div
+
+className="
+max-w-sm
+mx-auto
+"
+
+
+>
+
+
+<div
+
+className="
+mb-5
+"
+
+>
+
+<BackButton />
+
+</div>
+
+
+
+
+
+
+
+<div
+
+className="
 bg-white/10
+border
+border-white/20
 rounded-3xl
-p-6
-">
+p-5
+backdrop-blur-xl
+shadow-2xl
+"
 
 
-<h1 className="
+>
+
+
+
+
+<h1
+
+className="
 text-2xl
-font-bold
+font-black
 text-center
-mb-6
-">
+mb-5
+"
+
+
+>
 
 🎮 Créer une partie
+<br/>
+
 
 </h1>
 
 
 
 
-{
-error &&
 
-<div className="
-bg-red-500/20
-p-3
-rounded-xl
-mb-4
-text-red-400
-">
 
-{error}
 
-</div>
+
+<input
+
+
+value={name}
+
+
+onChange={
+
+e=>
+
+setName(
+
+e.target.value
+
+)
 
 }
 
 
+placeholder="Nom de la partie"
 
 
-
-
-<input
-
-placeholder="Nom de partie"
-
-value={name}
-
-onChange={(e)=>setName(e.target.value)}
 
 className="
 w-full
 p-3
 rounded-xl
-bg-black
+bg-black/30
 border
-mb-4
+border-white/10
+outline-none
+mb-3
+text-white
+text-sm
 "
 
 />
@@ -433,21 +519,46 @@ mb-4
 
 
 
+
+
+
 <input
+
 
 type="number"
 
+
 value={bet}
 
-onChange={(e)=>setBet(e.target.value)}
+
+onChange={
+
+e=>
+
+setBet(
+
+e.target.value
+
+)
+
+}
+
+
+placeholder="Montant de la mise (HTG)"
+
+
 
 className="
 w-full
 p-3
 rounded-xl
-bg-black
+bg-black/30
 border
-mb-4
+border-white/10
+outline-none
+mb-3
+text-white
+text-sm
 "
 
 />
@@ -457,64 +568,63 @@ mb-4
 
 
 
+
+
+
 <select
+
 
 value={mode}
 
-onChange={(e)=>setMode(e.target.value)}
+
+onChange={
+
+e=>
+
+setMode(
+
+e.target.value
+
+)
+
+}
+
 
 className="
 w-full
 p-3
 rounded-xl
-bg-black
+bg-black/30
 border
-mb-4
-">
+border-white/10
+outline-none
+mb-5
+text-sm
+"
+
+
+>
+
 
 <option value="1v1">
-👥 1 VS 1
+
+1 VS 1
+
 </option>
+
 
 
 <option value="2v2">
-👥 2 VS 2
+
+2 VS 2
+
 </option>
+
 
 
 </select>
 
 
-
-
-
-
-<select
-
-value={type}
-
-onChange={(e)=>setType(e.target.value)}
-
-className="
-w-full
-p-3
-rounded-xl
-bg-black
-border
-mb-5
-">
-
-<option value="public">
-🌍 Public
-</option>
-
-
-<option value="private">
-🔒 Privé
-</option>
-
-
-</select>
 
 
 
@@ -524,31 +634,86 @@ mb-5
 
 <button
 
-disabled={loading}
 
 onClick={createRoom}
 
+
+disabled={loading}
+
+
+
 className="
 w-full
-bg-blue-600
-py-3
+p-3
 rounded-xl
-font-bold
-">
+bg-blue-600
+hover:bg-blue-500
+font-black
+text-sm
+transition
+"
+
+
+>
 
 
 {
+
 loading
+
 ?
+
 "Création..."
+
 :
-"🚀 Créer"
+
+"Créer une partie"
+
 }
 
 
 
 </button>
 
+
+
+
+
+
+
+
+{
+
+error &&
+
+
+<p
+
+className="
+mt-4
+text-red-400
+text-xs
+text-center
+font-bold
+"
+
+>
+
+
+{error}
+
+
+</p>
+
+
+}
+
+
+
+
+
+
+</div>
 
 
 </div>

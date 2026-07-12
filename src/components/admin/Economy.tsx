@@ -2,21 +2,20 @@
 
 
 import {
-useEffect,
-useState
+  useEffect,
+  useState
 } from "react";
 
 
 import {
-database
-} from "@/lib/firebase";
+  ref,
+  onValue
+} from "firebase/database";
 
 
 import {
-ref,
-onValue
-} from "firebase/database";
-
+  database
+} from "@/lib/firebase";
 
 
 
@@ -24,23 +23,20 @@ onValue
 export default function Economy(){
 
 
-const [stats,setStats]=useState({
 
-totalBalance:0,
+const [stats,setStats] = useState({
 
-users:0,
+balance:0,
 
-online:0,
+bets:0,
 
-commission:0
+commission:0,
+
+wins:0,
+
+transactions:0
 
 });
-
-
-
-const [players,setPlayers]=useState<any[]>([]);
-
-
 
 
 
@@ -53,11 +49,64 @@ const usersRef =
 ref(database,"users");
 
 
+const transactionsRef =
+ref(database,"transactions");
 
-const unsubscribe = onValue(
 
+
+
+
+const stopUsers =
+onValue(
 usersRef,
+(snapshot)=>{
 
+
+const users =
+snapshot.val() || {};
+
+
+
+let total = 0;
+
+
+
+Object.values(users)
+.forEach((user:any)=>{
+
+
+total += Number(
+user.balance || 0
+);
+
+
+});
+
+
+
+setStats(prev=>({
+
+...prev,
+
+balance:total
+
+}));
+
+
+
+}
+
+);
+
+
+
+
+
+
+
+const stopTransactions =
+onValue(
+transactionsRef,
 (snapshot)=>{
 
 
@@ -66,72 +115,65 @@ snapshot.val() || {};
 
 
 
-let total = 0;
+let bets=0;
 
-let users = 0;
+let wins=0;
 
-let online = 0;
-
-
-
-const list:any[]=[];
+let count=0;
 
 
 
 
-
-Object.entries(data).forEach(
-
-([uid,user]:any)=>{
+Object.values(data)
+.forEach((tx:any)=>{
 
 
-
-const balance =
-Number(user.balance || 0);
+count++;
 
 
 
-total += balance;
+if(tx.type==="Bet"){
 
-
-users++;
-
-
-
-
-if(user.online){
-
-online++;
+bets += Math.abs(
+Number(tx.amount || 0)
+);
 
 }
 
 
 
+if(tx.type==="WIN"){
 
+wins += Number(
+tx.amount || 0
+);
 
+}
 
-list.push({
-
-uid,
-
-username:user.username || "Joueur",
-
-email:user.email || "Pas email",
-
-balance,
-
-online:user.online || false,
-
-role:user.role || "joueur"
 
 
 });
 
 
 
+setStats(prev=>({
+
+...prev,
+
+bets,
+
+wins,
+
+transactions:count,
+
+commission:
+Math.floor(bets * 0.10)
+
+}));
+
+
+
 }
-
-
 
 );
 
@@ -139,33 +181,13 @@ role:user.role || "joueur"
 
 
 
-setStats({
+return()=>{
 
-totalBalance:total,
+stopUsers();
 
-users,
+stopTransactions();
 
-online,
-
-commission:0
-
-});
-
-
-
-setPlayers(list);
-
-
-
-}
-
-
-);
-
-
-
-return()=>unsubscribe();
-
+};
 
 
 },[]);
@@ -176,23 +198,66 @@ return()=>unsubscribe();
 
 
 
+const cards=[
+
+
+{
+title:"Argent joueurs",
+value:`${Math.floor(stats.balance)} HTG`,
+icon:"💰",
+color:"text-green-400"
+},
+
+
+{
+title:"Volume des mises",
+value:`${stats.bets} HTG`,
+icon:"🎮",
+color:"text-blue-400"
+},
+
+
+{
+title:"Commission",
+value:`${stats.commission} HTG`,
+icon:"🏦",
+color:"text-yellow-400"
+},
+
+
+{
+title:"Gains distribués",
+value:`${stats.wins} HTG`,
+icon:"🏆",
+color:"text-purple-400"
+},
+
+
+{
+title:"Transactions",
+value:stats.transactions,
+icon:"📄",
+color:"text-white"
+}
+
+
+
+];
+
+
+
 
 
 
 return(
 
 
-<div className="
-text-white
-w-full
-">
-
-
+<div className="text-white">
 
 
 
 <h1 className="
-text-xl
+text-3xl
 font-black
 ">
 
@@ -203,15 +268,13 @@ font-black
 
 
 <p className="
-text-xs
 text-gray-400
+mt-2
 ">
 
-Gestion financière globale
+Contrôle financier DOMINOS HAÏTI
 
 </p>
-
-
 
 
 
@@ -222,275 +285,97 @@ Gestion financière globale
 <div className="
 grid
 md:grid-cols-2
-gap-3
-mt-5
+xl:grid-cols-3
+gap-5
+mt-8
 ">
-
-
-
-
-
-
-<div className="
-bg-white/[0.05]
-border
-border-white/10
-rounded-2xl
-p-4
-">
-
-
-<p className="
-text-xs
-text-gray-400
-">
-
-🏦 Capital total
-
-</p>
-
-
-
-<h2 className="
-text-2xl
-font-black
-text-green-400
-mt-2
-">
-
-{stats.totalBalance} HTG
-
-</h2>
-
-
-
-<p className="
-text-[11px]
-text-gray-500
-mt-1
-">
-
-Somme de tous les soldes joueurs
-
-</p>
-
-
-</div>
-
-
-
-
-
-
-
-
-<div className="
-bg-white/[0.05]
-border
-border-white/10
-rounded-2xl
-p-4
-">
-
-
-<p className="
-text-xs
-text-gray-400
-">
-
-📈 Gains plateforme
-
-</p>
-
-
-
-<h2 className="
-text-2xl
-font-black
-text-blue-400
-mt-2
-">
-
-{stats.commission} HTG
-
-</h2>
-
-
-</div>
-
-
-
-
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<div className="
-grid
-grid-cols-3
-gap-3
-mt-4
-">
-
-
-
-<Card
-
-title="👥 Utilisateurs"
-
-value={stats.users}
-
-/>
-
-
-
-<Card
-
-title="🟢 En ligne"
-
-value={stats.online}
-
-/>
-
-
-
-<Card
-
-title="💰 Solde joueurs"
-
-value={`${stats.totalBalance} HTG`}
-
-/>
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<h2 className="
-mt-6
-text-sm
-font-bold
-">
-
-👥 Tous les soldes joueurs
-
-</h2>
-
-
-
-
-
-
-
-
-<div className="
-mt-3
-space-y-2
-">
-
 
 
 {
 
-players.map(player=>(
-
+cards.map((card)=>(
 
 
 <div
 
-key={player.uid}
+key={card.title}
 
 className="
-bg-white/[0.05]
-border
-border-white/10
-rounded-xl
-p-3
-flex
-justify-between
-items-center
-"
 
+bg-[#111827]
+
+border
+
+border-white/10
+
+rounded-3xl
+
+p-6
+
+shadow-xl
+
+"
 
 >
 
 
-<div>
-
-
-<p className="
-font-bold
-text-sm
+<div className="
+flex
+justify-between
+items-center
 ">
-
-👤 {player.username}
-
-</p>
-
-
-<p className="
-text-[11px]
-text-gray-400
-">
-
-{player.email}
-
-</p>
-
-
-</div>
-
-
-
 
 
 <div className="
-text-right
+text-4xl
 ">
 
+{card.icon}
 
-<p className="
-font-black
-text-green-400
+</div>
+
+
+<div className="
+w-3
+h-3
+rounded-full
+bg-green-400
 ">
 
-{player.balance} HTG
-
-</p>
-
-
-
-<p className="
-text-[10px]
-text-gray-400
-">
-
-{player.online ? "🟢 En ligne":"⚫ Hors ligne"}
-
-</p>
-
+</div>
 
 
 </div>
 
 
+
+
+<p className="
+text-gray-400
+mt-5
+">
+
+{card.title}
+
+</p>
+
+
+
+<h2 className={`
+
+text-3xl
+
+font-black
+
+mt-2
+
+${card.color}
+
+`}>
+
+{card.value}
+
+</h2>
 
 
 
@@ -505,75 +390,171 @@ text-gray-400
 
 
 
-
 </div>
 
 
 
 
 
-</div>
 
 
-);
-
-
-}
-
-
-
-
-
-
-
-
-function Card({
-
-title,
-
-value
-
-}:{
-
-title:string;
-
-value:any;
-
-}){
-
-
-return(
 
 <div className="
-bg-white/[0.05]
+
+mt-10
+
+bg-[#111827]
+
 border
+
 border-white/10
-rounded-xl
-p-3
+
+rounded-3xl
+
+p-6
+
 ">
 
-<p className="
-text-[11px]
-text-gray-400
-">
 
-{title}
-
-</p>
-
-
-<p className="
-text-lg
+<h2 className="
+text-xl
 font-black
-mt-1
 ">
 
-{value}
+📊 Résumé financier
 
-</p>
+</h2>
+
+
+
+
+
+<div className="
+mt-6
+space-y-4
+">
+
+
+<div className="
+flex
+justify-between
+bg-black/30
+p-4
+rounded-xl
+">
+
+<span>
+💵 Argent circulation
+</span>
+
+
+<b>
+{Math.floor(stats.balance)} HTG
+</b>
 
 
 </div>
+
+
+
+
+
+
+<div className="
+flex
+justify-between
+bg-black/30
+p-4
+rounded-xl
+">
+
+
+<span>
+🎲 Volume jeu
+</span>
+
+
+<b>
+{stats.bets} HTG
+</b>
+
+
+</div>
+
+
+
+
+
+
+
+<div className="
+flex
+justify-between
+bg-black/30
+p-4
+rounded-xl
+">
+
+
+<span>
+🏦 Revenus plateforme
+</span>
+
+
+<b className="
+text-green-400
+">
+
+{stats.commission} HTG
+
+</b>
+
+
+</div>
+
+
+
+
+
+
+
+<div className="
+flex
+justify-between
+bg-black/30
+p-4
+rounded-xl
+">
+
+
+<span>
+🏆 Gains joueurs
+</span>
+
+
+<b>
+{stats.wins} HTG
+</b>
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+
+</div>
+
 
 );
 

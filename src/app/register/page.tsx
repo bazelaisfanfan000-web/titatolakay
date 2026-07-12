@@ -1,11 +1,15 @@
 "use client";
 
+import {
+  useState
+} from "react";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useRouter
+} from "next/navigation";
 
 
-import { 
+import {
   auth,
   database
 } from "../../lib/firebase";
@@ -23,27 +27,47 @@ import {
 } from "firebase/database";
 
 
+import {
+  motion
+} from "framer-motion";
+
+
+import {
+  User,
+  Mail,
+  Lock
+} from "lucide-react";
+
+
+
+
 
 
 export default function Register(){
-
 
 
 const router = useRouter();
 
 
 
-const [username,setUsername] = useState("");
 
-const [email,setEmail] = useState("");
+const [username,setUsername] =
+useState("");
 
-const [password,setPassword] = useState("");
+const [email,setEmail] =
+useState("");
+
+const [password,setPassword] =
+useState("");
 
 
 
-const [error,setError] = useState("");
+const [error,setError] =
+useState("");
 
-const [loading,setLoading] = useState(false);
+const [loading,setLoading] =
+useState(false);
+
 
 
 
@@ -72,7 +96,6 @@ return;
 
 
 
-
 if(password.length < 6){
 
 
@@ -90,7 +113,6 @@ return;
 
 
 
-
 try{
 
 
@@ -102,10 +124,8 @@ setError("");
 
 
 
-// CREATION COMPTE FIREBASE AUTH
-
-
-const result = await createUserWithEmailAndPassword(
+const result =
+await createUserWithEmailAndPassword(
 
 auth,
 
@@ -117,51 +137,43 @@ password
 
 
 
-const user = result.user;
+const user =
+result.user;
 
 
 
-const uid = user.uid;
+const uid =
+user.uid;
 
 
 
 
-
-
-// CREATION PROFIL JOUEUR + BONUS 1000 HTG
 
 
 await set(
 
-ref(database,"users/"+uid),
+ref(database,`users/${uid}`),
 
 {
 
 
-uid:uid,
+uid,
 
+username,
 
-username:username,
-
-
-email:email,
-
+email,
 
 balance:1000,
 
-
 currency:"HTG",
 
-
 createdAt:Date.now(),
-
 
 lastBonus:Date.now()
 
 
 }
 
-
 );
 
 
@@ -170,15 +182,14 @@ lastBonus:Date.now()
 
 
 
+const notificationRef =
+push(
 
-// CREATION NOTIFICATION BONUS
-
-
-const notificationRef = push(
-
-ref(database,"notifications/"+uid)
+ref(database,`notifications/${uid}`)
 
 );
+
+
 
 
 
@@ -193,9 +204,8 @@ notificationRef,
 
 title:"🎁 Bonus de bienvenue",
 
-
 message:
-"Tu as reçu +1000 HTG pour commencer à jouer sur Domino Lakay.",
+"Tu as reçu +1000 HTG pour commencer à jouer sur Ti Ta To.",
 
 
 amount:1000,
@@ -208,7 +218,6 @@ read:false,
 
 
 createdAt:Date.now()
-
 
 
 }
@@ -225,16 +234,9 @@ router.push("/dashboard");
 
 
 
-
-
 }
 
 catch(err:any){
-
-
-
-console.log(err);
-
 
 
 
@@ -274,8 +276,6 @@ err.message
 
 }
 
-
-
 finally{
 
 
@@ -296,8 +296,6 @@ setLoading(false);
 
 
 
-
-
 return(
 
 
@@ -305,29 +303,89 @@ return(
 
 className="
 min-h-screen
-bg-[#050505]
+relative
+overflow-hidden
+bg-gradient-to-br
+from-[#020617]
+via-[#07152f]
+to-black
 text-white
 flex
 items-center
 justify-center
-px-5
+px-3
 "
 
 >
 
 
 
+
+
 <div
 
 className="
-w-full
-max-w-sm
-bg-white/5
+absolute
+w-40
+h-40
+bg-blue-500/20
+rounded-full
+blur-3xl
+top-10
+left-5
+"
+
+/>
+
+
+
+
+
+<div
+
+className="
+absolute
+w-40
+h-40
+bg-purple-500/20
+rounded-full
+blur-3xl
+bottom-10
+right-5
+"
+
+/>
+
+
+
+
+
+
+
+<section
+
+className="
+relative
+z-10
+w-[240px]
+text-center
+"
+
+>
+
+
+
+
+
+<div
+
+className="
+bg-white/10
+backdrop-blur-2xl
 border
-border-white/10
-backdrop-blur-xl
+border-white/20
 rounded-3xl
-p-6
+p-4
 shadow-2xl
 "
 
@@ -338,19 +396,43 @@ shadow-2xl
 
 
 
-<h1
+<motion.h1
+
+
+animate={{
+
+y:[0,-6,0],
+
+rotate:[0,2,-2,0]
+
+}}
+
+
+transition={{
+
+duration:3,
+
+repeat:Infinity
+
+}}
+
+
 
 className="
-text-3xl
+text-xl
 font-black
-text-center
+bg-gradient-to-r
+from-blue-400
+to-cyan-300
+bg-clip-text
+text-transparent
 "
 
 >
 
-🎲 DOMINOS HAÏTI
+⭕ TI TA TO
 
-</h1>
+</motion.h1>
 
 
 
@@ -359,124 +441,183 @@ text-center
 <p
 
 className="
-text-center
-text-gray-400
+text-[11px]
+text-gray-300
 mt-2
 "
 
 >
 
-Créer un compte joueur
+Créer ton compte joueur
 
-</p>
+</p><div
+
+className="
+relative
+mt-5
+"
+
+>
 
 
+<User
 
+size={14}
 
+className="
+absolute
+left-3
+top-3
+text-blue-400
+"
 
-
+/>
 
 
 
 <input
 
-
 className="
 w-full
-mt-6
-p-3
+h-9
+pl-9
 rounded-xl
-bg-black/40
+bg-black/30
 border
-border-white/10
+border-white/20
+text-[11px]
 outline-none
+placeholder:text-gray-500
 "
-
 
 placeholder="Nom joueur"
 
-
 value={username}
-
 
 onChange={(e)=>setUsername(e.target.value)}
 
+/>
+
+
+</div>
+
+
+
+
+
+
+
+<div
+
+className="
+relative
+mt-3
+"
+
+>
+
+
+<Mail
+
+size={14}
+
+className="
+absolute
+left-3
+top-3
+text-blue-400
+"
 
 />
 
 
 
-
-
-
-
-
-
 <input
-
 
 className="
 w-full
-mt-3
-p-3
+h-9
+pl-9
 rounded-xl
-bg-black/40
+bg-black/30
 border
-border-white/10
+border-white/20
+text-[11px]
 outline-none
+placeholder:text-gray-500
 "
-
 
 placeholder="Email"
 
-
 type="email"
-
 
 value={email}
 
-
 onChange={(e)=>setEmail(e.target.value)}
-
 
 />
 
 
+</div>
 
 
 
 
+
+
+
+<div
+
+className="
+relative
+mt-3
+"
+
+>
+
+
+<Lock
+
+size={14}
+
+className="
+absolute
+left-3
+top-3
+text-blue-400
+"
+
+/>
 
 
 
 <input
 
-
 className="
 w-full
-mt-3
-p-3
+h-9
+pl-9
 rounded-xl
-bg-black/40
+bg-black/30
 border
-border-white/10
+border-white/20
+text-[11px]
 outline-none
+placeholder:text-gray-500
 "
-
 
 placeholder="Mot de passe"
 
-
 type="password"
-
 
 value={password}
 
-
 onChange={(e)=>setPassword(e.target.value)}
 
-
 />
+
+
+</div>
 
 
 
@@ -487,17 +628,15 @@ onChange={(e)=>setPassword(e.target.value)}
 
 
 {
-
 error &&
 
 
 <p
 
 className="
-text-red-500
-text-sm
-mt-4
-text-center
+text-red-400
+text-[10px]
+mt-3
 "
 
 >
@@ -522,19 +661,23 @@ text-center
 
 onClick={register}
 
-
 disabled={loading}
 
 
 
 className="
 w-full
-mt-5
-py-3
+h-9
+mt-4
 rounded-xl
-bg-blue-600
+text-[11px]
 font-bold
+bg-gradient-to-b
+from-blue-400
+to-blue-700
+shadow-[0_5px_0_#123a8a]
 hover:scale-105
+active:scale-95
 transition
 disabled:opacity-50
 "
@@ -548,14 +691,13 @@ loading
 
 ?
 
-"Création du compte..."
+"Création..."
 
 :
 
-"Créer mon compte"
+"🚀 Créer mon compte"
 
 }
-
 
 
 </button>
@@ -567,20 +709,71 @@ loading
 
 
 
+
 <p
 
 className="
-text-center
-text-gray-500
-text-xs
+text-[10px]
+text-yellow-300
+mt-4
+"
+
+>
+
+🎁 Nouveau joueur : +1000 HTG offert
+
+</p>
+
+
+
+
+
+
+
+
+
+<p
+
+className="
+text-[10px]
+text-gray-400
 mt-5
 "
 
 >
 
-🎁 Nouveau joueur reçoit automatiquement 1000 HTG
+Déjà enregistré ?
 
 </p>
+
+
+
+
+
+
+
+<button
+
+
+onClick={()=>router.push("/login")}
+
+
+
+className="
+mt-2
+text-[11px]
+font-bold
+text-cyan-300
+hover:text-cyan-200
+transition
+"
+
+>
+
+🔐 Connexion
+
+</button>
+
 
 
 
@@ -592,10 +785,17 @@ mt-5
 </div>
 
 
+</section>
+
+
+
+
+
+
 </main>
 
 
-)
+);
 
 
 }

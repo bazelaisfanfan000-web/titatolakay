@@ -1,9 +1,11 @@
 "use client";
 
 
-interface Props{
+type Props = {
 
 requestedBy:string;
+
+requesterName:string;
 
 myUid:string;
 
@@ -11,13 +13,15 @@ onAccept:()=>void;
 
 onReject:()=>void;
 
-}
+};
 
 
 
 export default function RematchModal({
 
 requestedBy,
+
+requesterName,
 
 myUid,
 
@@ -29,81 +33,143 @@ onReject
 
 
 
-return(
+if(requestedBy === myUid){
 
-<div className="
+return null;
+
+}
+
+
+
+return (
+
+<div
+
+className="
 fixed
 inset-0
-bg-black/70
+bg-black/80
+backdrop-blur-lg
 flex
 items-center
 justify-center
 z-50
-">
+p-4
+"
+
+>
 
 
-<div className="
-bg-white
-text-black
+<div
+
+className="
+w-full
+max-w-sm
+bg-white/10
+border
+border-white/20
 rounded-3xl
 p-6
 text-center
+shadow-2xl
+"
+
+>
+
+
+<div className="
+text-6xl
+mb-4
 ">
 
+🎮
 
-{
+</div>
 
-requestedBy===myUid
 
-?
 
-<>
-
-<h2 className="
-text-xl
-font-bold
+<h1 className="
+text-2xl
+font-black
+text-white
 ">
 
-⏳ Revanche envoyée
+Demande de revanche
 
-</h2>
+</h1>
 
 
-<p className="mt-3">
 
-Attente de l'autre joueur...
+
+<p className="
+mt-5
+text-white
+text-lg
+">
+
+<b>
+
+{requesterName}
+
+</b>
 
 </p>
 
-</>
 
 
-:
-
-<>
-
-<h2 className="
-text-xl
-font-bold
+<p className="
+text-gray-300
+mt-1
 ">
 
-⚔️ Demande de revanche
-
-</h2>
-
-
-<p className="mt-3">
-
-Le joueur veut recommencer.
+veut rejouer une partie
 
 </p>
+
+
+
+
+<p className="
+mt-5
+text-yellow-400
+font-black
+">
+
+💰 Même mise : partie précédente
+
+</p>
+
+
 
 
 <div className="
 flex
 gap-3
-mt-5
+mt-8
 ">
+
+
+<button
+
+onClick={onReject}
+
+className="
+flex-1
+py-3
+rounded-xl
+bg-red-600
+font-black
+text-white
+"
+
+>
+
+❌ Refuser
+
+</button>
+
+
+
 
 
 <button
@@ -111,11 +177,12 @@ mt-5
 onClick={onAccept}
 
 className="
-bg-green-600
-text-white
-px-5
+flex-1
 py-3
 rounded-xl
+bg-green-600
+font-black
+text-white
 "
 
 >
@@ -126,32 +193,8 @@ rounded-xl
 
 
 
-<button
-
-onClick={onReject}
-
-className="
-bg-red-600
-text-white
-px-5
-py-3
-rounded-xl
-"
-
->
-
-❌ Refuser
-
-</button>
-
 
 </div>
-
-
-</>
-
-}
-
 
 
 </div>

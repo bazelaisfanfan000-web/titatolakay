@@ -20,9 +20,7 @@ import {
 
 
 
-
-
-export default function AdminBannedPage(){
+export default function Banned(){
 
 
 
@@ -33,16 +31,11 @@ useState<any[]>([]);
 
 
 
-
 useEffect(()=>{
 
 
-
 const usersRef =
-ref(
-database,
-"users"
-);
+ref(database,"users");
 
 
 
@@ -72,13 +65,9 @@ uid,
 }))
 
 .filter(
-
 (user:any)=>
-
 user.banned === true
-
 );
-
 
 
 
@@ -87,7 +76,6 @@ setUsers(bannedUsers);
 
 
 }
-
 
 
 );
@@ -107,9 +95,7 @@ return()=>unsubscribe();
 
 
 
-
 async function unban(uid:string){
-
 
 
 await update(
@@ -121,15 +107,11 @@ database,
 
 {
 
-
 banned:false,
-
 
 banReason:null,
 
-
 bannedAt:null
-
 
 }
 
@@ -151,11 +133,13 @@ alert(
 
 
 
-
 return(
 
 
-<div>
+<div className="text-white">
+
+
+
 
 
 <h1 className="
@@ -174,7 +158,7 @@ text-gray-400
 mt-2
 ">
 
-Liste des comptes bloqués
+Gestion des comptes bloqués
 
 </p>
 
@@ -194,23 +178,34 @@ space-y-5
 
 
 
-{
 
-users.length===0 &&
+{
+users.length === 0 &&
 
 
 <div className="
-bg-white/5
+
+bg-green-500/10
+
 border
-border-white/10
-rounded-2xl
-p-5
+
+border-green-500/20
+
+rounded-3xl
+
+p-6
+
+text-green-400
+
+font-bold
+
 ">
+
 
 ✅ Aucun utilisateur banni
 
-</div>
 
+</div>
 
 
 }
@@ -233,21 +228,38 @@ users.map((user)=>(
 key={user.uid}
 
 className="
-bg-white/5
-backdrop-blur-xl
+
+bg-[#111827]
+
 border
-border-white/10
+
+border-red-500/20
+
 rounded-3xl
+
 p-6
+
+shadow-xl
+
 "
+
 
 >
 
 
 
+
+
+<div className="
+flex
+justify-between
+items-center
+">
+
+
 <h2 className="
-font-bold
 text-xl
+font-black
 ">
 
 🚫 {user.username || "Joueur"}
@@ -256,56 +268,112 @@ text-xl
 
 
 
+<div className="
+bg-red-500/20
+text-red-400
+px-3
+py-1
+rounded-full
+text-sm
+font-bold
+">
+
+BANNI
+
+</div>
+
+
+
+</div>
+
+
+
 
 
 
 
 <div className="
-mt-4
-space-y-2
+mt-5
+space-y-3
 text-gray-300
 text-sm
 ">
 
 
-<p>
+
+<div className="
+bg-black/30
+rounded-xl
+p-3
+">
 
 🆔 UID :
 
+<span className="text-white">
+
 {user.uid}
 
-</p>
+</span>
+
+</div>
 
 
 
-<p>
+
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-3
+">
 
 📧 Email :
 
+<span className="text-white">
+
 {user.email || "Non disponible"}
 
-</p>
+</span>
+
+</div>
 
 
 
 
 
-<p>
+
+<div className="
+bg-black/30
+rounded-xl
+p-3
+">
 
 📝 Raison :
 
+<span className="text-white">
+
 {user.banReason || "Aucune"}
 
-</p>
+</span>
+
+</div>
 
 
 
 
 
 
-<p>
+
+<div className="
+bg-black/30
+rounded-xl
+p-3
+">
 
 📅 Date :
+
+<span className="text-white">
 
 {
 
@@ -320,13 +388,14 @@ user.bannedAt
 
 :
 
-""
+"Non disponible"
 
 }
 
-</p>
 
+</span>
 
+</div>
 
 
 
@@ -343,24 +412,51 @@ user.bannedAt
 
 <button
 
-onClick={()=>
-unban(user.uid)
-}
+
+onClick={()=>unban(user.uid)}
+
 
 className="
-mt-5
+
+mt-6
+
 w-full
+
 bg-blue-600
-py-3
+
+text-white
+
+py-4
+
 rounded-xl
-font-bold
+
+font-black
+
+border-b-4
+
+border-blue-900
+
+shadow-[0_6px_0_#172554]
+
+hover:bg-blue-500
+
+active:translate-y-1
+
+active:border-b-0
+
+transition-all
+
 "
+
 
 >
 
+
 🔓 Débannir le joueur
 
+
 </button>
+
 
 
 
@@ -380,8 +476,8 @@ font-bold
 
 
 
-</div>
 
+</div>
 
 
 
@@ -392,6 +488,7 @@ font-bold
 
 
 );
+
 
 
 }

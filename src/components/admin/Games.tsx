@@ -2,22 +2,20 @@
 
 
 import {
- useEffect,
- useState
+  useEffect,
+  useState
 } from "react";
 
 
 import {
- database
-} from "@/lib/firebase";
+  ref,
+  onValue
+} from "firebase/database";
 
 
 import {
- ref,
- onValue,
- update,
- remove
-} from "firebase/database";
+  database
+} from "@/lib/firebase";
 
 
 
@@ -27,7 +25,8 @@ export default function Games(){
 
 
 
-const [games,setGames]=useState<any[]>([]);
+const [games,setGames] =
+useState<any[]>([]);
 
 
 
@@ -36,147 +35,53 @@ const [games,setGames]=useState<any[]>([]);
 useEffect(()=>{
 
 
-const gamesRef =
-ref(database,"games");
+const roomsRef =
+ref(database,"rooms");
 
 
 
-return onValue(
+const unsubscribe =
+onValue(
 
-gamesRef,
+roomsRef,
 
 (snapshot)=>{
 
 
 const data =
-snapshot.val();
+snapshot.val() || {};
 
 
 
-if(!data){
-
-setGames([]);
-
-return;
-
-}
-
-
-
-
-
-setGames(
+const list =
 
 Object.entries(data)
 
-.map(([id,value]:any)=>(
-
-{
+.map(([id,room]:any)=>({
 
 id,
 
-...value
+...room
+
+}));
+
+
+
+setGames(list);
+
+
 
 }
-
-))
 
 );
 
 
-}
 
-);
+return()=>unsubscribe();
 
 
 
 },[]);
-
-
-
-
-
-
-
-
-
-
-async function stopGame(id:string){
-
-
-
-const ok =
-confirm(
-
-"Arrêter cette partie ?"
-
-);
-
-
-
-if(!ok)
-
-return;
-
-
-
-
-await update(
-
-ref(
-database,
-`games/${id}`
-),
-
-{
-
-status:"stopped"
-
-}
-
-);
-
-
-
-}
-
-
-
-
-
-
-
-async function deleteGame(id:string){
-
-
-const ok =
-confirm(
-
-"Supprimer cette partie ?"
-
-);
-
-
-
-if(!ok)
-
-return;
-
-
-
-
-await remove(
-
-ref(
-database,
-`games/${id}`
-)
-
-);
-
-
-
-}
 
 
 
@@ -193,8 +98,10 @@ return(
 
 
 
+
+
 <h1 className="
-text-2xl
+text-3xl
 font-black
 ">
 
@@ -206,11 +113,10 @@ font-black
 
 <p className="
 text-gray-400
-text-sm
 mt-2
 ">
 
-Surveillance des matchs Domino Lakay
+Surveillance des matchs DOMINOS HAÏTI
 
 </p>
 
@@ -222,9 +128,12 @@ Surveillance des matchs Domino Lakay
 
 
 <div className="
-mt-6
-space-y-4
+mt-8
+grid
+gap-5
 ">
+
+
 
 
 
@@ -236,17 +145,29 @@ games.length===0 &&
 
 
 <div className="
-bg-white/5
+
+bg-yellow-500/10
+
 border
-border-white/10
-rounded-xl
-p-5
-text-gray-400
+
+border-yellow-500/20
+
+rounded-3xl
+
+p-6
+
+text-yellow-400
+
+font-bold
+
 ">
 
-Aucune partie trouvée
+
+🎲 Aucune partie disponible
+
 
 </div>
+
 
 
 }
@@ -258,9 +179,11 @@ Aucune partie trouvée
 
 
 
+
 {
 
-games.map(game=>(
+games.map((game)=>(
+
 
 
 <div
@@ -268,12 +191,21 @@ games.map(game=>(
 key={game.id}
 
 className="
-bg-white/5
+
+bg-[#111827]
+
 border
+
 border-white/10
-rounded-2xl
-p-5
+
+rounded-3xl
+
+p-6
+
+shadow-xl
+
 "
+
 
 >
 
@@ -281,12 +213,21 @@ p-5
 
 
 
-<h2 className="
-font-bold
-text-lg
+
+
+<div className="
+flex
+justify-between
+items-center
 ">
 
-🎮 Partie #{game.id}
+
+<h2 className="
+text-xl
+font-black
+">
+
+🎲 {game.name || "Partie Domino"}
 
 </h2>
 
@@ -294,17 +235,208 @@ text-lg
 
 
 
-
-<p className="mt-2">
-
-📌 Statut :
-
 <span className="
+
+bg-blue-500/20
+
+text-blue-400
+
+px-3
+
+py-1
+
+rounded-full
+
+text-sm
+
+font-bold
+
+">
+
+
+{game.status || "Inconnu"}
+
+
+</span>
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<div className="
+mt-6
+grid
+md:grid-cols-2
+gap-3
+">
+
+
+
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-4
+">
+
+🆔 ID
+
+<p className="
+text-white
+mt-1
+break-all
+">
+
+{game.id}
+
+</p>
+
+</div>
+
+
+
+
+
+
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-4
+">
+
+🎯 Mode
+
+<p className="
+text-white
+mt-1
+">
+
+{game.mode || "1v1"}
+
+</p>
+
+</div>
+
+
+
+
+
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-4
+">
+
+💰 Mise
+
+<p className="
 text-green-400
+mt-1
 font-bold
 ">
 
-{game.status || "waiting"}
+{game.bet || 0} HTG
+
+</p>
+
+</div>
+
+
+
+
+
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-4
+">
+
+🏦 Pot total
+
+<p className="
+text-blue-400
+mt-1
+font-bold
+">
+
+{game.pot || 0} HTG
+
+</p>
+
+</div>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<div className="
+mt-5
+bg-black/40
+rounded-xl
+p-5
+">
+
+
+
+<h3 className="
+font-black
+">
+
+📊 Résultat
+
+</h3>
+
+
+
+
+<div className="
+mt-3
+space-y-2
+text-gray-300
+">
+
+
+<p>
+
+🏆 Gagnant :
+
+<span className="
+text-white
+">
+
+{
+game.game?.winner || "Pas encore"
+
+}
 
 </span>
 
@@ -314,44 +446,34 @@ font-bold
 
 
 
-
 <p>
 
-💰 Mise :
+💸 Commission plateforme :
 
-{game.bet || 0}
+<span className="
+text-green-400
+font-bold
+">
+
+{
+
+game.game?.commission ||
+
+Math.floor(
+Number(game.pot || 0)
+*
+0.10
+)
+
+}
 
  HTG
 
-</p>
+</span>
 
-
-
-
-
-<p>
-
-🏦 Pot :
-
-{game.totalBet || 0}
-
- HTG
 
 </p>
 
-
-
-
-
-
-
-<p>
-
-🏆 Gagnant :
-
-{game.winner || "Pas encore"}
-
-</p>
 
 
 
@@ -362,7 +484,33 @@ font-bold
 
 👥 Joueurs :
 
+<span className="
+text-white
+font-bold
+">
+
+{
+game.players?.playersCount || 0
+}
+
+</span>
+
+
 </p>
+
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
 
 
 
@@ -370,44 +518,28 @@ font-bold
 
 
 <div className="
-mt-2
-bg-black/30
-rounded-xl
-p-3
+mt-5
 text-sm
+text-gray-500
 ">
 
 
+📅 Créée :
+
 {
 
-game.players
+game.createdAt
 
 ?
 
-Object.values(game.players)
-
-.map(
-
-(player:any,index)=>(
-
-
-<p key={index}>
-
-👤 {player.username || player.uid}
-
-</p>
-
-
+new Date(
+game.createdAt
 )
-
-)
+.toLocaleString()
 
 :
 
-<p>
-Aucun joueur
-</p>
-
+"Date inconnue"
 
 }
 
@@ -419,73 +551,8 @@ Aucun joueur
 
 
 
-
-
-
-
-<div className="
-flex
-gap-3
-mt-5
-">
-
-
-
-<button
-
-onClick={()=>stopGame(game.id)}
-
-className="
-bg-yellow-600
-px-4
-py-2
-rounded-xl
-font-bold
-"
-
->
-
-⛔ Stop
-
-</button>
-
-
-
-
-
-
-<button
-
-onClick={()=>deleteGame(game.id)}
-
-className="
-bg-red-600
-px-4
-py-2
-rounded-xl
-font-bold
-"
-
->
-
-🗑 Supprimer
-
-</button>
-
-
-
-
 </div>
 
-
-
-
-
-
-
-
-
-</div>
 
 
 ))
@@ -495,7 +562,10 @@ font-bold
 
 
 
+
+
 </div>
+
 
 
 
@@ -505,6 +575,7 @@ font-bold
 
 
 );
+
 
 
 }

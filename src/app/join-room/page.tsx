@@ -1,13 +1,20 @@
 "use client";
 
+
 import {
   useEffect,
   useState
 } from "react";
 
+
 import {
   useRouter
 } from "next/navigation";
+
+
+import {
+  motion
+} from "framer-motion";
 
 
 import {
@@ -31,21 +38,33 @@ import {
 } from "@/lib/firebaseEconomy";
 
 
+import BackButton from "@/components/BackButton";
+
+
 
 
 
 export default function JoinRoomPage(){
 
 
+
 const router = useRouter();
 
 
-const [rooms,setRooms] =
-useState<any[]>([]);
+
+const [
+rooms,
+setRooms
+]=useState<any[]>([]);
 
 
-const [loading,setLoading] =
-useState(true);
+
+const [
+loading,
+setLoading
+]=useState(true);
+
+
 
 
 
@@ -55,6 +74,7 @@ useEffect(()=>{
 
 
 const roomsRef =
+
 ref(
 database,
 "rooms"
@@ -62,7 +82,9 @@ database,
 
 
 
+
 const unsubscribe =
+
 onValue(
 
 roomsRef,
@@ -70,8 +92,8 @@ roomsRef,
 (snapshot)=>{
 
 
-const data =
-snapshot.val();
+const data = snapshot.val();
+
 
 
 
@@ -90,6 +112,7 @@ return;
 
 
 const list =
+
 Object.entries(data)
 
 .map(([id,room]:any)=>({
@@ -104,6 +127,10 @@ id,
 
 .filter((room:any)=>
 
+room.gameType==="titato"
+
+&&
+
 room.status==="waiting"
 
 &&
@@ -112,16 +139,21 @@ room.type==="public"
 
 &&
 
-room.playersCount < room.maxPlayers
+(room.playersCount || 0)
+
+<
+
+room.maxPlayers
 
 );
 
 
 
+
 setRooms(list);
 
-
 setLoading(false);
+
 
 
 }
@@ -130,7 +162,8 @@ setLoading(false);
 
 
 
-return ()=>unsubscribe();
+return()=>unsubscribe();
+
 
 
 },[]);
@@ -149,8 +182,7 @@ async function joinRoom(room:any){
 try{
 
 
-const user =
-auth.currentUser;
+const user = auth.currentUser;
 
 
 
@@ -165,6 +197,7 @@ throw new Error(
 
 
 
+
 const betAmount =
 Number(room.bet);
 
@@ -172,12 +205,13 @@ Number(room.bet);
 
 
 
-// vérifier solde
-
 const balance =
+
 await checkUserBalance(
 user.uid
 );
+
+
 
 
 
@@ -193,16 +227,11 @@ throw new Error(
 
 
 
-
-// empêcher double entrée
-
 if(room.players?.[user.uid]){
-
 
 router.push(
 `/room/${room.id}`
 );
-
 
 return;
 
@@ -213,7 +242,6 @@ return;
 
 
 
-// retirer la mise
 
 await deductBet(
 
@@ -231,7 +259,6 @@ room.id
 
 
 
-// ajouter joueur
 
 await set(
 
@@ -245,26 +272,17 @@ database,
 
 {
 
-
 uid:user.uid,
 
-
-name:
-user.displayName || "Joueur",
-
+name:user.displayName || "Joueur",
 
 symbol:"O",
 
-
 ready:true,
-
 
 betPaid:true,
 
-
-joinedAt:
-serverTimestamp()
-
+joinedAt:serverTimestamp()
 
 }
 
@@ -278,7 +296,8 @@ serverTimestamp()
 
 
 const newPlayersCount =
-(room.playersCount || 0) + 1;
+
+(room.playersCount || 0)+1;
 
 
 
@@ -286,8 +305,9 @@ const newPlayersCount =
 
 
 
+if(newPlayersCount >= room.maxPlayers){
 
-// mise à jour partie
+
 
 await update(
 
@@ -301,53 +321,49 @@ database,
 
 {
 
+playersCount:newPlayersCount,
 
-playersCount:
-newPlayersCount,
+pot:Number(room.pot || 0)+betAmount,
 
+status:"starting",
 
+countdownStart:Date.now()
 
-pot:
-Math.floor(
-(room.pot || 0) + betAmount
-),
+}
 
-
-
-
-status:
-
-newPlayersCount >= room.maxPlayers
-
-?
-
-"started"
-
-:
-
-"waiting",
-
-
-
-
-
-gameStartAt:
-
-newPlayersCount >= room.maxPlayers
-
-?
-
-Date.now()
-
-:
-
-null
+);
 
 
 
 }
 
+else{
+
+
+
+await update(
+
+ref(
+
+database,
+
+`rooms/${room.id}`
+
+),
+
+{
+
+playersCount:newPlayersCount,
+
+pot:Number(room.pot || 0)+betAmount
+
+}
+
 );
+
+
+
+}
 
 
 
@@ -363,18 +379,16 @@ router.push(
 
 
 
-
 }
+
+
 catch(error:any){
 
 
-console.error(
-error
-);
-
-
 alert(
+
 error.message || "Erreur"
+
 );
 
 
@@ -383,6 +397,7 @@ error.message || "Erreur"
 
 
 }
+
 
 
 
@@ -394,31 +409,230 @@ error.message || "Erreur"
 return(
 
 
-<main className="
+
+<main
+
+
+className="
+
 min-h-screen
-bg-black
+
+relative
+
+overflow-hidden
+
+bg-gradient-to-br
+
+from-[#020617]
+
+via-[#07152f]
+
+to-black
+
 text-white
-p-4
-">
+
+px-4
+
+py-10
+
+"
+
+>
 
 
-<div className="
-max-w-md
+
+
+
+
+
+<motion.div
+
+
+animate={{
+
+x:[0,40,0],
+
+y:[0,20,0]
+
+}}
+
+
+
+transition={{
+
+duration:6,
+
+repeat:Infinity
+
+}}
+
+
+
+className="
+
+absolute
+
+w-56
+
+h-56
+
+bg-blue-500/20
+
+rounded-full
+
+blur-3xl
+
+top-0
+
+left:-60px
+
+"
+
+/>
+
+
+
+
+
+
+
+
+<motion.div
+
+
+animate={{
+
+x:[0,-40,0],
+
+y:[0,-20,0]
+
+}}
+
+
+
+transition={{
+
+duration:7,
+
+repeat:Infinity
+
+}}
+
+
+
+className="
+
+absolute
+
+w-56
+
+h-56
+
+bg-green-500/20
+
+rounded-full
+
+blur-3xl
+
+bottom-10
+
+right-[-60px]
+
+"
+
+/>
+
+
+
+
+
+
+
+
+<div
+
+className="
+
+relative
+
+z-10
+
+max-w-sm
+
 mx-auto
-">
+
+"
+
+>
 
 
 
-<h1 className="
-text-2xl
-font-bold
+
+
+
+
+<BackButton />
+
+
+
+
+
+
+
+
+<motion.h1
+
+
+animate={{
+
+y:[0,-5,0]
+
+}}
+
+
+
+transition={{
+
+duration:3,
+
+repeat:Infinity
+
+}}
+
+
+
+className="
+
+text-xl
+
+font-black
+
 text-center
+
 mb-6
-">
 
-🎮 Rejoindre une partie
+bg-gradient-to-r
 
-</h1>
+from-blue-400
+
+to-cyan-300
+
+bg-clip-text
+
+text-transparent
+
+"
+
+>
+
+
+🚀 Rejoindre une partie
+
+
+</motion.h1>
+
+
+
 
 
 
@@ -426,12 +640,10 @@ mb-6
 
 
 {
+
 loading &&
 
-<p className="
-text-center
-text-gray-400
-">
+<p className="text-center text-gray-400">
 
 Chargement...
 
@@ -446,21 +658,39 @@ Chargement...
 
 
 
+
 {
+
 !loading && rooms.length===0 &&
 
 
-<div className="
+<div
+
+className="
+
 bg-white/10
-rounded-2xl
-p-5
+
+backdrop-blur-2xl
+
+border
+
+border-white/20
+
+rounded-3xl
+
+p-6
+
 text-center
-">
+
+"
+
+>
 
 🎮 Aucune partie disponible
 
 
 </div>
+
 
 }
 
@@ -470,38 +700,95 @@ text-center
 
 
 
-<div className="
-space-y-4
-">
-
-
-{
-
-rooms.map((room)=>(
 
 
 <div
 
-key={room.id}
-
 className="
-bg-white/10
-border
-border-white/20
-rounded-3xl
-p-5
+
+flex
+
+flex-col
+
+gap-4
+
 "
 
 >
 
 
 
-<h2 className="
-font-bold
-text-xl
-">
 
-🎲 {room.name}
+
+
+{
+
+rooms.map((room,index)=>(
+
+
+
+<motion.div
+
+
+key={room.id}
+
+
+
+initial={{
+
+opacity:0,
+
+y:30
+
+}}
+
+
+
+animate={{
+
+opacity:1,
+
+y:0
+
+}}
+
+
+
+transition={{
+
+delay:index*0.1
+
+}}
+
+
+
+className="
+
+bg-white/10
+
+backdrop-blur-2xl
+
+border
+
+border-white/20
+
+rounded-3xl
+
+p-5
+
+shadow-xl
+
+"
+
+>
+
+
+
+
+
+<h2 className="font-black text-lg">
+
+🎲 {room.name || "Ti Ta To"}
 
 </h2>
 
@@ -509,10 +796,9 @@ text-xl
 
 
 
-<p className="mt-2">
+<p className="text-sm text-gray-300 mt-3">
 
-💰 Mise :
-{room.bet} HTG
+💰 Mise : {room.bet} HTG
 
 </p>
 
@@ -520,13 +806,15 @@ text-xl
 
 
 
-<p>
+<p className="text-sm text-gray-300 mt-2">
 
 👥 Joueurs :
 
-{" "}
+{room.playersCount || 0}
 
-{room.playersCount}/{room.maxPlayers}
+/
+
+{room.maxPlayers}
 
 </p>
 
@@ -536,38 +824,77 @@ text-xl
 
 
 
-<button
+
+<motion.button
+
+
+whileHover={{
+
+scale:1.03
+
+}}
+
+
+
+whileTap={{
+
+scale:.95
+
+}}
+
+
 
 onClick={()=>joinRoom(room)}
 
+
+
 className="
-mt-4
+
+mt-5
+
 w-full
-bg-green-600
+
 py-3
+
 rounded-xl
+
 font-bold
+
+bg-gradient-to-b
+
+from-green-400
+
+to-green-700
+
+shadow-[0_5px_0_#166534]
+
 "
 
 >
 
+
 🚀 Rejoindre
 
-</button>
+
+</motion.button>
 
 
 
 
 
-</div>
+
+</motion.div>
 
 
 ))
 
+
 }
 
 
+
 </div>
+
 
 
 
@@ -580,6 +907,7 @@ font-bold
 
 
 );
+
 
 
 }

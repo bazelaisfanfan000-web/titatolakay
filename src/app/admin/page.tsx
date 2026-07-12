@@ -1,10 +1,6 @@
 "use client";
 
-
-import {
-useState
-} from "react";
-
+import { useState } from "react";
 
 import Users from "@/components/admin/Users";
 import Games from "@/components/admin/Games";
@@ -14,326 +10,214 @@ import Banned from "@/components/admin/Banned";
 import Settings from "@/components/admin/Settings";
 
 
+export default function AdminDashboard() {
 
 
+  const [page, setPage] = useState("economy");
 
-export default function AdminDashboard(){
 
+  const menu = [
+    {
+      id: "economy",
+      name: "💰 Économie plateforme"
+    },
+    {
+      id: "users",
+      name: "👥 Gestion utilisateurs"
+    },
+    {
+      id: "games",
+      name: "🎮 Gestion des parties"
+    },
+    {
+      id: "rewards",
+      name: "🎁 Récompenses"
+    },
+    {
+      id: "banned",
+      name: "🚫 Utilisateurs bannis"
+    },
+    {
+      id: "settings",
+      name: "⚙️ Paramètres admin"
+    }
+  ];
 
-const [page,setPage]=useState("economy");
 
 
+  function renderPage() {
 
-const menu=[
+    switch(page) {
 
-{
-id:"economy",
-name:"💰 Économie plateforme"
-},
+      case "users":
+        return <Users />;
 
-{
-id:"users",
-name:"👥 Gestion utilisateurs"
-},
+      case "games":
+        return <Games />;
 
-{
-id:"games",
-name:"🎮 Gestion des parties"
-},
+      case "rewards":
+        return <Rewards />;
 
-{
-id:"rewards",
-name:"🎁 Récompenses"
-},
+      case "banned":
+        return <Banned />;
 
-{
-id:"banned",
-name:"🚫 Utilisateurs bannis"
-},
+      case "settings":
+        return <Settings />;
 
-{
-id:"settings",
-name:"⚙️ Paramètres admin"
-}
+      default:
+        return <Economy />;
 
-];
+    }
 
+  }
 
 
 
+  return (
 
-function renderPage(){
+    <main className="min-h-screen bg-black text-white p-5">
 
-switch(page){
 
-case "users":
-return <Users/>;
+      <div className="flex gap-5">
 
 
-case "games":
-return <Games/>;
 
+        <aside className="
+          hidden
+          md:block
+          w-72
+          bg-white/5
+          border
+          border-white/10
+          rounded-3xl
+          p-5
+        ">
 
-case "rewards":
-return <Rewards/>;
 
+          <h1 className="
+            text-2xl
+            font-black
+            text-blue-500
+            mb-8
+          ">
+            👑 DOMINOS HAÏTI
+          </h1>
 
-case "banned":
-return <Banned/>;
 
 
-case "settings":
-return <Settings/>;
+          <div className="space-y-3">
 
 
-default:
-return <Economy/>;
+            {menu.map((item)=>(
 
-}
+              <button
 
-}
+                key={item.id}
 
+                onClick={() => setPage(item.id)}
 
+                className={
+                  page === item.id
+                  ?
+                  "w-full text-left px-4 py-3 rounded-xl font-bold bg-blue-600"
+                  :
+                  "w-full text-left px-4 py-3 rounded-xl font-bold bg-white/10 hover:bg-white/20"
+                }
 
+              >
 
+                {item.name}
 
-return(
+              </button>
 
-<main className="
-min-h-screen
-w-full
-bg-black
-text-white
-p-0
-">
 
+            ))}
 
 
-<div className="
-w-full
-min-h-screen
-flex
-gap-5
-p-5
-">
+          </div>
 
 
+        </aside>
 
 
 
 
 
-{/* MENU GAUCHE */}
+        <div className="
+          md:hidden
+          fixed
+          top-3
+          left-3
+          right-3
+          z-50
+        ">
 
-<aside className="
-w-72
-shrink-0
-hidden
-md:block
-bg-white/[0.04]
-border
-border-white/10
-backdrop-blur-xl
-rounded-3xl
-p-5
-h-fit
-sticky
-top-5
-">
 
+          <select
 
+            value={page}
 
-<h1 className="
-text-xl
-font-black
-mb-8
-text-blue-500
-">
+            onChange={(e)=>setPage(e.target.value)}
 
-👑 Domino Lakay
+            className="
+              w-full
+              bg-black
+              border
+              border-white/20
+              rounded-xl
+              p-3
+              text-white
+            "
 
-</h1>
+          >
 
+            {
+              menu.map((item)=>(
 
+                <option
+                  key={item.id}
+                  value={item.id}
+                >
+                  {item.name}
+                </option>
 
-<div className="
-space-y-3
-">
+              ))
+            }
 
 
-{
-menu.map(item=>(
+          </select>
 
 
-<button
+        </div>
 
-key={item.id}
 
-onClick={()=>setPage(item.id)}
 
-className={`
 
-w-full
-text-left
-px-4
-py-3
-rounded-xl
-transition
-font-bold
-text-sm
 
-${
-page===item.id
+        <section className="
+          flex-1
+          min-h-screen
+          bg-white/5
+          border
+          border-white/10
+          rounded-3xl
+          p-6
+        ">
 
-?
 
-"bg-blue-600 shadow-lg shadow-blue-600/30"
+          {renderPage()}
 
-:
 
-"bg-white/5 hover:bg-white/10"
+        </section>
 
-}
 
-`}
 
->
+      </div>
 
-{item.name}
 
-</button>
+    </main>
 
-
-))
-
-}
-
-
-
-</div>
-
-
-</aside>
-
-
-
-
-
-
-
-
-
-{/* MENU MOBILE */}
-
-<div className="
-md:hidden
-fixed
-top-3
-left-3
-right-3
-z-50
-bg-black/80
-backdrop-blur-xl
-border
-border-white/10
-rounded-2xl
-p-3
-">
-
-
-<select
-
-value={page}
-
-onChange={
-e=>setPage(e.target.value)
-}
-
-className="
-w-full
-bg-black
-border
-border-white/20
-rounded-xl
-p-3
-"
-
->
-
-{
-
-menu.map(item=>(
-
-<option
-key={item.id}
-value={item.id}
->
-
-{item.name}
-
-</option>
-
-))
-
-}
-
-
-</select>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-{/* CONTENU PRINCIPAL */}
-
-<section className="
-
-flex-1
-
-w-full
-
-min-h-screen
-
-bg-white/[0.03]
-
-border
-
-border-white/10
-
-backdrop-blur-xl
-
-rounded-3xl
-
-p-6
-
-overflow-hidden
-
-">
-
-
-{renderPage()}
-
-
-</section>
-
-
-
-
-
-
-</div>
-
-
-</main>
-
-);
+  );
 
 
 }

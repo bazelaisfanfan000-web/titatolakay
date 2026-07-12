@@ -2,32 +2,30 @@
 
 
 import {
- useEffect,
- useState
+  useEffect,
+  useState
 } from "react";
 
 
 import {
- database
-} from "@/lib/firebase";
-
-
-import {
- ref,
- onValue,
- update,
- remove
+  ref,
+  onValue,
+  update
 } from "firebase/database";
 
 
+import {
+  database
+} from "@/lib/firebase";
 
 
 
 export default function Banned(){
 
 
-const [banned,setBanned]=useState<any[]>([]);
 
+const [users,setUsers] =
+useState<any[]>([]);
 
 
 
@@ -40,53 +38,8 @@ const usersRef =
 ref(database,"users");
 
 
-const bansRef =
-ref(database,"bans");
 
-
-
-let users:any={};
-
-let bans:any={};
-
-
-
-
-
-function load(){
-
-
-const list = Object.entries(bans)
-
-.map(([uid,value]:any)=>{
-
-
-return {
-
-uid,
-
-...(users[uid] || {}),
-
-...value
-
-};
-
-
-});
-
-
-setBanned(list);
-
-
-
-}
-
-
-
-
-
-const unsubUsers =
-
+const unsubscribe =
 onValue(
 
 usersRef,
@@ -94,54 +47,42 @@ usersRef,
 (snapshot)=>{
 
 
-users =
+const data =
 snapshot.val() || {};
 
-load();
+
+
+const bannedUsers =
+
+Object.entries(data)
+
+.map(([uid,user]:any)=>({
+
+uid,
+
+...user
+
+}))
+
+.filter(
+(user:any)=>
+user.banned === true
+);
+
+
+
+setUsers(bannedUsers);
+
 
 
 }
+
 
 );
 
 
 
-
-
-
-
-const unsubBans =
-
-onValue(
-
-bansRef,
-
-(snapshot)=>{
-
-
-bans =
-snapshot.val() || {};
-
-load();
-
-
-}
-
-);
-
-
-
-
-
-
-
-return()=>{
-
-unsubUsers();
-
-unsubBans();
-
-};
+return()=>unsubscribe();
 
 
 
@@ -154,26 +95,7 @@ unsubBans();
 
 
 
-
 async function unban(uid:string){
-
-
-
-const ok =
-confirm(
-
-"Êtes-vous sûr de débloquer ce joueur ?"
-
-);
-
-
-
-if(!ok)
-
-return;
-
-
-
 
 
 await update(
@@ -185,109 +107,25 @@ database,
 
 {
 
-banned:false
+banned:false,
+
+banReason:null,
+
+bannedAt:null
 
 }
-
-);
-
-
-
-
-
-await remove(
-
-ref(
-database,
-`bans/${uid}`
-)
-
-);
-
-
-
-
-
-alert(
-"✅ Joueur débloqué"
-);
-
-
-
-}
-
-
-
-
-
-
-
-
-
-async function deleteUser(uid:string){
-
-
-
-const ok =
-confirm(
-
-"Supprimer définitivement ce compte ?"
-
-);
-
-
-
-if(!ok)
-
-return;
-
-
-
-
-await remove(
-
-ref(
-database,
-`users/${uid}`
-)
-
-);
-
-
-
-await remove(
-
-ref(
-database,
-`wallets/${uid}`
-)
-
-);
-
-
-
-await remove(
-
-ref(
-database,
-`bans/${uid}`
-)
 
 );
 
 
 
 alert(
-"🗑 Compte supprimé"
+"✅ Joueur débanni"
 );
 
 
 
 }
-
-
-
-
 
 
 
@@ -302,8 +140,10 @@ return(
 
 
 
+
+
 <h1 className="
-text-2xl
+text-3xl
 font-black
 ">
 
@@ -315,7 +155,6 @@ font-black
 
 <p className="
 text-gray-400
-text-sm
 mt-2
 ">
 
@@ -331,26 +170,40 @@ Gestion des comptes bloqués
 
 
 <div className="
-mt-6
-space-y-4
+mt-8
+space-y-5
 ">
+
+
+
+
 
 
 {
-
-banned.length === 0 &&
+users.length === 0 &&
 
 
 <div className="
-bg-white/5
+
+bg-green-500/10
+
 border
-border-white/10
-rounded-xl
-p-5
-text-gray-400
+
+border-green-500/20
+
+rounded-3xl
+
+p-6
+
+text-green-400
+
+font-bold
+
 ">
 
-Aucun utilisateur banni
+
+✅ Aucun utilisateur banni
+
 
 </div>
 
@@ -364,10 +217,10 @@ Aucun utilisateur banni
 
 
 
-
 {
 
-banned.map(user=>(
+users.map((user)=>(
+
 
 
 <div
@@ -375,86 +228,63 @@ banned.map(user=>(
 key={user.uid}
 
 className="
-bg-white/5
+
+bg-[#111827]
+
 border
+
 border-red-500/20
-rounded-2xl
-p-5
+
+rounded-3xl
+
+p-6
+
+shadow-xl
+
 "
+
 
 >
 
 
-<h2 className="
-font-bold
-text-lg
+
+
+
+<div className="
+flex
+justify-between
+items-center
 ">
 
-👤 {user.username || "Joueur"}
+
+<h2 className="
+text-xl
+font-black
+">
+
+🚫 {user.username || "Joueur"}
 
 </h2>
 
 
 
-<p>
-
-📧 {user.email || "Pas email"}
-
-</p>
-
-
-
-
-<p className="
-text-xs
-text-gray-400
-break-all
-">
-
-🆔 {user.uid}
-
-</p>
-
-
-
-
-
-<p className="
-mt-3
+<div className="
+bg-red-500/20
 text-red-400
+px-3
+py-1
+rounded-full
+text-sm
+font-bold
 ">
 
-🚫 Raison :
+BANNI
 
-{user.reason || "Non précisée"}
-
-</p>
+</div>
 
 
 
-
-
-<p>
-
-⏳ Expire :
-
-{
-
-user.until
-
-?
-
-new Date(
-user.until
-).toLocaleString()
-
-:
-
-"Permanent"
-
-}
-
-</p>
+</div>
 
 
 
@@ -463,27 +293,167 @@ user.until
 
 
 <div className="
-flex
-gap-3
 mt-5
+space-y-3
+text-gray-300
+text-sm
 ">
 
 
+
+<div className="
+bg-black/30
+rounded-xl
+p-3
+">
+
+🆔 UID :
+
+<span className="text-white">
+
+{user.uid}
+
+</span>
+
+</div>
+
+
+
+
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-3
+">
+
+📧 Email :
+
+<span className="text-white">
+
+{user.email || "Non disponible"}
+
+</span>
+
+</div>
+
+
+
+
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-3
+">
+
+📝 Raison :
+
+<span className="text-white">
+
+{user.banReason || "Aucune"}
+
+</span>
+
+</div>
+
+
+
+
+
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-3
+">
+
+📅 Date :
+
+<span className="text-white">
+
+{
+
+user.bannedAt
+
+?
+
+new Date(
+user.bannedAt
+)
+.toLocaleString()
+
+:
+
+"Non disponible"
+
+}
+
+
+</span>
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
 <button
+
 
 onClick={()=>unban(user.uid)}
 
+
 className="
-bg-green-600
-px-4
-py-2
+
+mt-6
+
+w-full
+
+bg-blue-600
+
+text-white
+
+py-4
+
 rounded-xl
-font-bold
+
+font-black
+
+border-b-4
+
+border-blue-900
+
+shadow-[0_6px_0_#172554]
+
+hover:bg-blue-500
+
+active:translate-y-1
+
+active:border-b-0
+
+transition-all
+
 "
+
 
 >
 
-✅ Débannir
+
+🔓 Débannir le joueur
+
 
 </button>
 
@@ -492,34 +462,10 @@ font-bold
 
 
 
-<button
-
-onClick={()=>deleteUser(user.uid)}
-
-className="
-bg-red-600
-px-4
-py-2
-rounded-xl
-font-bold
-"
-
->
-
-🗑 Supprimer
-
-</button>
-
 
 
 </div>
 
-
-
-
-
-
-</div>
 
 
 ))
@@ -529,8 +475,9 @@ font-bold
 
 
 
-</div>
 
+
+</div>
 
 
 
@@ -541,6 +488,7 @@ font-bold
 
 
 );
+
 
 
 }

@@ -2,24 +2,22 @@
 
 
 import {
-useEffect,
-useState
+  useEffect,
+  useState
 } from "react";
 
 
 import {
-database
-} from "@/lib/firebase";
+  ref,
+  onValue,
+  update
+} from "firebase/database";
 
 
 import {
-ref,
-onValue,
-get,
-set,
-push,
-update
-} from "firebase/database";
+  database
+} from "@/lib/firebase";
+
 
 
 
@@ -27,25 +25,20 @@ update
 export default function Users(){
 
 
-const [users,setUsers]=useState<any[]>([]);
-
-const [search,setSearch]=useState("");
-
+const [users,setUsers] =
+useState<any[]>([]);
 
 
-const [modal,setModal]=useState(false);
-
-const [mode,setMode]=useState<
-"give"|"edit"
->("give");
+const [search,setSearch] =
+useState("");
 
 
-const [selected,setSelected]=useState<any>(null);
+const [selectedUser,setSelectedUser] =
+useState<any>(null);
 
 
-const [amount,setAmount]=useState("");
-
-
+const [newBalance,setNewBalance] =
+useState("");
 
 
 
@@ -59,7 +52,8 @@ ref(database,"users");
 
 
 
-return onValue(
+const unsubscribe =
+onValue(
 
 usersRef,
 
@@ -71,39 +65,17 @@ snapshot.val() || {};
 
 
 
-const list:any[]=[];
+const list =
 
+Object.entries(data)
 
-
-Object.entries(data).forEach(
-
-([uid,user]:any)=>{
-
-
-list.push({
+.map(([uid,user]:any)=>({
 
 uid,
 
-username:user.username || "Joueur",
+...user
 
-email:user.email || "Pas email",
-
-balance:Number(user.balance || 0),
-
-wins:user.wins || 0,
-
-games:user.games || 0,
-
-role:user.role || "joueur",
-
-banned:user.banned || false
-
-});
-
-
-}
-
-);
+}));
 
 
 
@@ -113,8 +85,11 @@ setUsers(list);
 
 }
 
-
 );
+
+
+
+return()=>unsubscribe();
 
 
 
@@ -127,129 +102,49 @@ setUsers(list);
 
 
 
-
-
-async function saveMoney(){
-
-
-
-const value =
-Number(amount);
+async function updateBalance(){
 
 
 
-if(!value || value <0){
+if(!selectedUser)
+return;
 
-alert(
-"Montant invalide"
-);
+
+
+const amount =
+Number(newBalance);
+
+
+
+if(
+isNaN(amount)
+||
+amount < 0
+){
+
+
+alert("❌ Solde invalide");
 
 return;
 
-}
-
-
-
-const uid =
-selected.uid;
-
-
-
-const balanceRef =
-ref(
-database,
-`users/${uid}/balance`
-);
-
-
-
-
-
-if(mode==="give"){
-
-
-
-const snap =
-await get(balanceRef);
-
-
-
-const old =
-Number(
-snap.val() || 0
-);
-
-
-
-await set(
-
-balanceRef,
-
-old + value
-
-);
-
-
-
-}else{
-
-
-
-await set(
-
-balanceRef,
-
-value
-
-);
-
-
 
 }
 
 
 
 
-
-
-
-const notif =
-push(
+await update(
 
 ref(
 database,
-`notifications/${uid}`
-)
-
-);
-
-
-
-
-
-
-await set(
-
-notif,
+`users/${selectedUser.uid}`
+),
 
 {
 
-message:
+balance:amount,
 
-mode==="give"
-
-?
-
-`🎁 Ti Ta To vous a donné ${value} HTG`
-
-:
-
-`💰 Votre solde a été modifié à ${value} HTG`,
-
-read:false,
-
-createdAt:Date.now()
-
+balanceUpdatedAt:Date.now()
 
 }
 
@@ -257,13 +152,12 @@ createdAt:Date.now()
 
 
 
+alert("✅ Solde modifié");
 
 
+setSelectedUser(null);
 
-
-setModal(false);
-
-setAmount("");
+setNewBalance("");
 
 
 
@@ -276,21 +170,7 @@ setAmount("");
 
 
 
-
-async function banUser(user:any){
-
-
-
-const ok =
-confirm(
-"Êtes-vous sûr de bannir ce joueur ?"
-);
-
-
-
-if(!ok)
-return;
-
+async function banUser(uid:string){
 
 
 
@@ -301,24 +181,26 @@ prompt(
 
 
 
+if(!reason)
+return;
+
+
 
 
 await update(
 
 ref(
 database,
-`users/${user.uid}`
+`users/${uid}`
 ),
 
 {
 
 banned:true,
 
-banReason:
-reason || "Aucune raison",
+banReason:reason,
 
-banDate:
-Date.now()
+bannedAt:Date.now()
 
 }
 
@@ -326,6 +208,7 @@ Date.now()
 
 
 
+alert("🚫 Joueur banni");
 
 
 
@@ -335,38 +218,31 @@ Date.now()
 
 
 
-const filtered =
-users.filter(user=>{
-
-
-const text =
-search.toLowerCase();
 
 
 
-return(
+const filteredUsers =
 
-user.username
-.toLowerCase()
-.includes(text)
+users.filter((user)=>{
 
-||
 
-user.email
-.toLowerCase()
-.includes(text)
+const value =
 
-||
+`${user.username || ""}
+${user.email || ""}
+${user.uid}`
 
-user.uid
-.toLowerCase()
-.includes(text)
+.toLowerCase();
 
+
+
+return value.includes(
+search.toLowerCase()
 );
+
 
 
 });
-
 
 
 
@@ -380,13 +256,11 @@ return(
 
 <div className="
 text-white
-w-full
 ">
 
 
-
 <h1 className="
-text-2xl
+text-3xl
 font-black
 ">
 
@@ -396,49 +270,89 @@ font-black
 
 
 
+<p className="
+text-gray-400
+mt-2
+">
 
-<input
+Gestion des comptes joueurs DOMINOS HAÏTI
 
-className="
-mt-5
-w-full
-bg-white/5
-border
-border-white/10
-rounded-xl
-p-4
-"
-
-placeholder="
-Rechercher joueur...
-"
-
-value={search}
-
-onChange={
-e=>setSearch(e.target.value)
-}
-
-/>
-
-
-
+</p>
 
 
 
 
 
 <div className="
-mt-5
-space-y-3
+mt-8
 ">
+
+
+<input
+
+
+value={search}
+
+
+onChange={(e)=>
+setSearch(e.target.value)
+}
+
+
+placeholder="🔍 Rechercher un joueur..."
+
+
+className="
+w-full
+bg-black
+border
+border-white/20
+rounded-xl
+p-4
+outline-none
+"
+
+
+/>
+
+
+</div>
+
+
+
+
+
+<div className="
+mt-8
+space-y-5
+">
+
+
+{
+filteredUsers.length===0 &&
+
+<div className="
+bg-white/5
+border
+border-white/10
+rounded-3xl
+p-6
+text-gray-400
+">
+
+Aucun utilisateur trouvé
+
+</div>
+
+}
+
+
+
 
 
 
 {
-
-filtered.map(user=>(
-
+filteredUsers.map((user)=>(
 
 
 <div
@@ -446,69 +360,108 @@ filtered.map(user=>(
 key={user.uid}
 
 className="
-bg-white/[0.05]
+bg-[#111827]
 border
 border-white/10
-rounded-2xl
-p-5
+rounded-3xl
+p-6
+shadow-xl
 "
 
->
+><div className="
+flex
+justify-between
+items-center
+">
+
+
+<h2 className="
+text-xl
+font-black
+">
+
+👤 {user.username || "Joueur"}
+
+</h2>
+
+
+
+
+{
+user.banned ?
+
+<span className="
+bg-red-500/20
+text-red-400
+px-3
+py-1
+rounded-full
+text-sm
+font-bold
+">
+
+BANNI
+
+</span>
+
+
+:
+
+
+<span className="
+bg-green-500/20
+text-green-400
+px-3
+py-1
+rounded-full
+text-sm
+font-bold
+">
+
+ACTIF
+
+</span>
+
+}
+
+
+</div>
+
+
+
+
+
+
 
 
 <div className="
-flex
-justify-between
+mt-5
+grid
+md:grid-cols-2
+gap-3
 ">
 
 
 
-<div>
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-4
+">
+
+📧 Email
 
 
 <p className="
-font-bold
-text-lg
+text-white
+mt-1
 ">
 
-👤 {user.username}
-
-</p>
-
-
-
-<p className="
-text-gray-400
-text-sm
-">
-
-📧 {user.email}
-
-</p>
-
-
-
-
-<p className="
-text-green-400
-font-black
-text-xl
-">
-
-💰 {user.balance} HTG
-
-</p>
-
-
-
-<p className="
-text-xs
-text-gray-400
-">
-
-🏆 {user.wins} victoires
-
-🎮 {user.games} parties
+{
+user.email || "Non disponible"
+}
 
 </p>
 
@@ -520,63 +473,51 @@ text-gray-400
 
 
 
+
+
+
 <div className="
-flex
-flex-col
-gap-2
+bg-black/30
+rounded-xl
+p-4
 ">
 
 
-
-<button
-
-onClick={()=>{
-
-setSelected(user);
-
-setMode("give");
-
-setModal(true);
-
-}}
-
-className="
-bg-green-600
-px-4
-py-2
-rounded-xl
-text-sm
-"
-
->
-
-🎁 Donner
-
-</button>
+<div className="
+flex
+justify-between
+items-center
+">
 
 
-
+<span>
+💰 Solde
+</span>
 
 
 
 <button
 
+
 onClick={()=>{
 
-setSelected(user);
+setSelectedUser(user);
 
-setMode("edit");
-
-setModal(true);
+setNewBalance(
+String(user.balance || 0)
+);
 
 }}
+
 
 className="
 bg-blue-600
-px-4
-py-2
-rounded-xl
-text-sm
+px-3
+py-1
+rounded-lg
+text-xs
+font-bold
+hover:bg-blue-500
 "
 
 >
@@ -587,52 +528,113 @@ text-sm
 
 
 
+</div>
 
 
 
 
-<button
+<p className="
+text-green-400
+font-bold
+mt-3
+">
 
-onClick={()=>banUser(user)}
 
-className="
-bg-red-600
-px-4
-py-2
+{
+user.balance || 0
+}
+
+ HTG
+
+
+</p>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<div className="
+bg-black/30
 rounded-xl
-text-sm
-"
+p-4
+">
 
->
-
-🚫 Bannir
-
-</button>
+🆔 UID
 
 
+<p className="
+text-gray-300
+text-xs
+break-all
+mt-1
+">
 
+{user.uid}
 
-</div>
-
-
-
-</div>
-
+</p>
 
 
 </div>
 
 
 
-))
 
+
+
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-4
+">
+
+📅 Création
+
+
+<p className="
+text-white
+mt-1
+">
+
+
+{
+
+user.createdAt
+
+?
+
+new Date(
+user.createdAt
+)
+.toLocaleDateString()
+
+:
+
+"Non disponible"
 
 }
 
 
 
+</p>
+
+
 </div>
 
+
+
+
+
+
+</div>
 
 
 
@@ -643,7 +645,62 @@ text-sm
 
 {
 
-modal &&
+!user.banned &&
+
+
+<button
+
+
+onClick={()=>
+banUser(user.uid)
+}
+
+
+className="
+mt-6
+w-full
+bg-red-600
+text-white
+py-4
+rounded-xl
+font-black
+border-b-4
+border-red-900
+shadow-[0_6px_0_#7f1d1d]
+hover:bg-red-500
+active:translate-y-1
+active:border-b-0
+transition-all
+"
+
+>
+
+
+🚫 Bannir ce joueur
+
+
+</button>
+
+
+
+}
+
+
+
+</div>
+
+
+))
+
+
+}
+
+
+
+</div>{
+
+
+selectedUser && (
 
 
 <div className="
@@ -658,33 +715,24 @@ z-50
 
 
 <div className="
-bg-[#080808]
+bg-[#111827]
 border
 border-white/10
 rounded-3xl
-p-6
-w-96
+p-8
+w-[90%]
+max-w-md
+shadow-2xl
 ">
+
 
 
 <h2 className="
-text-xl
+text-2xl
 font-black
 ">
 
-{
-
-mode==="give"
-
-?
-
-"🎁 Donner argent"
-
-:
-
-"✏️ Modifier solde"
-
-}
+💰 Modifier le solde
 
 </h2>
 
@@ -692,40 +740,57 @@ mode==="give"
 
 <p className="
 text-gray-400
-text-sm
 mt-2
 ">
 
-{selected?.username}
+Joueur :
+
+<span className="
+text-white
+font-bold
+">
+
+ {selectedUser.username || "Joueur"}
+
+</span>
 
 </p>
 
 
 
 
+
 <input
+
 
 type="number"
 
-value={amount}
 
-onChange={
-e=>setAmount(e.target.value)
+value={newBalance}
+
+
+onChange={(e)=>
+setNewBalance(e.target.value)
 }
 
-placeholder="Montant HTG"
+
+placeholder="Nouveau solde HTG"
+
 
 className="
-mt-5
+mt-6
 w-full
-bg-white/10
+bg-black
 border
 border-white/20
 rounded-xl
 p-4
+outline-none
 "
 
+
 />
+
 
 
 
@@ -735,53 +800,68 @@ p-4
 <div className="
 flex
 gap-3
-mt-5
+mt-6
 ">
 
 
 
+
+
 <button
 
-onClick={()=>setModal(false)}
+
+onClick={updateBalance}
+
 
 className="
-bg-gray-700
 flex-1
-py-3
-rounded-xl
-"
-
->
-
-Annuler
-
-</button>
-
-
-
-
-
-<button
-
-onClick={saveMoney}
-
-className="
 bg-green-600
-flex-1
 py-3
 rounded-xl
 font-bold
+hover:bg-green-500
 "
 
 >
 
-Confirmer
+✅ Valider
 
 </button>
 
 
 
-</div>
+
+
+
+
+<button
+
+
+onClick={()=>{
+
+
+setSelectedUser(null);
+
+setNewBalance("");
+
+}}
+
+
+className="
+flex-1
+bg-red-600
+py-3
+rounded-xl
+font-bold
+hover:bg-red-500
+"
+
+
+>
+
+❌ Annuler
+
+</button>
 
 
 
@@ -790,7 +870,16 @@ Confirmer
 </div>
 
 
+
+
+
 </div>
+
+
+</div>
+
+
+)
 
 
 }

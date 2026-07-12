@@ -1,14 +1,36 @@
 "use client";
 
+import {
+  useState
+} from "react";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useRouter
+} from "next/navigation";
 
-import { auth } from "../../lib/firebase";
+
+import {
+  auth
+} from "../../lib/firebase";
+
 
 import {
   signInWithEmailAndPassword
 } from "firebase/auth";
+
+
+import {
+  motion
+} from "framer-motion";
+
+
+import {
+  Mail,
+  Lock
+} from "lucide-react";
+
+
+
 
 
 
@@ -18,13 +40,27 @@ export default function Login(){
 const router = useRouter();
 
 
-const [email,setEmail] = useState("");
 
-const [password,setPassword] = useState("");
 
-const [error,setError] = useState("");
+const [email,setEmail] =
+useState("");
 
-const [loading,setLoading] = useState(false);
+
+const [password,setPassword] =
+useState("");
+
+
+
+const [error,setError] =
+useState("");
+
+
+const [loading,setLoading] =
+useState(false);
+
+
+
+
 
 
 
@@ -33,13 +69,22 @@ const [loading,setLoading] = useState(false);
 async function login(){
 
 
+
 if(!email || !password){
 
-setError("Remplis tous les champs ❌");
+
+setError(
+"Tous les champs sont obligatoires"
+);
+
 
 return;
 
+
 }
+
+
+
 
 
 
@@ -49,6 +94,9 @@ try{
 setLoading(true);
 
 setError("");
+
+
+
 
 
 
@@ -64,6 +112,9 @@ password
 
 
 
+
+
+
 router.push("/dashboard");
 
 
@@ -74,53 +125,52 @@ catch(err:any){
 
 
 
-console.log(err);
+if(err.code==="auth/user-not-found"){
 
-
-
-if(err.code === "auth/invalid-credential"){
 
 setError(
-"Email ou mot de passe incorrect ❌"
+"Aucun compte trouvé"
 );
+
 
 }
 
-else if(err.code === "auth/user-not-found"){
+
+else if(err.code==="auth/wrong-password"){
+
 
 setError(
-"Ce compte n'existe pas ❌"
+"Mot de passe incorrect"
 );
+
 
 }
 
-else if(err.code === "auth/wrong-password"){
+
+else if(err.code==="auth/invalid-email"){
+
 
 setError(
-"Mot de passe incorrect ❌"
+"Email invalide"
 );
+
 
 }
 
-else if(err.code === "auth/invalid-email"){
-
-setError(
-"Email invalide ❌"
-);
-
-}
 
 else{
 
+
 setError(
-"Une erreur est survenue ❌"
+"Erreur de connexion"
 );
 
-}
-
-
 
 }
+
+
+}
+
 
 finally{
 
@@ -131,7 +181,9 @@ setLoading(false);
 }
 
 
+
 }
+
 
 
 
@@ -142,54 +194,182 @@ setLoading(false);
 
 return(
 
-<main className="
+
+<main
+
+className="
 min-h-screen
-bg-[#050505]
+relative
+overflow-hidden
+bg-gradient-to-br
+from-[#020617]
+via-[#07152f]
+to-black
 text-white
 flex
 items-center
 justify-center
-px-5
-">
+px-3
+"
+
+>
 
 
-<div className="
-w-full
-max-w-sm
-bg-white/5
+
+
+
+
+<div
+
+className="
+absolute
+w-40
+h-40
+bg-blue-500/20
+rounded-full
+blur-3xl
+top-10
+left-5
+"
+
+/>
+
+
+
+
+
+
+
+<div
+
+className="
+absolute
+w-40
+h-40
+bg-purple-500/20
+rounded-full
+blur-3xl
+bottom-10
+right-5
+"
+
+/>
+
+
+
+
+
+
+
+<section
+
+className="
+relative
+z-10
+w-[240px]
+text-center
+"
+
+>
+
+
+
+<div
+
+className="
+bg-white/10
+backdrop-blur-2xl
 border
-border-white/10
-backdrop-blur-xl
+border-white/20
 rounded-3xl
-p-6
-">
+p-4
+shadow-2xl
+"
+
+>
 
 
 
-<h1 className="
-text-3xl
+
+
+
+<motion.h1
+
+
+animate={{
+
+y:[0,-6,0],
+
+rotate:[0,2,-2,0]
+
+}}
+
+
+transition={{
+
+duration:3,
+
+repeat:Infinity
+
+}}
+
+
+
+className="
+text-xl
 font-black
-text-center
-">
+bg-gradient-to-r
+from-blue-400
+to-cyan-300
+bg-clip-text
+text-transparent
+"
 
-🎲 DOMINOS HAÏTI
+>
 
-</h1>
+⭕ TI TA TO
+
+</motion.h1>
 
 
 
-<p className="
-text-center
-text-gray-400
+
+
+
+<p
+
+className="
+text-[11px]
+text-gray-300
 mt-2
-">
+"
 
-Connexion
+>
 
-</p>
+Connexion à ton compte joueur
+
+</p><div
+
+className="
+relative
+mt-5
+"
+
+>
 
 
+<Mail
 
+size={14}
+
+className="
+absolute
+left-3
+top-3
+text-blue-400
+"
+
+/>
 
 
 
@@ -197,14 +377,15 @@ Connexion
 
 className="
 w-full
-mt-6
-p-3
+h-9
+pl-9
 rounded-xl
-bg-black/40
+bg-black/30
 border
-border-white/10
-text-sm
+border-white/20
+text-[11px]
 outline-none
+placeholder:text-gray-500
 "
 
 placeholder="Email"
@@ -218,7 +399,38 @@ onChange={(e)=>setEmail(e.target.value)}
 />
 
 
+</div>
 
+
+
+
+
+
+
+
+
+<div
+
+className="
+relative
+mt-3
+"
+
+>
+
+
+<Lock
+
+size={14}
+
+className="
+absolute
+left-3
+top-3
+text-blue-400
+"
+
+/>
 
 
 
@@ -226,14 +438,15 @@ onChange={(e)=>setEmail(e.target.value)}
 
 className="
 w-full
-mt-3
-p-3
+h-9
+pl-9
 rounded-xl
-bg-black/40
+bg-black/30
 border
-border-white/10
-text-sm
+border-white/20
+text-[11px]
 outline-none
+placeholder:text-gray-500
 "
 
 placeholder="Mot de passe"
@@ -247,6 +460,11 @@ onChange={(e)=>setPassword(e.target.value)}
 />
 
 
+</div>
+
+
+
+
 
 
 
@@ -255,17 +473,21 @@ onChange={(e)=>setPassword(e.target.value)}
 {
 error &&
 
-<p className="
-text-red-500
-text-xs
+
+<p
+
+className="
+text-red-400
+text-[10px]
 mt-3
-text-center
-font-bold
-">
+"
+
+>
 
 {error}
 
 </p>
+
 
 }
 
@@ -275,20 +497,32 @@ font-bold
 
 
 
+
+
 <button
+
 
 onClick={login}
 
 disabled={loading}
 
+
+
 className="
 w-full
-mt-5
-py-3
+h-9
+mt-4
 rounded-xl
-bg-blue-600
+text-[11px]
 font-bold
-text-sm
+bg-gradient-to-b
+from-blue-400
+to-blue-700
+shadow-[0_5px_0_#123a8a]
+hover:scale-105
+active:scale-95
+transition
+disabled:opacity-50
 "
 
 >
@@ -304,7 +538,7 @@ loading
 
 :
 
-"Se connecter"
+"🔐 Se connecter"
 
 }
 
@@ -316,11 +550,116 @@ loading
 
 
 
+
+
+
+<p
+
+className="
+text-[10px]
+text-cyan-300
+mt-4
+"
+
+>
+
+🎮 Joue avec tes amis en temps réel
+
+</p>
+
+
+
+
+
+
+
+
+
+<p
+
+className="
+text-[10px]
+text-gray-400
+mt-5
+"
+
+>
+
+Pas encore de compte ?
+
+</p>
+
+
+
+
+
+
+
+<button
+
+
+onClick={()=>router.push("/register")}
+
+
+
+className="
+mt-2
+text-[11px]
+font-bold
+text-cyan-300
+hover:text-cyan-200
+transition
+"
+
+>
+
+🚀 Créer un compte
+
+</button>
+
+
+
+
+
+
+
+
+<p
+
+className="
+text-[9px]
+text-gray-500
+mt-5
+"
+
+>
+
+🇭🇹 Créé avec fierté en l'honneur d'Haïti ❤️
+
+</p>
+
+
+
+
+
+
+
+
+
 </div>
+
+
+</section>
+
+
+
+
 
 
 </main>
 
-)
+
+);
+
 
 }

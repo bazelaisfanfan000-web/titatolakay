@@ -20,12 +20,11 @@ import {
 
 
 
-export default function AdminEconomyPage(){
+export default function Economy(){
 
 
 
-const [stats,setStats] =
-useState({
+const [stats,setStats] = useState({
 
 balance:0,
 
@@ -46,20 +45,12 @@ transactions:0
 useEffect(()=>{
 
 
-
 const usersRef =
-ref(
-database,
-"users"
-);
-
+ref(database,"users");
 
 
 const transactionsRef =
-ref(
-database,
-"transactions"
-);
+ref(database,"transactions");
 
 
 
@@ -67,9 +58,7 @@ database,
 
 const stopUsers =
 onValue(
-
 usersRef,
-
 (snapshot)=>{
 
 
@@ -95,27 +84,19 @@ user.balance || 0
 
 
 
-
-
 setStats(prev=>({
-
 
 ...prev,
 
-
 balance:total
-
-
 
 }));
 
 
+
 }
 
-
-
 );
-
 
 
 
@@ -125,9 +106,7 @@ balance:total
 
 const stopTransactions =
 onValue(
-
 transactionsRef,
-
 (snapshot)=>{
 
 
@@ -136,14 +115,11 @@ snapshot.val() || {};
 
 
 
-let bets = 0;
+let bets=0;
 
-let wins = 0;
+let wins=0;
 
-let commission = 0;
-
-let count = 0;
-
+let count=0;
 
 
 
@@ -152,40 +128,27 @@ Object.values(data)
 .forEach((tx:any)=>{
 
 
-
 count++;
-
-
 
 
 
 if(tx.type==="Bet"){
 
-
 bets += Math.abs(
 Number(tx.amount || 0)
 );
 
-
 }
-
-
-
-
 
 
 
 if(tx.type==="WIN"){
 
-
 wins += Number(
 tx.amount || 0
 );
 
-
 }
-
-
 
 
 
@@ -193,46 +156,26 @@ tx.amount || 0
 
 
 
-
-
-commission =
-
-Math.floor(
-bets * 0.10
-);
-
-
-
-
-
 setStats(prev=>({
-
 
 ...prev,
 
-
 bets,
-
 
 wins,
 
+transactions:count,
 
-commission,
-
-
-transactions:count
-
-
+commission:
+Math.floor(bets * 0.10)
 
 }));
 
 
+
 }
 
-
 );
-
-
 
 
 
@@ -240,19 +183,14 @@ transactions:count
 
 return()=>{
 
-
 stopUsers();
 
 stopTransactions();
 
-
 };
 
 
-
 },[]);
-
-
 
 
 
@@ -264,60 +202,42 @@ const cards=[
 
 
 {
-
-title:"Argent total joueurs",
-
+title:"Argent joueurs",
 value:`${Math.floor(stats.balance)} HTG`,
-
-icon:"💰"
-
+icon:"💰",
+color:"text-green-400"
 },
 
 
 {
-
-title:"Total des mises",
-
+title:"Volume des mises",
 value:`${stats.bets} HTG`,
-
-icon:"🎮"
-
+icon:"🎮",
+color:"text-blue-400"
 },
 
 
-
 {
-
-title:"Commission plateforme",
-
+title:"Commission",
 value:`${stats.commission} HTG`,
-
-icon:"🏦"
-
+icon:"🏦",
+color:"text-yellow-400"
 },
 
 
-
 {
-
 title:"Gains distribués",
-
 value:`${stats.wins} HTG`,
-
-icon:"🏆"
-
+icon:"🏆",
+color:"text-purple-400"
 },
 
 
-
 {
-
 title:"Transactions",
-
 value:stats.transactions,
-
-icon:"📄"
-
+icon:"📄",
+color:"text-white"
 }
 
 
@@ -329,11 +249,11 @@ icon:"📄"
 
 
 
-
 return(
 
 
-<div>
+<div className="text-white">
+
 
 
 <h1 className="
@@ -341,7 +261,7 @@ text-3xl
 font-black
 ">
 
-💰 Gestion financière
+💰 Économie plateforme
 
 </h1>
 
@@ -352,9 +272,10 @@ text-gray-400
 mt-2
 ">
 
-Suivi économique Domino Lakay
+Contrôle financier DOMINOS HAÏTI
 
 </p>
+
 
 
 
@@ -370,7 +291,6 @@ mt-8
 ">
 
 
-
 {
 
 cards.map((card)=>(
@@ -381,20 +301,33 @@ cards.map((card)=>(
 key={card.title}
 
 className="
-bg-white/5
-backdrop-blur-xl
-border
-border-white/10
-rounded-3xl
-p-6
-"
 
+bg-[#111827]
+
+border
+
+border-white/10
+
+rounded-3xl
+
+p-6
+
+shadow-xl
+
+"
 
 >
 
 
 <div className="
-text-3xl
+flex
+justify-between
+items-center
+">
+
+
+<div className="
+text-4xl
 ">
 
 {card.icon}
@@ -402,10 +335,24 @@ text-3xl
 </div>
 
 
+<div className="
+w-3
+h-3
+rounded-full
+bg-green-400
+">
+
+</div>
+
+
+</div>
+
+
+
 
 <p className="
 text-gray-400
-mt-4
+mt-5
 ">
 
 {card.title}
@@ -414,11 +361,17 @@ mt-4
 
 
 
-<h2 className="
-text-2xl
+<h2 className={`
+
+text-3xl
+
 font-black
-text-blue-400
-">
+
+mt-2
+
+${card.color}
+
+`}>
 
 {card.value}
 
@@ -427,6 +380,7 @@ text-blue-400
 
 
 </div>
+
 
 
 ))
@@ -446,18 +400,25 @@ text-blue-400
 
 
 <div className="
+
 mt-10
-bg-white/5
+
+bg-[#111827]
+
 border
+
 border-white/10
+
 rounded-3xl
+
 p-6
+
 ">
 
 
 <h2 className="
 text-xl
-font-bold
+font-black
 ">
 
 📊 Résumé financier
@@ -466,52 +427,117 @@ font-bold
 
 
 
+
+
 <div className="
-mt-4
-space-y-3
-text-gray-300
+mt-6
+space-y-4
 ">
 
 
-<p>
-💵 Argent en circulation :
+<div className="
+flex
+justify-between
+bg-black/30
+p-4
+rounded-xl
+">
+
+<span>
+💵 Argent circulation
+</span>
+
+
 <b>
-{" "}
 {Math.floor(stats.balance)} HTG
 </b>
-</p>
+
+
+</div>
 
 
 
-<p>
-🎲 Volume de jeu :
+
+
+
+<div className="
+flex
+justify-between
+bg-black/30
+p-4
+rounded-xl
+">
+
+
+<span>
+🎲 Volume jeu
+</span>
+
+
 <b>
-{" "}
 {stats.bets} HTG
 </b>
-</p>
+
+
+</div>
 
 
 
 
-<p>
-🏦 Revenus plateforme :
-<b>
-{" "}
+
+
+
+<div className="
+flex
+justify-between
+bg-black/30
+p-4
+rounded-xl
+">
+
+
+<span>
+🏦 Revenus plateforme
+</span>
+
+
+<b className="
+text-green-400
+">
+
 {stats.commission} HTG
+
 </b>
-</p>
+
+
+</div>
 
 
 
 
-<p>
-🏆 Argent donné aux gagnants :
+
+
+
+<div className="
+flex
+justify-between
+bg-black/30
+p-4
+rounded-xl
+">
+
+
+<span>
+🏆 Gains joueurs
+</span>
+
+
 <b>
-{" "}
 {stats.wins} HTG
 </b>
-</p>
+
+
+</div>
 
 
 
@@ -519,8 +545,9 @@ text-gray-300
 </div>
 
 
-</div>
 
+
+</div>
 
 
 

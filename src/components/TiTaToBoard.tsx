@@ -2,6 +2,7 @@
 
 import React from "react";
 
+
 interface Props {
 
 board:string[][];
@@ -15,6 +16,7 @@ playMove:(row:number,col:number)=>void;
 winner:string|null;
 
 }
+
 
 
 export default function TiTaToBoard({
@@ -57,7 +59,7 @@ return;
 
 if(mySymbol !== turn){
 
-alert("⚠️ Ce n'est pas ton tour");
+alert("⏳ Ce n'est pas ton tour");
 
 return;
 
@@ -66,7 +68,6 @@ return;
 
 
 playMove(row,col);
-
 
 
 }
@@ -78,52 +79,130 @@ playMove(row,col);
 
 return (
 
-<div className="w-full flex flex-col items-center">
+<div
+
+className="
+w-full
+flex
+flex-col
+items-center
+mt-6
+"
+
+>
 
 
-<div className="mb-5 text-center">
 
 
-<p className="text-white text-xl font-bold">
 
-🎮 Tu joues avec :
+{/* STATUT */}
+
+<div
+
+className="
+
+w-full
+
+max-w-md
+
+
+bg-white/10
+
+
+border
+
+border-white/20
+
+
+rounded-3xl
+
+
+p-5
+
+
+mb-6
+
+
+"
+
+>
+
+
+<h2
+
+className="
+
+text-center
+
+text-3xl
+
+font-black
+
+text-white
+
+"
+
+>
+
+🎮 Ti Ta To
+
+</h2>
+
+
+
+<p
+
+className="
+
+text-center
+
+mt-3
+
+text-white
+
+"
+
+>
+
+Votre symbole :
+
 
 <span
+
 className={`
+
 ml-2
-${mySymbol==="X"
-?"text-blue-500"
-:"text-red-500"
+
+text-3xl
+
+font-black
+
+
+${
+
+mySymbol==="X"
+
+?
+
+"text-blue-400"
+
+:
+
+"text-red-400"
+
 }
+
 `}
+
 >
 
 {mySymbol}
 
 </span>
 
-</p>
-
-
-
-<p className="text-white mt-2">
-
-{
-winner
-?
-"🏆 Partie terminée"
-:
-turn===mySymbol
-?
-"🟢 À toi de jouer"
-:
-"⏳ Tour de l'adversaire"
-}
 
 </p>
 
-
-</div>
 
 
 
@@ -132,12 +211,13 @@ turn===mySymbol
 <div
 
 className="
-grid
-grid-cols-10
-gap-1
-bg-black
-p-2
-rounded-2xl
+
+mt-4
+
+text-center
+
+font-bold
+
 "
 
 >
@@ -145,69 +225,292 @@ rounded-2xl
 
 {
 
-board.map(
-(row,rowIndex)=>(
+winner
 
-row.map(
-(cell,colIndex)=>(
+?
+
+<p className="text-yellow-400">
+
+🏆 Joueur {winner} gagne !
+
+</p>
 
 
-<button
+:
 
-key={`${rowIndex}-${colIndex}`}
 
-onClick={()=>clickCell(
-rowIndex,
-colIndex
-)}
+turn===mySymbol
 
-disabled={
-winner!==null ||
-cell!==""
+
+?
+
+
+<p className="text-green-400">
+
+🟢 Votre tour
+
+</p>
+
+
+:
+
+
+<p className="text-gray-300">
+
+⏳ Tour adversaire
+
+</p>
+
+
 }
 
-className={`
-w-10
-h-10
-sm:w-12
-sm:h-12
 
-rounded-lg
 
-bg-white/10
+</div>
 
-border
-border-white/20
 
-flex
-items-center
-justify-center
 
-text-3xl
-font-black
+</div>
 
-transition
 
-hover:scale-110
 
-${
-cell==="X"
-?
-"text-blue-500"
-:
-cell==="O"
-?
-"text-red-500"
-:
-""
-}
 
-`}
+
+
+
+
+
+{/* TABLE 10x10 */}
+
+
+<div
+
+className="
+
+w-full
+
+overflow-x-auto
+
+"
 
 >
 
 
-{cell}
+<div
+
+className="
+
+inline-block
+
+
+bg-black
+
+
+p-4
+
+
+rounded-3xl
+
+
+border
+
+border-blue-500/30
+
+
+"
+
+>
+
+
+<div
+
+className="
+
+grid
+
+grid-cols-10
+
+
+gap-1
+
+"
+
+>
+
+
+{
+
+
+board.map(
+
+(row,rowIndex)=>(
+
+
+row.map(
+
+(cell,colIndex)=>(
+
+
+
+<button
+
+
+key={
+
+`${rowIndex}-${colIndex}`
+
+}
+
+
+
+onClick={()=>clickCell(
+
+rowIndex,
+
+colIndex
+
+)}
+
+
+
+disabled={
+
+winner!==null ||
+
+cell!==""
+
+
+}
+
+
+
+className={`
+
+
+w-8
+
+h-8
+
+
+sm:w-10
+
+sm:h-10
+
+
+
+rounded-md
+
+
+
+bg-white/10
+
+
+
+border
+
+border-white/20
+
+
+
+flex
+
+items-center
+
+justify-center
+
+
+
+text-xl
+
+sm:text-2xl
+
+
+
+font-black
+
+
+
+transition
+
+
+
+${
+
+cell==="X"
+
+?
+
+"text-blue-400"
+
+:
+
+cell==="O"
+
+?
+
+"text-red-400"
+
+:
+
+"text-white"
+
+}
+
+
+
+${
+
+cell===""
+
+&&
+
+!winner
+
+&&
+
+mySymbol===turn
+
+
+?
+
+"hover:bg-white/20"
+
+:
+
+""
+
+}
+
+
+`}
+
+
+
+>
+
+
+{
+
+cell==="X"
+
+&&
+
+"❌"
+
+}
+
+
+
+{
+
+cell==="O"
+
+&&
+
+"⭕"
+
+}
+
 
 
 </button>
@@ -219,7 +522,6 @@ cell==="O"
 
 )
 
-
 )
 
 
@@ -230,9 +532,58 @@ cell==="O"
 </div>
 
 
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+<div
+
+className="
+
+mt-5
+
+text-center
+
+text-gray-400
+
+text-sm
+
+"
+
+>
+
+{
+
+winner
+
+?
+
+"🏆 Partie terminée"
+
+:
+
+"Alignez 4 symboles pour gagner"
+
+}
+
+
+</div>
+
+
+
+
 
 </div>
 
 );
+
 
 }

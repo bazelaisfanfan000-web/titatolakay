@@ -1,56 +1,85 @@
 "use client";
 
-import { useEffect } from "react";
+
+import {
+  useEffect
+} from "react";
+
 
 import {
   auth,
   database
 } from "@/lib/firebase";
 
+
 import {
   onAuthStateChanged
 } from "firebase/auth";
 
+
 import {
   ref,
-  update
+  update,
+  onDisconnect,
+  serverTimestamp
 } from "firebase/database";
+
+
+
 
 
 export default function Presence(){
 
 
+
 useEffect(()=>{
 
 
-let timer:any;
+let interval:any;
 
 
 
-const unsubscribe = onAuthStateChanged(
+const unsubscribe =
+
+onAuthStateChanged(
 
 auth,
 
 (user)=>{
 
 
-if(!user) return;
+if(!user)
+return;
 
 
 
-const updateOnline = async()=>{
 
 
-await update(
+const userRef =
 
 ref(
 database,
 `users/${user.uid}`
-),
+);
+
+
+
+
+
+
+
+const goOnline = async()=>{
+
+
+await update(
+
+userRef,
 
 {
 
-lastSeen: Date.now()
+online:true,
+
+lastSeen:serverTimestamp()
 
 }
 
@@ -61,24 +90,143 @@ lastSeen: Date.now()
 
 
 
-updateOnline();
 
 
 
-timer = setInterval(
 
-updateOnline,
 
-60000
+
+const goOffline = async()=>{
+
+
+await update(
+
+userRef,
+
+{
+
+online:false,
+
+lastSeen:serverTimestamp()
+
+}
 
 );
 
+
+};
+
+
+
+
+
+
+
+
+
+// connexion immédiate
+
+
+goOnline();
+
+
+
+
+
+
+
+// quand utilisateur quitte
+
+
+onDisconnect(userRef)
+
+.update({
+
+online:false,
+
+lastSeen:serverTimestamp()
+
+});
+
+
+
+
+
+
+
+
+// actualisation chaque minute
+
+
+interval = setInterval(()=>{
+
+
+goOnline();
+
+
+},60000);
+
+
+
+
+
+
+
+// retour quand onglet devient actif
+
+
+const handleVisibility = ()=>{
+
+
+if(
+document.visibilityState === "visible"
+){
+
+goOnline();
+
+}
+
+
+};
+
+
+
+
+document.addEventListener(
+"visibilitychange",
+handleVisibility
+);
+
+
+
+
+
+
+
+
+return()=>{
+
+
+document.removeEventListener(
+
+"visibilitychange",
+
+handleVisibility
+
+);
+
+
+};
 
 
 }
 
 
 );
+
+
+
+
 
 
 
@@ -88,9 +236,9 @@ return()=>{
 unsubscribe();
 
 
-if(timer){
+if(interval){
 
-clearInterval(timer);
+clearInterval(interval);
 
 }
 
@@ -98,7 +246,11 @@ clearInterval(timer);
 };
 
 
+
 },[]);
+
+
+
 
 
 

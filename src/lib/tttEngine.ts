@@ -5,173 +5,262 @@ export type Board = string[][];
 
 
 
-// Créer un plateau vide 10x10
 
-export function createEmptyBoard(): Board {
 
-  return Array.from(
-    { length: 10 },
-    () => Array(10).fill("")
-  );
+// Créer grille 10x10
+
+export function createEmptyBoard():Board{
+
+return Array.from(
+{length:10},
+()=>Array(10).fill("")
+);
 
 }
 
 
 
 
-// Vérifier les 4 alignés
+
+
+
+// Vérifier victoire alignement 4
 
 export function checkWinner(
-  board: Board
-): string | null {
 
-
-
-  const directions = [
-
-    [1,0],   // vertical
-
-    [0,1],   // horizontal
-
-    [1,1],   // diagonal droite
-
-    [1,-1]   // diagonal gauche
-
-  ];
-
-
-
-
-  for(let row = 0; row < 10; row++){
-
-
-    for(let col = 0; col < 10; col++){
-
-
-
-      const symbol = board[row][col];
-
-
-
-      if(!symbol)
-        continue;
-
-
-
-
-      for(const direction of directions){
-
-
-        const dr = direction[0];
-
-        const dc = direction[1];
-
-
-
-        let count = 1;
-
-
-
-
-        for(
-          let i = 1;
-          i < 4;
-          i++
-        ){
-
-
-
-          const newRow =
-          row + dr * i;
-
-
-          const newCol =
-          col + dc * i;
-
-
-
-
-          if(
-
-            newRow >= 0 &&
-            newRow < 10 &&
-            newCol >= 0 &&
-            newCol < 10 &&
-            board[newRow][newCol] === symbol
-
-          ){
-
-            count++;
-
-
-          }else{
-
-            break;
-
-          }
-
-
-        }
-
-
-
-
-
-        if(count >= 4){
-
-          return symbol;
-
-        }
-
-
-      }
-
-
-    }
-
-
-  }
-
-
-
-
-  return null;
-
-
-}
-
-
-
-
-
-// Vérifier si le plateau est plein
-
-export function isDraw(
 board:Board
+
+):string|null{
+
+
+
+const directions = [
+
+[0,1],   // horizontal
+
+[1,0],   // vertical
+
+[1,1],   // diagonale \
+
+[1,-1]   // diagonale /
+
+];
+
+
+
+
+
+for(
+let row=0;
+row<10;
+row++
 ){
 
-  for(
-    const row of board
-  ){
-
-    for(
-      const cell of row
-    ){
-
-      if(cell === ""){
-
-        return false;
-
-      }
-
-    }
-
-  }
 
 
-  return true;
+for(
+let col=0;
+col<10;
+col++
+){
+
+
+
+const symbol =
+board[row][col];
+
+
+
+if(!symbol)
+continue;
+
+
+
+
+
+for(
+const [dr,dc]
+of directions
+){
+
+
+
+let count = 1;
+
+
+
+
+
+// avant
+
+count += countDirection(
+board,
+row,
+col,
+-dr,
+-dc,
+symbol
+);
+
+
+
+// après
+
+count += countDirection(
+board,
+row,
+col,
+dr,
+dc,
+symbol
+);
+
+
+
+
+
+
+
+if(count >=4){
+
+return symbol;
 
 }
+
+
+
+}
+
+
+
+}
+
+
+
+}
+
+
+
+return null;
+
+
+}
+
+
+
+
+
+
+
+
+
+function countDirection(
+
+board:Board,
+
+row:number,
+
+col:number,
+
+dr:number,
+
+dc:number,
+
+symbol:string
+
+){
+
+
+let count = 0;
+
+
+
+let r =
+row + dr;
+
+
+let c =
+col + dc;
+
+
+
+
+
+while(
+
+r>=0 &&
+r<10 &&
+c>=0 &&
+c<10 &&
+board[r][c]===symbol
+
+){
+
+
+count++;
+
+
+r += dr;
+
+c += dc;
+
+
+}
+
+
+
+return count;
+
+
+}
+
+
+
+
+
+
+
+
+
+// Plateau plein
+
+export function isDraw(
+
+board:Board
+
+){
+
+
+for(
+const row of board
+){
+
+for(
+const cell of row
+){
+
+
+if(cell===""){
+
+return false;
+
+}
+
+
+}
+
+
+}
+
+
+return true;
+
+
+}
+
+
+
+
 
 
 
@@ -193,26 +282,34 @@ symbol:string
 
 
 
-  const newBoard =
-  board.map(
-    r=>[...r]
-  );
+const newBoard =
+
+board.map(
+row=>[...row]
+);
 
 
 
-  if(newBoard[row][col] !== ""){
-
-    return board;
-
-  }
 
 
+if(
+newBoard[row][col] !== ""
+){
 
-  newBoard[row][col] = symbol;
+return board;
+
+}
 
 
 
-  return newBoard;
+
+
+newBoard[row][col]=symbol;
+
+
+
+
+return newBoard;
 
 
 }

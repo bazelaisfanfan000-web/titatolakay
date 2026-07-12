@@ -21,7 +21,7 @@ import {
 
 
 
-export default function AdminGamesPage(){
+export default function Games(){
 
 
 
@@ -36,10 +36,7 @@ useEffect(()=>{
 
 
 const roomsRef =
-ref(
-database,
-"rooms"
-);
+ref(database,"rooms");
 
 
 
@@ -59,13 +56,12 @@ snapshot.val() || {};
 const list =
 
 Object.entries(data)
-.map(([id,room]:any)=>({
 
+.map(([id,room]:any)=>({
 
 id,
 
 ...room
-
 
 }));
 
@@ -76,8 +72,6 @@ setGames(list);
 
 
 }
-
-
 
 );
 
@@ -100,7 +94,10 @@ return()=>unsubscribe();
 return(
 
 
-<div>
+<div className="text-white">
+
+
+
 
 
 <h1 className="
@@ -119,7 +116,7 @@ text-gray-400
 mt-2
 ">
 
-Surveillance des matchs Domino Lakay
+Surveillance des matchs DOMINOS HAÏTI
 
 </p>
 
@@ -132,8 +129,13 @@ Surveillance des matchs Domino Lakay
 
 <div className="
 mt-8
-space-y-5
+grid
+gap-5
 ">
+
+
+
+
 
 
 
@@ -141,17 +143,37 @@ space-y-5
 
 games.length===0 &&
 
+
 <div className="
-bg-white/5
-rounded-2xl
-p-5
+
+bg-yellow-500/10
+
+border
+
+border-yellow-500/20
+
+rounded-3xl
+
+p-6
+
+text-yellow-400
+
+font-bold
+
 ">
 
-Aucune partie
+
+🎲 Aucune partie disponible
+
 
 </div>
 
+
+
 }
+
+
+
 
 
 
@@ -169,49 +191,78 @@ games.map((game)=>(
 key={game.id}
 
 className="
-bg-white/5
-backdrop-blur-xl
+
+bg-[#111827]
+
 border
+
 border-white/10
+
 rounded-3xl
+
 p-6
+
+shadow-xl
+
 "
 
+
 >
+
+
+
+
 
 
 
 <div className="
 flex
 justify-between
+items-center
 ">
-
-
 
 
 <h2 className="
-font-bold
+text-xl
+font-black
 ">
 
-🎲 {game.name || "Partie"}
+🎲 {game.name || "Partie Domino"}
 
 </h2>
 
 
 
 
+
 <span className="
+
+bg-blue-500/20
+
 text-blue-400
+
+px-3
+
+py-1
+
+rounded-full
+
+text-sm
+
 font-bold
+
 ">
 
-{game.status}
+
+{game.status || "Inconnu"}
+
 
 </span>
 
 
 
 
+
 </div>
 
 
@@ -220,154 +271,189 @@ font-bold
 
 
 
+
+
 <div className="
-mt-5
-space-y-2
-text-gray-300
-text-sm
+mt-6
+grid
+md:grid-cols-2
+gap-3
 ">
 
 
-<p>
-
-🆔 ID :
-
-{game.id}
-
-</p>
-
-
-
-<p>
-
-💰 Mise :
-
-<b>
-{game.bet || 0} HTG
-</b>
-
-</p>
-
-
-
-
-<p>
-
-🏦 Pot :
-
-<b>
-{game.pot || 0} HTG
-</b>
-
-</p>
-
-
-
-
-
-<p>
-
-👥 Joueurs :
-
-<b>
-{game.players?.playersCount || 0}
-</b>
-
-</p>
-
-
-
-
-
-
-<p>
-
-🎯 Mode :
-
-{game.mode || "1v1"}
-
-</p>
-
-
-
-
-
-
-<p>
-
-📅 Création :
-
-{
-
-game.createdAt ?
-
-new Date(
-game.createdAt
-)
-.toLocaleString()
-
-:
-
-""
-
-}
-
-</p>
-
-
-
-
-
-
-
-</div>
-
-
-
-
-
 
 
 
 <div className="
-mt-5
 bg-black/30
 rounded-xl
 p-4
 ">
 
+🆔 ID
 
 <p className="
+text-white
+mt-1
+break-all
+">
+
+{game.id}
+
+</p>
+
+</div>
+
+
+
+
+
+
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-4
+">
+
+🎯 Mode
+
+<p className="
+text-white
+mt-1
+">
+
+{game.mode || "1v1"}
+
+</p>
+
+</div>
+
+
+
+
+
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-4
+">
+
+💰 Mise
+
+<p className="
+text-green-400
+mt-1
 font-bold
+">
+
+{game.bet || 0} HTG
+
+</p>
+
+</div>
+
+
+
+
+
+
+
+<div className="
+bg-black/30
+rounded-xl
+p-4
+">
+
+🏦 Pot total
+
+<p className="
+text-blue-400
+mt-1
+font-bold
+">
+
+{game.pot || 0} HTG
+
+</p>
+
+</div>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<div className="
+mt-5
+bg-black/40
+rounded-xl
+p-5
+">
+
+
+
+<h3 className="
+font-black
 ">
 
 📊 Résultat
 
-</p>
+</h3>
 
 
 
-<p className="mt-2">
+
+<div className="
+mt-3
+space-y-2
+text-gray-300
+">
+
+
+<p>
 
 🏆 Gagnant :
 
+<span className="
+text-white
+">
+
 {
-
-game.game?.winner ||
-
-"Pas encore"
+game.game?.winner || "Pas encore"
 
 }
 
+</span>
 
 </p>
+
 
 
 
 
 <p>
 
-💸 Commission :
+💸 Commission plateforme :
+
+<span className="
+text-green-400
+font-bold
+">
 
 {
 
@@ -383,6 +469,33 @@ Number(game.pot || 0)
 
  HTG
 
+</span>
+
+
+</p>
+
+
+
+
+
+
+
+<p>
+
+👥 Joueurs :
+
+<span className="
+text-white
+font-bold
+">
+
+{
+game.players?.playersCount || 0
+}
+
+</span>
+
+
 </p>
 
 
@@ -393,6 +506,46 @@ Number(game.pot || 0)
 
 
 
+
+</div>
+
+
+
+
+
+
+
+
+
+<div className="
+mt-5
+text-sm
+text-gray-500
+">
+
+
+📅 Créée :
+
+{
+
+game.createdAt
+
+?
+
+new Date(
+game.createdAt
+)
+.toLocaleString()
+
+:
+
+"Date inconnue"
+
+}
+
+
+
+</div>
 
 
 
@@ -410,8 +563,8 @@ Number(game.pot || 0)
 
 
 
-</div>
 
+</div>
 
 
 
@@ -422,6 +575,7 @@ Number(game.pot || 0)
 
 
 );
+
 
 
 }

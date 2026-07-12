@@ -1,113 +1,420 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState
+} from "react";
 
-type Props = {
-  winner: string;
-  mySymbol: string;
-  reward: number;
-  onClose: () => void;
-  onRequestRematch?: () => void;
-};
+
+interface Props {
+
+winner:string;
+
+mySymbol:string;
+
+reward:number;
+
+onClose:()=>void;
+
+onRequestRematch:()=>void;
+
+}
+
+
 
 export default function WinnerModal({
-  winner,
-  mySymbol,
-  reward,
-  onClose,
-  onRequestRematch
-}: Props) {
-  const victory = winner === mySymbol;
-  const [showConfetti, setShowConfetti] = useState(false);
 
-  useEffect(() => {
-    setShowConfetti(true);
-    
-    const audio = new Audio(
-      victory
-        ? "/sounds/win.mp3"
-        : "/sounds/lose.mp3"
-    );
+winner,
 
-    audio.volume = 0.7;
-    audio.play().catch(() => {});
+mySymbol,
 
-    return () => {
-      audio.pause();
-    };
-  }, [victory]);
+reward,
 
-  return (
-    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-      <div
-        className={`
-          rounded-3xl p-8 text-center w-80 shadow-2xl
-          transform transition-all duration-500
-          ${victory ? "bg-gradient-to-br from-green-600 to-green-800" : "bg-gradient-to-br from-red-600 to-red-800"}
-          ${showConfetti ? "scale-100 opacity-100" : "scale-90 opacity-0"}
-        `}
-      >
-        {victory ? (
-          <>
-            <div className="text-6xl animate-bounce mb-4">
-              🎉🎉🎉
-            </div>
+onClose,
 
-            <h1 className="text-3xl font-black mt-3 animate-pulse">
-              🏆 VICTOIRE !
-            </h1>
+onRequestRematch
 
-            <p className="mt-4 text-xl">
-              Tu as aligné 4 symboles
-            </p>
+}:Props){
 
-            <div className="mt-4 bg-white/20 rounded-xl p-4">
-              <p className="text-lg">🎁 Tu as gagné</p>
-              <p className="text-4xl font-black animate-pulse">
-                +{reward} HTG
-              </p>
-            </div>
 
-            <div className="mt-4 text-3xl animate-pulse">
-              ✨✨✨
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="text-6xl animate-pulse mb-4">
-              ❌
-            </div>
+const [showMoney,setShowMoney] =
+useState(false);
 
-            <h1 className="text-3xl font-black mt-3">
-              DÉFAITE
-            </h1>
 
-            <p className="mt-4 text-xl">
-              L'adversaire a aligné 4 symboles
-            </p>
 
-            <div className="mt-4 bg-white/20 rounded-xl p-4">
-              <p className="text-lg">💰 Mise perdue</p>
-            </div>
-          </>
-        )}
+const win =
+winner === mySymbol;
 
-        <button
-          onClick={onClose}
-          className="bg-white text-black font-bold rounded-xl px-6 py-3 mt-6 hover:bg-gray-100 transition-all"
-        >
-          Retour accueil
-        </button>
 
-        {onRequestRematch && (
-          <button
-            onClick={onRequestRematch}
-            className="w-full bg-purple-500 text-white font-bold rounded-xl px-6 py-3 mt-3 hover:bg-purple-600 transition-all"
-          >
-            🔄 Demander revanche
-          </button>
-        )}
-      </div>
-    </div>
-  );
+
+useEffect(()=>{
+
+const timer =
+setTimeout(()=>{
+
+setShowMoney(true);
+
+},700);
+
+
+return()=>clearTimeout(timer);
+
+
+},[]);
+
+
+
+
+
+
+return(
+
+<div
+
+className="
+fixed
+inset-0
+bg-black/80
+backdrop-blur-lg
+flex
+items-center
+justify-center
+z-50
+p-4
+"
+
+>
+
+
+<div
+
+className="
+
+w-full
+
+max-w-md
+
+
+bg-gradient-to-br
+
+from-white/20
+
+to-white/5
+
+
+border
+
+border-white/20
+
+
+rounded-[35px]
+
+
+p-8
+
+
+shadow-2xl
+
+
+text-center
+
+
+animate-in
+
+zoom-in
+
+
+duration-300
+
+"
+
+>
+
+
+
+
+
+{
+
+win
+
+?
+
+
+<>
+
+
+<div className="
+text-7xl
+mb-4
+animate-bounce
+">
+
+🏆
+
+</div>
+
+
+<h1
+
+className="
+text-4xl
+font-black
+text-green-400
+"
+
+>
+
+VICTOIRE
+
+</h1>
+
+
+
+<p className="
+text-white
+text-lg
+mt-3
+">
+
+Félicitations 🎉
+
+</p>
+
+
+
+</>
+
+
+
+:
+
+
+<>
+
+
+<div className="
+text-7xl
+mb-4
+">
+
+😢
+
+</div>
+
+
+
+<h1
+
+className="
+text-4xl
+font-black
+text-red-400
+"
+
+>
+
+DÉFAITE
+
+</h1>
+
+
+
+<p className="
+text-white
+text-lg
+mt-3
+">
+
+La prochaine sera la bonne 💪
+
+</p>
+
+
+
+</>
+
+}
+
+
+
+
+{
+
+showMoney &&
+
+<div
+
+className="
+
+mt-8
+
+
+bg-black/30
+
+
+rounded-2xl
+
+
+py-5
+
+
+border
+
+border-yellow-400/30
+
+"
+
+>
+
+
+<p className="
+text-gray-300
+text-sm
+">
+
+Récompense
+
+</p>
+
+
+
+<p
+
+className="
+text-4xl
+font-black
+text-yellow-400
+animate-pulse
+"
+
+>
+
+💰 {win ? "+" : ""}{reward} HTG
+
+</p>
+
+
+
+</div>
+
+
+}
+
+
+
+
+
+
+<button
+
+onClick={onRequestRematch}
+
+className="
+
+mt-8
+
+w-full
+
+
+bg-gradient-to-r
+
+from-green-500
+
+to-emerald-600
+
+
+py-4
+
+
+rounded-2xl
+
+
+text-white
+
+
+font-black
+
+
+text-lg
+
+
+shadow-lg
+
+
+hover:scale-105
+
+
+transition
+
+"
+
+>
+
+🔄 Revanche
+
+</button>
+
+
+
+
+
+
+<button
+
+onClick={onClose}
+
+className="
+
+mt-3
+
+w-full
+
+
+bg-white/10
+
+
+border
+
+border-white/20
+
+
+py-4
+
+
+rounded-2xl
+
+
+text-white
+
+
+font-bold
+
+
+hover:bg-white/20
+
+
+transition
+
+"
+
+>
+
+🏠 Retour accueil
+
+</button>
+
+
+
+
+
+</div>
+
+
+</div>
+
+
+);
+
+
 }

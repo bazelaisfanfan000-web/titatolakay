@@ -1,279 +1,893 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+
+import {
+  useEffect,
+  useState
+} from "react";
+
+
+import {
+  useRouter
+} from "next/navigation";
+
+
+import {
+  motion
+} from "framer-motion";
+
 
 import {
   ref,
   onValue
 } from "firebase/database";
 
+
 import {
   database
 } from "@/lib/firebase";
 
 
+import BackButton from "@/components/BackButton";
+
+
+
+
+
 export default function SpectatorList(){
 
+
+
 const router = useRouter();
-const [rooms,setRooms] = useState<any[]>([]);
-const [loading,setLoading] = useState(true);
+
+
+
+const [
+rooms,
+setRooms
+]=useState<any[]>([]);
+
+
+
+const [
+loading,
+setLoading
+]=useState(true);
+
+
+
+
+
 
 
 useEffect(()=>{
 
-const roomsRef = ref(database,"rooms");
+
+
+const roomsRef =
+
+ref(
+
+database,
+
+"rooms"
+
+);
+
+
+
+
+
+
 
 const unsubscribe = onValue(
+
+
 roomsRef,
+
+
 (snapshot)=>{
+
+
 
 const data = snapshot.val();
 
+
+
+
+
 if(!data){
+
+
 setRooms([]);
+
 setLoading(false);
+
 return;
+
+
 }
 
 
-const allRooms = Object.entries(data).map(([id,room]:[string,any])=>({
+
+
+
+
+
+const allRooms =
+
+Object.entries(data).map(
+
+([id,room]:[string,any])=>({
+
+
 id,
+
 ...room
-}));
 
 
-const playingRooms = allRooms.filter(
-room=>room.status === "playing"
+})
+
 );
+
+
+
+
+
+
+
+
+const playingRooms =
+
+allRooms.filter(
+
+room=>room.status==="playing"
+
+);
+
+
+
+
+
 
 setRooms(playingRooms);
+
+
 setLoading(false);
+
+
 
 },
+
+
 (error)=>{
-console.error("Erreur Firebase:",error);
-setLoading(false);
-}
+
+
+console.error(
+
+"Erreur Firebase:",
+
+error
+
 );
 
-return ()=>unsubscribe();
+
+setLoading(false);
+
+
+}
+
+
+);
+
+
+
+
+
+
+
+
+return()=>unsubscribe();
+
+
 
 },[]);
 
 
+
+
+
+
+
+
+
 if(loading){
+
+
 return(
+
+
 <main className="
+
 min-h-screen
-bg-black
+
+bg-gradient-to-br
+
+from-[#020617]
+
+via-[#07152f]
+
+to-black
+
 text-white
+
 flex
+
 items-center
+
 justify-center
+
 ">
 
-<div className="text-center">
-<p>🎮 Chargement des parties...</p>
-</div>
+
+<p>
+
+🎮 Chargement des parties...
+
+</p>
+
 
 </main>
+
+
 );
+
+
 }
 
 
+
+
+
+
+
+
+
 return(
-<main className="
+
+
+
+<main
+
+
+className="
+
 min-h-screen
-bg-black
+
+relative
+
+overflow-hidden
+
+bg-gradient-to-br
+
+from-[#020617]
+
+via-[#07152f]
+
+to-black
+
 text-white
-p-4
-">
 
-<div className="
+px-4
+
+py-10
+
+"
+
+>
+
+
+
+
+
+
+
+
+
+<motion.div
+
+
+animate={{
+
+x:[0,40,0],
+
+y:[0,20,0]
+
+}}
+
+
+
+transition={{
+
+duration:6,
+
+repeat:Infinity
+
+}}
+
+
+
+className="
+
+absolute
+
+w-56
+
+h-56
+
+bg-blue-500/20
+
+rounded-full
+
+blur-3xl
+
+top-0
+
+left-[-60px]
+
+"
+
+/>
+
+
+
+
+
+
+
+
+
+<motion.div
+
+
+animate={{
+
+x:[0,-40,0],
+
+y:[0,-20,0]
+
+}}
+
+
+
+transition={{
+
+duration:7,
+
+repeat:Infinity
+
+}}
+
+
+
+className="
+
+absolute
+
+w-56
+
+h-56
+
+bg-purple-500/20
+
+rounded-full
+
+blur-3xl
+
+bottom-10
+
+right-[-60px]
+
+"
+
+/>
+
+
+
+
+
+
+
+
+
+<div
+
+className="
+
+relative
+
+z-10
+
 max-w-sm
+
 mx-auto
-">
+
+"
+
+>
 
 
-<h1 className="
-text-2xl
+
+
+
+
+
+
+<BackButton />
+
+
+
+
+
+
+
+
+
+<motion.h1
+
+
+animate={{
+
+y:[0,-5,0]
+
+}}
+
+
+transition={{
+
+duration:3,
+
+repeat:Infinity
+
+}}
+
+
+
+className="
+
+text-xl
+
 font-black
+
 text-center
-mb-6
-">
+
+mb-4
+
+bg-gradient-to-r
+
+from-blue-400
+
+to-cyan-300
+
+bg-clip-text
+
+text-transparent
+
+"
+
+>
+
 
 👁️ Mode Spectateur
 
-</h1>
+
+</motion.h1>
 
 
-<p className="
-text-center
-text-gray-400
-mb-6
-">
-Regarde les parties en direct
-</p>
 
 
-{
-rooms.length === 0 ? (
 
-<div className="
-bg-white/10
-rounded-2xl
-p-6
-text-center
-">
 
-<div className="
-text-4xl
-mb-4
-">
-🎮
-</div>
 
-<h2 className="
-font-bold
-mb-2
-">
-Aucune partie en direct
-</h2>
 
-<p className="
-text-sm
-text-gray-400
-">
-Reviens plus tard pour voir des parties en cours 👁️
-</p>
+<p
 
-</div>
-
-) : (
-
-<div className="
-flex
-flex-col
-gap-3
-">
-
-{
-rooms.map((room)=>(
-
-<div
-key={room.id}
 className="
+
+text-center
+
+text-xs
+
+text-gray-400
+
+mb-6
+
+"
+
+>
+
+Regarde les parties en direct 🎮
+
+</p>
+
+
+
+
+
+
+
+
+
+{
+
+rooms.length===0 ? (
+
+
+
+<motion.div
+
+
+initial={{
+
+opacity:0,
+
+scale:.8
+
+}}
+
+
+
+animate={{
+
+opacity:1,
+
+scale:1
+
+}}
+
+
+
+className="
+
 bg-white/10
+
+backdrop-blur-2xl
+
 border
+
 border-white/20
-rounded-2xl
-p-4
-">
 
-<div className="
-flex
-justify-between
-items-start
-mb-3
-">
+rounded-3xl
 
-<h2 className="
-font-bold
-text-lg
-">
-🎮 {room.name || "Partie"}
+p-6
+
+text-center
+
+"
+
+>
+
+
+
+<div className="text-4xl mb-4">
+
+🎮
+
+</div>
+
+
+
+<h2 className="font-bold">
+
+Aucune partie en direct
+
 </h2>
 
-<span className="
-text-green-400
-text-xs
-font-bold
-">
+
+
+
+<p className="text-xs text-gray-400 mt-3">
+
+Reviens plus tard pour regarder une partie 👁️
+
+</p>
+
+
+
+</motion.div>
+
+
+
+)
+
+:
+
+(
+
+
+
+<div className="flex flex-col gap-4">
+
+
+{
+
+
+rooms.map((room,index)=>(
+
+
+
+<motion.div
+
+
+key={room.id}
+
+
+
+initial={{
+
+opacity:0,
+
+y:30
+
+}}
+
+
+
+animate={{
+
+opacity:1,
+
+y:0
+
+}}
+
+
+
+transition={{
+
+delay:index*0.1
+
+}}
+
+
+
+whileHover={{
+
+scale:1.02,
+
+y:-3
+
+}}
+
+
+
+className="
+
+bg-white/10
+
+backdrop-blur-2xl
+
+border
+
+border-white/20
+
+rounded-3xl
+
+p-5
+
+shadow-xl
+
+"
+
+>
+
+
+
+
+
+
+
+<div className="flex justify-between mb-3">
+
+
+<h2 className="font-bold">
+
+🎮 {room.name || "Partie"}
+
+</h2>
+
+
+
+
+<span className="text-green-400 text-xs font-bold">
+
 🔴 LIVE
+
 </span>
 
+
+
 </div>
 
 
-<div className="
-flex
-flex-col
-gap-2
-mb-4
-">
 
-<p className="
-text-sm
-text-gray-300
-">
+
+
+
+
+<p className="text-xs text-gray-300">
+
 💰 Mise : {room.bet || 0} HTG
+
 </p>
 
 
-<p className="
-text-sm
-text-gray-300
-">
+
+<p className="text-xs text-gray-300 mt-2">
+
 👥 Joueurs : {room.playersCount || 2}
+
 </p>
 
 
-<p className="
-text-sm
-text-gray-300
-">
+
+<p className="text-xs text-gray-300 mt-2">
+
 🎲 Mode : {room.mode || "1v1"}
+
 </p>
 
-</div>
 
 
-<button
+
+
+
+
+
+
+<motion.button
+
+
+whileHover={{
+
+scale:1.03
+
+}}
+
+
+
+whileTap={{
+
+scale:.95
+
+}}
+
+
+
 onClick={()=>router.push(`/spectator/${room.id}`)}
-className="
-w-full
-bg-purple-600
-py-3
-rounded-xl
-font-bold
-hover:bg-purple-700
-transition-all
-"
->
-👁️ Regarder
-</button>
 
-</div>
+
+
+className="
+
+mt-4
+
+w-full
+
+py-3
+
+rounded-xl
+
+font-bold
+
+bg-gradient-to-b
+
+from-purple-400
+
+to-purple-700
+
+shadow-[0_5px_0_#581c87]
+
+"
+
+>
+
+
+👁️ Regarder
+
+
+</motion.button>
+
+
+
+
+
+
+</motion.div>
+
 
 ))
+
+
 }
 
+
+
 </div>
+
+
+
 )
+
+
 }
 
 
-<button
-onClick={()=>router.push("/dashboard")}
+
+
+
+
+
+
+
+<motion.p
+
+
+animate={{
+
+opacity:[0.4,1,0.4]
+
+}}
+
+
+
+transition={{
+
+duration:3,
+
+repeat:Infinity
+
+}}
+
+
+
 className="
-mt-6
-w-full
-bg-white/10
-py-3
-rounded-xl
+
+text-center
+
+text-[10px]
+
+text-cyan-300
+
 font-bold
-hover:bg-white/20
-transition-all
+
+mt-8
+
 "
+
 >
-← Retour au dashboard
-</button>
+
+
+🧪 Ti Ta To - Version bêta
+
+
+</motion.p>
+
+
+
+
+
+
 
 
 </div>
+
 
 </main>
+
+
+
 );
+
 
 }

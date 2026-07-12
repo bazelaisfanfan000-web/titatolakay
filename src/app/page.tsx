@@ -4,6 +4,17 @@ import {
   useRouter
 } from "next/navigation";
 
+import {
+  motion
+} from "framer-motion";
+
+import {
+  Trophy,
+  Zap,
+  Gamepad2
+} from "lucide-react";
+
+
 
 export default function Home(){
 
@@ -12,89 +23,171 @@ const router = useRouter();
 
 
 
-return (
+return(
+
 
 <main
 
 className="
 min-h-screen
-bg-[#050505]
+relative
+overflow-hidden
+bg-gradient-to-br
+from-[#020617]
+via-[#07152f]
+to-black
 text-white
 flex
 items-center
 justify-center
-px-4
+px-3
 "
 
 >
 
 
-<section
+{/* Lumières */}
+
+<div
 
 className="
-w-full
-max-w-xs
+absolute
+w-40
+h-40
+bg-blue-500/20
+rounded-full
+blur-3xl
+top-10
+left-5
+"
+
+/>
+
+
+<div
+
+className="
+absolute
+w-40
+h-40
+bg-purple-500/20
+rounded-full
+blur-3xl
+bottom-10
+right-5
+"
+
+/>
+
+
+
+
+
+<motion.section
+
+initial={{
+opacity:0,
+scale:.85
+}}
+
+animate={{
+opacity:1,
+scale:1
+}}
+
+transition={{
+duration:.6
+}}
+
+className="
+relative
+z-10
+w-[240px]
 text-center
 "
 
 >
 
 
-
 {/* LOGO */}
 
-<div
+<motion.div
+
+animate={{
+y:[0,-5,0]
+}}
+
+transition={{
+duration:3,
+repeat:Infinity
+}}
 
 className="
-mb-8
-animate-pulse
+mb-5
 "
 
 >
 
-<h1
+
+<div
 
 className="
+mx-auto
+w-16
+h-16
+rounded-2xl
+bg-white/10
+backdrop-blur-xl
+border
+border-white/20
+shadow-xl
 flex
-justify-center
 items-center
-gap-1
+justify-center
+"
+
+>
+
+<span
+
+className="
+text-2xl
 font-black
 "
 
 >
 
-<span className="text-lg">
 ⭕
-</span>
-
-
-<span
-
-className="
-text-lg
-text-blue-500
-"
-
->
+<span className="text-blue-400">
 X
 </span>
 
+</span>
+
+</div>
 
 
-<span
+
+<h1
 
 className="
-text-sm
-text-blue-400
+mt-3
+text-xl
+font-black
+tracking-widest
+bg-gradient-to-r
+from-blue-400
+to-cyan-300
+bg-clip-text
+text-transparent
 "
 
 >
-TI TA TO
-</span>
 
+TI TA TO
 
 </h1>
+
 
 
 <p
@@ -102,17 +195,18 @@ TI TA TO
 className="
 text-[10px]
 text-gray-400
-mt-2
+mt-1
 "
 
 >
 
-Le jeu rapide entre amis 🎮
+Joue des parties et gagne de l'argent 💰
 
 </p>
 
 
-</div>
+</motion.div>
+
 
 
 
@@ -120,27 +214,42 @@ Le jeu rapide entre amis 🎮
 
 {/* CARTE */}
 
-<div
+
+<motion.div
+
+initial={{
+opacity:0,
+y:20
+}}
+
+animate={{
+opacity:1,
+y:0
+}}
+
+transition={{
+delay:.2
+}}
 
 className="
-bg-white/5
+bg-white/10
+backdrop-blur-2xl
 border
-border-white/10
-rounded-2xl
-p-5
-backdrop-blur-xl
+border-white/20
+rounded-3xl
+p-4
+shadow-2xl
 "
 
 >
 
 
-
 <h2
 
 className="
-text-sm
+text-base
 font-bold
-mb-3
+mb-2
 "
 
 >
@@ -155,73 +264,98 @@ Bienvenue 👋
 
 className="
 text-[11px]
-text-gray-400
-leading-5
-mb-5
+text-gray-300
+mb-4
 "
 
 >
 
-Crée ton compte et joue à Ti Ta To
-avec des joueurs du monde entier.
+Crée ton compte et rejoins la communauté.
 
-</p>
-
+</p><motion.button
 
 
+whileHover={{
+scale:1.05,
+y:-3
+}}
 
+whileTap={{
+scale:.95,
+y:2
+}}
 
-<button
 
 onClick={()=>router.push("/register")}
 
+
 className="
 w-full
-py-3
+h-9
 rounded-xl
-bg-blue-600
-text-xs
+text-[11px]
 font-bold
+bg-gradient-to-b
+from-blue-400
+to-blue-700
+border
+border-blue-300/40
+shadow-[0_5px_0_#123a8a]
 mb-3
-animate-pulse
-shadow-lg
-shadow-blue-600/30
 "
 
 >
 
 🚀 Créer un compte
 
-</button>
+</motion.button>
 
 
 
 
 
-<button
+
+<motion.button
+
+
+whileHover={{
+scale:1.05,
+y:-3
+}}
+
+whileTap={{
+scale:.95,
+y:2
+}}
+
 
 onClick={()=>router.push("/login")}
 
+
 className="
 w-full
-py-3
+h-9
 rounded-xl
-bg-white/10
-border
-border-white/10
-text-xs
+text-[11px]
 font-bold
+bg-gradient-to-b
+from-white/30
+to-white/10
+border
+border-white/20
+shadow-[0_5px_0_rgba(255,255,255,0.15)]
 "
 
 >
 
 🔐 Connexion
 
-</button>
+</motion.button>
 
 
 
-</div>
+</motion.div>
+
 
 
 
@@ -230,101 +364,105 @@ font-bold
 
 {/* FEATURES */}
 
+
+
 <div
 
 className="
 grid
 grid-cols-3
 gap-2
+mt-4
+"
+
+>
+
+
+<Card
+
+icon={<Zap size={14}/>}
+
+text="Rapide"
+
+/>
+
+
+<Card
+
+icon={<Trophy size={14}/>}
+
+text="Défis"
+
+/>
+
+
+<Card
+
+icon={<Gamepad2 size={14}/>}
+
+text="Jeu"
+
+/>
+
+
+</div>
+
+
+
+
+
+
+
+{/* MESSAGE COMMUNAUTE */}
+
+
+
+<motion.div
+
+
+animate={{
+opacity:[0.5,1,0.5]
+}}
+
+transition={{
+duration:3,
+repeat:Infinity
+}}
+
+
+className="
 mt-5
+text-[10px]
+text-cyan-300
+font-bold
 "
 
 >
 
 
-<div
+<p>
+
+🎮 Joue avec tes amis en temps réel + gagne 💰
+
+</p>
+
+
+<p
 
 className="
-bg-white/5
-rounded-xl
-p-3
+mt-1
+text-gray-400
 "
 
 >
 
-<p className="text-sm">
-
-⚡
+💬 Chatter pendant la partie
 
 </p>
 
-<p className="text-[9px] text-gray-400">
 
-Rapide
+</motion.div>
 
-</p>
-
-</div>
-
-
-
-
-
-<div
-
-className="
-bg-white/5
-rounded-xl
-p-3
-"
-
->
-
-<p className="text-sm">
-
-🏆
-
-</p>
-
-<p className="text-[9px] text-gray-400">
-
-Classement
-
-</p>
-
-</div>
-
-
-
-
-
-<div
-
-className="
-bg-white/5
-rounded-xl
-p-3
-"
-
->
-
-<p className="text-sm">
-
-🎮
-
-</p>
-
-<p className="text-[9px] text-gray-400">
-
-Jeu
-
-</p>
-
-</div>
-
-
-
-</div>
 
 
 
@@ -335,24 +473,146 @@ Jeu
 
 className="
 text-[9px]
-text-gray-600
-mt-8
+text-gray-500
+mt-3
 "
 
 >
 
-🧪 Version bêta
+🧪 version Beta
 
 </p>
 
 
 
-</section>
+
+
+
+
+<motion.p
+
+
+animate={{
+opacity:[0.5,1,0.5]
+}}
+
+transition={{
+duration:3,
+repeat:Infinity
+}}
+
+
+className="
+text-[9px]
+text-yellow-300
+mt-8
+font-bold
+"
+
+>
+
+
+
+</motion.p>
+
+
+
+
+
+
+</motion.section>
+
 
 
 </main>
 
 
 );
+
+}
+
+
+
+
+
+
+
+
+function Card({
+
+icon,
+
+text
+
+}:{
+
+icon:any;
+
+text:string;
+
+}){
+
+
+return(
+
+
+<motion.div
+
+
+whileHover={{
+scale:1.08,
+y:-4
+}}
+
+
+className="
+bg-white/10
+backdrop-blur-xl
+border
+border-white/20
+rounded-xl
+p-2
+flex
+flex-col
+items-center
+"
+
+>
+
+
+<div
+
+className="
+text-blue-400
+"
+
+>
+
+{icon}
+
+</div>
+
+
+
+<p
+
+className="
+text-[9px]
+text-gray-300
+"
+
+>
+
+{text}
+
+</p>
+
+
+
+</motion.div>
+
+
+);
+
 
 }

@@ -1,8 +1,10 @@
 import {
   ref,
   get,
-  update
+  update,
+  serverTimestamp
 } from "firebase/database";
+
 
 import {
   database
@@ -16,11 +18,15 @@ import {
 
 
 
+export const TURN_TIME = 30;
 
 
-// =====================================
+
+
+
+// ==================================
 // JOUER UN COUP
-// =====================================
+// ==================================
 
 export async function playGameMove(
 
@@ -43,10 +49,8 @@ database,
 
 
 
-
 const snap =
 await get(roomRef);
-
 
 
 
@@ -60,63 +64,43 @@ throw new Error(
 
 
 
-
-
 const room =
 snap.val();
+
 
 const game =
 room.game;
 
 
 
-
-
-if(!game){
-
-throw new Error(
-"Jeu introuvable"
-);
-
-}
-
-
-
-
-
 if(game.status === "finished"){
 
 throw new Error(
-"La partie est terminée"
+"Partie terminée"
 );
 
 }
-
-
 
 
 
 if(game.turn !== symbol){
 
 throw new Error(
-"Ce n'est pas ton tour"
+"Ce n'est pas votre tour"
 );
 
 }
 
 
 
-
-
-if(
-game.board[row][col] !== ""
-){
+if(game.board[row][col] !== ""){
 
 throw new Error(
-"Cette case est déjà utilisée"
+"Case occupée"
 );
 
 }
+
 
 
 
@@ -138,6 +122,7 @@ symbol
 
 
 
+
 const winner =
 checkWinner(newBoard);
 
@@ -147,8 +132,7 @@ checkWinner(newBoard);
 
 const updates:any = {
 
-[`game/board`]:
-newBoard
+"game/board":newBoard
 
 };
 
@@ -156,9 +140,6 @@ newBoard
 
 
 
-// ===============================
-// FIN DE PARTIE
-// ===============================
 
 if(winner){
 
@@ -168,36 +149,16 @@ updates["game/status"] =
 "finished";
 
 
-
-
 updates["game/winner"] =
 winner;
 
 
-
-
 updates["game/finishedAt"] =
-Date.now();
-
-
-
-
-updates["game/paymentDone"] =
-false;
-
-
-
-
-updates["game/finalPot"] =
-Math.floor(
-Number(room.pot || 0)
-);
-
+serverTimestamp();
 
 
 
 }
-
 
 else{
 
@@ -206,22 +167,24 @@ else{
 updates["game/turn"] =
 
 symbol === "X"
+
 ?
+
 "O"
+
 :
+
 "X";
 
 
 
-
 updates["game/turnStartedAt"] =
-Date.now();
-
-
+serverTimestamp();
 
 
 
 }
+
 
 
 
@@ -237,16 +200,19 @@ updates
 
 
 
-
 }
 
 
 
 
 
-// =====================================
+
+
+
+
+// ==================================
 // PAIEMENT GAGNANT
-// =====================================
+// ==================================
 
 export async function finishGamePayment(
 
@@ -255,64 +221,6 @@ roomId:string,
 winnerUid:string
 
 ){
-
-
-
-const roomRef =
-ref(
-database,
-`rooms/${roomId}`
-);
-
-
-
-
-const snap =
-await get(roomRef);
-
-
-
-
-if(!snap.exists()){
-
-throw new Error(
-"Salle introuvable"
-);
-
-}
-
-
-
-
-
-const room =
-snap.val();
-
-
-
-
-
-if(
-room.game?.paymentDone === true
-){
-
-return {
-
-message:
-"Paiement déjà effectué"
-
-};
-
-}
-
-
-
-
-
-console.log("💰 finishGamePayment appelé avec winnerUid:", winnerUid);
-console.log("💰 Pot dans la salle:", room.pot);
-
-
 
 
 
@@ -327,8 +235,7 @@ method:"POST",
 
 headers:{
 
-"Content-Type":
-"application/json"
+"Content-Type":"application/json"
 
 },
 
@@ -339,48 +246,140 @@ roomId,
 
 winnerUid
 
+})
+
+
+}
+
+);
+
+
+
+
+
+return await response.json();
+
+
+
+}
+
+
+
+
+
+
+
+
+
+// ==================================
+// DEMANDER UNE REVANCHE
+// ==================================
+
+export async function requestRematch(
+
+roomId:string,
+
+uid:string,
+
+name:string
+
+){
+
+
+
+await update(
+
+ref(
+
+database,
+
+`rooms/${roomId}/rematch`
+
+),
+
+{
+
+
+requestedBy:uid,
+
+
+requesterName:name,
+
+
+status:"waiting",
+
+
+createdAt:serverTimestamp()
+
+
+
+}
+
+);
+
+
+
+}
+
+
+
+
+
+
+
+
+
+// ==================================
+// ACCEPTER REVANCHE
+// ==================================
+
+export async function acceptRematch(
+
+roomId:string,
+
+uid:string
+
+){
+
+
+
+const response =
+
+await fetch(
+
+"/api/game/rematch",
+
+{
+
+method:"POST",
+
+
+headers:{
+
+"Content-Type":"application/json"
+
+},
+
+
+body:JSON.stringify({
+
+roomId,
+
+uid
 
 })
 
 
 }
 
-
-
-
 );
 
 
 
 
-const data =
-await response.json();
 
 
-
-
-
-if(!response.ok){
-
-throw new Error(
-data.error ||
-"Erreur paiement"
-);
-
-}
-
-
-
-
-
-console.log("✅ Paiement terminé:",data);
-
-
-
-
-
-return data;
-
+return await response.json();
 
 
 
@@ -390,11 +389,15 @@ return data;
 
 
 
-// =====================================
-// DEMANDE REVANCHE
-// =====================================
 
-export async function requestRematch(
+
+
+
+// ==================================
+// REFUSER REVANCHE
+// ==================================
+
+export async function rejectRematch(
 
 roomId:string,
 
@@ -407,33 +410,38 @@ uid:string
 await update(
 
 ref(
+
 database,
-`rooms/${roomId}`
+
+`rooms/${roomId}/rematch`
+
 ),
 
 {
 
-rematch:{
 
-requestedBy:uid,
+[`rejected/${uid}`]:
 
-status:"waiting",
+true,
 
-time:Date.now()
 
-}
+status:"rejected"
 
 
 
 }
-
-
-
 
 );
 
 
 
+return {
+
+success:true
+
+};
+
+
 
 }
 
@@ -441,11 +449,15 @@ time:Date.now()
 
 
 
-// =====================================
-// ACCEPTER REVANCHE
-// =====================================
 
-export async function acceptRematch(
+
+
+
+// ==================================
+// CONFIRMER NOUVELLE PARTIE
+// ==================================
+
+export async function confirmNewGame(
 
 roomId:string
 
@@ -453,139 +465,31 @@ roomId:string
 
 
 
-const roomRef =
-ref(
-database,
-`rooms/${roomId}`
-);
-
-
-
-
-const snap =
-await get(roomRef);
-
-
-
-
-if(!snap.exists()){
-
-throw new Error(
-"Salle introuvable"
-);
-
-}
-
-
-
-
-
-const board =
-
-Array.from(
-
-{
-length:10
-},
-
-()=>Array(10).fill("")
-
-);
-
-
-
-
 await update(
 
-roomRef,
+ref(
+
+database,
+
+`rooms/${roomId}`
+
+),
 
 {
+
 
 status:"starting",
 
 
 countdownStart:
-Date.now(),
 
-
-rematch:null,
-
-
-
-
-game:{
-
-board,
-
-
-turn:"X",
-
-
-winner:null,
-
-
-status:"starting",
-
-
-turnStartedAt:
-Date.now(),
-
-
-paymentDone:false,
-
-
-finishedAt:null
-
-
-}
-
+serverTimestamp()
 
 
 
 }
-
-
-
 
 );
-
-
-
-
-}
-
-
-
-
-
-// =====================================
-// REFUSER REVANCHE
-// =====================================
-
-export async function rejectRematch(
-
-roomId:string
-
-){
-
-
-
-await update(
-
-ref(
-database,
-`rooms/${roomId}`
-),
-
-{
-
-rematch:null
-}
-
-
-
-);
-
 
 
 

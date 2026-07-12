@@ -10,52 +10,41 @@ import {
   useRouter
 } from "next/navigation";
 
+import {
+  motion
+} from "framer-motion";
 
 import {
   ref,
   onValue,
-  update
+  update,
+  serverTimestamp
 } from "firebase/database";
-
 
 import {
   database
 } from "@/lib/firebase";
 
-
-
-
+import BackButton from "@/components/BackButton";
 
 export default function RoomPage(){
-
 
 const params = useParams();
 
 const router = useRouter();
 
-
 const id = params.id as string;
-
-
 
 const [room,setRoom] =
 useState<any>(null);
 
-
 const [players,setPlayers] =
 useState<any[]>([]);
 
-
-
-
-
 useEffect(()=>{
-
 
 if(!id)
 return;
-
-
 
 const roomRef =
 ref(
@@ -63,60 +52,41 @@ database,
 `rooms/${id}`
 );
 
-
-
-
 const unsubscribe =
+
 onValue(
 
 roomRef,
 
-async(snapshot)=>{
-
+(snapshot)=>{
 
 const data =
 snapshot.val();
 
-
-
 if(!data)
 return;
 
-
-
-
-
 setRoom(data);
 
-
-
-
-
 const list =
+
 data.players
+
 ?
+
 Object.values(data.players)
+
 :
+
 [];
-
-
 
 setPlayers(
 list as any[]
 );
 
-
-
-
-
-// =================================
-// CREER LE COMPTE A REBOURS
-// =================================
-
-
 if(
 
-list.length >= data.maxPlayers
+list.length === data.maxPlayers
 
 &&
 
@@ -124,21 +94,15 @@ data.status === "waiting"
 
 ){
 
-
-
 const playersWithSymbol:any = {};
-
-
 
 (list as any[]).forEach(
 
 (player:any,index:number)=>{
 
-
 playersWithSymbol[player.uid]={
 
 ...player,
-
 
 symbol:
 
@@ -154,98 +118,60 @@ index === 0
 
 };
 
+}
 
-});
-
-
-
-
+);
 
 const board =
 
 Array.from(
 
-{length:9},
+{
+length:10
+},
 
-()=>Array(3).fill("")
+()=>Array(10).fill("")
 
 );
 
-
-
-
-
-
-await update(
+update(
 
 ref(
-
 database,
-
 `rooms/${id}`
-
 ),
 
 {
 
-
 status:"starting",
 
+countdownStart:
+serverTimestamp(),
 
-countdownStart:Date.now(),
-
-
-
-players:playersWithSymbol,
-
-
+players:
+playersWithSymbol,
 
 game:{
 
-
 board,
-
 
 turn:"X",
 
-
 winner:"",
-
 
 status:"starting",
 
-
-turnStartedAt:Date.now(),
-
+turnStartedAt:null,
 
 paymentDone:false
 
-
 }
-
-
 
 }
 
 );
 
-
-
-return;
-
 }
-
-
-
-
-
-
-
-
-// =================================
-// ALLER AU COMPTE A REBOURS
-// =================================
-
 
 if(
 
@@ -257,103 +183,64 @@ data.countdownStart
 
 ){
 
-
 router.push(
-
 `/countdown/${id}`
-
 );
-
 
 return;
 
 }
-
-
-
-
-
-
-
-
-// =================================
-// ALLER AU JEU
-// =================================
-
 
 if(
-
 data.status === "playing"
-
 ){
 
-
 router.push(
-
 `/game/${id}`
-
 );
-
 
 return;
 
 }
 
-
-
 }
 
-
-
 );
-
-
 
 return ()=>unsubscribe();
 
-
-
-},[id,router]);
-
-
-
-
-
-
-
+},[
+id,
+router
+]);
 
 if(!room){
 
-
 return(
 
-<div
-
+<main
 className="
 min-h-screen
-bg-black
+bg-gradient-to-br
+from-[#020617]
+via-[#07152f]
+to-black
 text-white
 flex
 items-center
 justify-center
 "
-
 >
 
-Chargement...
+<p className="font-bold">
+🎮 Chargement...
+</p>
 
-</div>
+</main>
 
 );
 
 }
-
-
-
-
-
-
-
 
 return(
 
@@ -361,144 +248,214 @@ return(
 
 className="
 min-h-screen
-bg-black
+relative
+overflow-hidden
+bg-gradient-to-br
+from-[#020617]
+via-[#07152f]
+to-black
 text-white
-flex
-items-center
-justify-center
-p-4
+px-4
+py-10
 "
 
 >
 
+<motion.div
+
+animate={{
+x:[0,40,0],
+y:[0,20,0]
+}}
+
+transition={{
+duration:6,
+repeat:Infinity
+}}
+
+className="
+absolute
+w-56
+h-56
+bg-blue-500/20
+rounded-full
+blur-3xl
+top-0
+left-[-60px]
+"
+
+/>
+
+<motion.div
+
+animate={{
+x:[0,-40,0],
+y:[0,-20,0]
+}}
+
+transition={{
+duration:7,
+repeat:Infinity
+}}
+
+className="
+absolute
+w-56
+h-56
+bg-purple-500/20
+rounded-full
+blur-3xl
+bottom-10
+right-[-60px]
+"
+
+/>
 
 <div
 
 className="
-w-full
+relative
+z-10
 max-w-sm
+mx-auto
+"
+
+>
+
+<BackButton />
+
+<motion.h1
+
+animate={{
+y:[0,-5,0]
+}}
+
+transition={{
+duration:3,
+repeat:Infinity
+}}
+
+className="
+text-xl
+font-black
+text-center
+mb-6
+bg-gradient-to-r
+from-blue-400
+to-cyan-300
+bg-clip-text
+text-transparent
+"
+
+>
+
+🎮 Salle d'attente
+
+</motion.h1>
+
+<div
+
+className="
 bg-white/10
+backdrop-blur-2xl
 border
 border-white/20
 rounded-3xl
 p-6
+shadow-xl
 text-center
 "
 
 >
 
-
-
-<h1
-
-className="
+<h2 className="
 text-2xl
-font-bold
-"
-
->
+font-black
+">
 
 🎮 {room.name || "Ti Ta To"}
 
-</h1>
+</h2>
 
+<p className="
+mt-4
+text-gray-300
+">
 
-
-
-
-
-<p className="mt-4">
-
-💰 Mise :
-
-{room.bet}
-
-HTG
+💰 Mise : {room.bet} HTG
 
 </p>
 
+<p className="
+mt-2
+text-gray-300
+">
 
-
-
-
-<p>
-
-👥 Joueurs :
-
-{" "}
-
-{players.length}
-
-/
-
-{room.maxPlayers}
+👥 Joueurs : {players.length}/{room.maxPlayers}
 
 </p>
 
-
-
-
-
-
-
-<div className="mt-5">
-
+<div className="
+mt-6
+flex
+flex-col
+gap-3
+">
 
 {
+players.map((player:any,index:number)=>(
 
-players.map(
+<motion.div
 
-(player:any,index:number)=>(
+key={player.uid || index}
 
+initial={{
+opacity:0,
+x:-20
+}}
 
-<div
-
-key={
-player.uid || index
-}
+animate={{
+opacity:1,
+x:0
+}}
 
 className="
 bg-white/10
-rounded-xl
-p-3
-mb-2
+border
+border-white/20
+rounded-2xl
+p-4
+flex
+justify-between
+items-center
 "
 
 >
 
+<div>
 
 🟢 {player.name || "Joueur"}
 
-
+</div>
 
 {
-
-player.symbol &&
-
+player.symbol && (
 
 <span
 
-className={`
-
-ml-2
-
-font-bold
-
-${
+className={
 
 player.symbol==="X"
 
 ?
 
-"text-blue-500"
+"text-blue-400 font-black"
 
 :
 
-"text-red-500"
+"text-red-400 font-black"
 
 }
-
-`}
 
 >
 
@@ -506,97 +463,84 @@ player.symbol==="X"
 
 </span>
 
-
+)
 }
 
+</motion.div>
 
-
-</div>
-
-
-)
-
-)
-
-
+))
 }
 
-
 </div>
-
-
-
-
-
-
-
-
 
 {
+players.length < room.maxPlayers && (
 
-players.length < room.maxPlayers &&
+<motion.p
 
+animate={{
+opacity:[0.4,1,0.4]
+}}
 
-<p
+transition={{
+duration:2,
+repeat:Infinity
+}}
 
 className="
-mt-5
-text-gray-400
+mt-6
+text-gray-300
+font-bold
 "
 
 >
 
 ⏳ En attente d'un joueur...
 
-</p>
+</motion.p>
 
-
+)
 }
 
-
-
-
-
-
-
-
 {
+players.length === room.maxPlayers && (
 
-players.length >= room.maxPlayers &&
+<motion.p
 
+animate={{
+scale:[1,1.05,1]
+}}
 
-<p
+transition={{
+duration:1,
+repeat:Infinity
+}}
 
 className="
-mt-5
+mt-6
 text-green-400
-font-bold
+font-black
 "
 
 >
 
 ✅ Salle complète
 
-<br/>
+<br />
 
-Préparation...
+Préparation de la partie...
 
-</p>
+</motion.p>
 
-
+)
 }
-
-
-
-
 
 </div>
 
+</div>
 
 </main>
 
-
 );
-
 
 }

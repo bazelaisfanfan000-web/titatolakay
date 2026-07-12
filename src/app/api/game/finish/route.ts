@@ -12,7 +12,7 @@ import {
 
 
 export async function POST(
-request:Request
+request: Request
 ){
 
 
@@ -26,7 +26,8 @@ await request.json();
 const {
 roomId,
 winnerUid
-}=body;
+} = body;
+
 
 
 
@@ -49,10 +50,17 @@ status:400
 
 
 
+
 const db =
 adminDB();
 
 
+
+
+
+// ===============================
+// RECUPERATION PARTIE
+// ===============================
 
 
 const roomRef =
@@ -67,7 +75,9 @@ await roomRef.once("value");
 
 
 
-if(!roomSnap.exists()){
+if(
+!roomSnap.exists()
+){
 
 return NextResponse.json(
 {
@@ -84,6 +94,8 @@ status:404
 
 const room =
 roomSnap.val();
+
+
 
 
 
@@ -111,6 +123,7 @@ message:"Paiement déjà effectué"
 
 
 
+
 if(
 room.game?.status !== "finished"
 ){
@@ -130,8 +143,10 @@ status:400
 
 
 
+
+
 // ===============================
-// CALCUL GAIN
+// CALCUL
 // ===============================
 
 
@@ -142,7 +157,9 @@ Number(room.pot || 0)
 
 
 
-if(pot <=0){
+if(
+pot <= 0
+){
 
 return NextResponse.json(
 {
@@ -159,8 +176,6 @@ status:400
 
 
 
-// Commission plateforme 10%
-
 const commission =
 Math.floor(
 pot * 0.10
@@ -176,41 +191,109 @@ pot - commission;
 
 
 
+
+
 // ===============================
-// VERIFICATION USER
+// CREDIT GAGNANT
 // ===============================
 
 
-const userRef =
+const balanceRef =
 db.ref(
 `users/${winnerUid}/balance`
 );
 
 
 
-const userSnap =
-await userRef.once("value");
 
+const balanceSnap =
+await balanceRef.once("value");
+
+
+
+if(
+!balanceSnap.exists()
+){
+
+return NextResponse.json(
+{
+error:"Utilisateur introuvable"
+},
+{
+status:404
+}
+);
+
+}
+
+
+
+
+
+
+const transactionResult =
+
+await balanceRef.transaction(
+
+(current: unknown)=>{
 
 
 const oldBalance =
-Number(
-userSnap.val() || 0
+Number(current || 0);
+
+
+
+return oldBalance + reward;
+
+
+}
+
 );
 
 
 
 
 
+
+
+if(
+!transactionResult.committed
+){
+
+return NextResponse.json(
+{
+error:"Erreur crédit wallet"
+},
+{
+status:500
+}
+);
+
+}
+
+
+
+
+
+
 const newBalance =
-oldBalance + reward;
+Number(
+transactionResult.snapshot.val()
+);
+
+
+
+const oldBalance =
+newBalance - reward;
+
+
 
 
 
 
 
 // ===============================
-// UPDATE
+// HISTORIQUE GAIN
 // ===============================
 
 
@@ -219,29 +302,11 @@ Date.now();
 
 
 
-const updates:any = {};
 
-
-
-
-// crédit gagnant
-
-updates[
-`users/${winnerUid}/balance`
-]
-=
-newBalance;
-
-
-
-
-// transaction gagnant
-
-updates[
+await db.ref(
 `transactions/${winnerUid}/${transactionId}`
-]
-=
-{
+)
+.set({
 
 type:"game_win",
 
@@ -255,19 +320,23 @@ gameId:roomId,
 
 createdAt:Date.now()
 
-};
+});
 
 
 
 
 
-// commission plateforme
 
-updates[
+
+// ===============================
+// COMMISSION PLATFORME
+// ===============================
+
+
+await db.ref(
 `platform/earnings/${transactionId}`
-]
-=
-{
+)
+.set({
 
 type:"game_commission",
 
@@ -277,55 +346,37 @@ gameId:roomId,
 
 createdAt:Date.now()
 
-};
+});
 
 
 
 
 
-// état partie
-
-updates[
-`rooms/${roomId}/game/paymentDone`
-]
-=
-true;
 
 
-updates[
-`rooms/${roomId}/game/reward`
-]
-=
-reward;
+// ===============================
+// MARQUER LA PARTIE PAYEE
+// ===============================
 
 
-updates[
-`rooms/${roomId}/game/commission`
-]
-=
-commission;
+await db.ref(
+`rooms/${roomId}/game`
+)
+.update({
+
+paymentDone:true,
+
+reward,
+
+commission,
+
+status:"paid",
+
+paidAt:Date.now()
+
+});
 
 
-updates[
-`rooms/${roomId}/game/status`
-]
-=
-"paid";
-
-
-updates[
-`rooms/${roomId}/game/paidAt`
-]
-=
-Date.now();
-
-
-
-
-
-await db
-.ref()
-.update(updates);
 
 
 
@@ -351,8 +402,10 @@ newBalance
 
 
 
-}
 
+
+
+}
 catch(error:any){
 
 

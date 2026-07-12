@@ -1,10 +1,12 @@
 "use client";
 
+
 import {
   useEffect,
   useState,
   useRef
 } from "react";
+
 
 import {
   useParams,
@@ -24,6 +26,7 @@ import {
 } from "@/lib/firebase";
 
 
+
 import {
   playGameMove,
   finishGamePayment,
@@ -33,16 +36,25 @@ import {
 } from "@/lib/firebaseGame";
 
 
+
 import {
   addPlayerWin,
   addPlayerLose
 } from "@/lib/playerStats";
 
 
+
 import TiTaToBoard from "@/components/TiTaToBoard";
+
 import GameTimer from "@/components/GameTimer";
+
 import WinnerModal from "@/components/WinnerModal";
+
 import RematchModal from "@/components/RematchModal";
+
+import GameChat from "@/components/GameChat";
+
+
 
 
 
@@ -51,12 +63,19 @@ import RematchModal from "@/components/RematchModal";
 export default function GamePage(){
 
 
-const params = useParams();
+const params =
+useParams();
 
-const router = useRouter();
+
+const router =
+useRouter();
 
 
-const id = params.id as string;
+
+const id =
+params.id as string;
+
+
 
 
 
@@ -64,19 +83,16 @@ const [room,setRoom] =
 useState<any>(null);
 
 
-
 const [board,setBoard] =
 useState<string[][]>([]);
-
 
 
 const [turn,setTurn] =
 useState<"X"|"O">("X");
 
 
-
 const [winner,setWinner] =
-useState("");
+useState<string|null>(null);
 
 
 
@@ -95,7 +111,8 @@ useState<any>(null);
 
 
 
-const paymentInitiatedRef =
+
+const paymentDone =
 useRef(false);
 
 
@@ -103,9 +120,13 @@ useRef(false);
 
 
 
-// =============================
-// ECOUTE SALLE
-// =============================
+
+
+
+
+// ==========================
+// ECOUTE PARTIE
+// ==========================
 
 
 useEffect(()=>{
@@ -124,7 +145,6 @@ database,
 
 
 
-
 const unsubscribe =
 
 onValue(
@@ -139,36 +159,13 @@ snapshot.val();
 
 
 
-if(!data){
-
-setRoom(null);
-
+if(!data)
 return;
-
-}
 
 
 
 
 setRoom(data);
-
-
-
-
-
-if(
-data.status==="starting"
-&&
-data.countdownStart
-){
-
-router.push(
-`/countdown/${id}`
-);
-
-return;
-
-}
 
 
 
@@ -182,37 +179,9 @@ data.game.board
 
 }
 
-else{
 
 
-setBoard(
-
-Array.from(
-
-{
-length:10
-},
-
-()=>Array(10).fill("")
-
-)
-
-);
-
-
-}
-
-
-
-
-
-
-
-if(
-data.game?.turn==="X"
-||
-data.game?.turn==="O"
-){
+if(data.game?.turn){
 
 setTurn(
 data.game.turn
@@ -222,26 +191,11 @@ data.game.turn
 
 
 
-
-
-if(
-data.game?.winner
-){
-
 setWinner(
-data.game.winner
+
+data.game?.winner || null
+
 );
-
-}
-
-else{
-
-setWinner("");
-
-}
-
-
-
 
 
 
@@ -264,9 +218,13 @@ auth.currentUser;
 
 
 if(
+
 user &&
+
 data.players?.[user.uid]
+
 ){
+
 
 setMySymbol(
 
@@ -274,32 +232,17 @@ data.players[user.uid].symbol
 
 );
 
+
 }
 
 
 
 
 
-if(data.rematch){
 
 setRematch(
-data.rematch
-);
 
-}
-
-else{
-
-setRematch(null);
-
-}
-
-
-
-
-}
-
-
+data.rematch || null
 
 );
 
@@ -307,18 +250,46 @@ setRematch(null);
 
 
 
-return()=>unsubscribe();
+if(data.status==="starting"){
+
+
+router.push(
+
+`/countdown/${id}`
+
+);
+
+
+}
 
 
 
-},[
-id,
-router
-]);
-// =============================
-// FIN DE PARTIE
-// CLASSEMENT + PAIEMENT
-// =============================
+}
+
+);
+
+
+
+return ()=>unsubscribe();
+
+
+
+},[id,router]);
+
+
+
+
+
+
+
+
+
+
+
+// ==========================
+// PAIEMENT FIN PARTIE
+// ==========================
+
 
 useEffect(()=>{
 
@@ -327,118 +298,77 @@ if(!room)
 return;
 
 
-if(
-room.game?.status !== "finished"
-)
-return;
 
-
-if(
-!room.game?.winner
-)
+if(room.game?.status !== "finished")
 return;
 
 
 
-if(
-paymentInitiatedRef.current
-)
+if(!room.game?.winner)
 return;
 
 
 
-paymentInitiatedRef.current = true;
+if(paymentDone.current)
+return;
 
 
 
-
-async function finishGame(){
-
-
-try{
-
-
-
-const players =
-room.players || {};
-
-
-
-let winnerUid = "";
-
-let loserUid = "";
+paymentDone.current=true;
 
 
 
 
 
-Object.entries(players)
+async function pay(){
 
-.forEach(
-([uid,player]:any)=>{
+
+
+let winnerUid="";
+
+let loserUid="";
+
+
+
+
+
+Object.entries(room.players || {})
+
+.forEach(([uid,p]:any)=>{
+
 
 
 if(
-player.symbol === room.game.winner
+p.symbol === room.game.winner
 ){
 
-winnerUid = uid;
+winnerUid=uid;
 
 }
 
 else{
 
-loserUid = uid;
+loserUid=uid;
 
 }
 
 
-}
-
-);
+});
 
 
 
 
 
-// ======================
-// AJOUT CLASSEMENT
-// ======================
 
 
 if(winnerUid){
 
-console.log("📊 Ajout victoire pour:", winnerUid);
+
 await addPlayerWin(
 winnerUid
 );
 
-}
 
-
-
-if(loserUid){
-
-console.log("📊 Ajout défaite pour:", loserUid);
-await addPlayerLose(
-loserUid
-);
-
-}
-
-
-
-
-
-
-
-// ======================
-// PAIEMENT
-// ======================
-
-
-console.log("💰 Lancement paiement pour winnerUid:", winnerUid);
-console.log("💰 Pot actuel:", room.pot);
 
 await finishGamePayment(
 
@@ -449,24 +379,25 @@ winnerUid
 );
 
 
+}
 
-console.log(
-"🏆 Classement mis à jour et paiement effectué"
+
+
+
+
+
+if(loserUid){
+
+
+await addPlayerLose(
+
+loserUid
+
 );
 
 
-
 }
 
-catch(error){
-
-console.error(
-"Erreur fin partie",
-error
-);
-
-
-}
 
 
 
@@ -474,15 +405,11 @@ error
 
 
 
-finishGame();
+pay();
 
 
 
-},[
-room,
-id
-]);
-
+},[room,id]);
 
 
 
@@ -491,12 +418,15 @@ id
 
 
 
-// =============================
-// JOUER UN COUP
-// =============================
 
 
-async function handlePlayMove(
+
+// ==========================
+// JOUEUR
+// ==========================
+
+
+async function handleMove(
 
 row:number,
 
@@ -506,49 +436,22 @@ col:number
 
 
 
-if(!mySymbol){
-
-alert(
-"❌ Symbole introuvable"
-);
-
+if(!mySymbol)
 return;
-
-}
-
-
-
-
-
-if(winner){
-
-alert(
-"🏆 Partie terminée"
-);
-
-return;
-
-}
-
-
 
 
 
 if(turn !== mySymbol){
 
 alert(
-"⏳ Ce n'est pas ton tour"
+"Ce n'est pas ton tour"
 );
+
 
 return;
 
 }
 
-
-
-
-
-try{
 
 
 await playGameMove(
@@ -567,19 +470,6 @@ mySymbol
 
 }
 
-catch(error:any){
-
-
-alert(
-error.message || "Erreur"
-);
-
-
-}
-
-
-
-}
 
 
 
@@ -589,15 +479,21 @@ error.message || "Erreur"
 
 
 
-// =============================
+
+// ==========================
 // REVANCHE
-// =============================
+// ==========================
 
 
-async function handleRequestRematch(){
+async function askRematch(){
 
 
-if(!auth.currentUser)
+const user =
+auth.currentUser;
+
+
+
+if(!user)
 return;
 
 
@@ -606,7 +502,55 @@ await requestRematch(
 
 id,
 
-auth.currentUser.uid
+user.uid,
+
+user.displayName || "Joueur"
+
+);
+
+
+
+}
+
+
+
+
+
+
+
+async function accept(){
+
+
+const user =
+auth.currentUser;
+
+
+
+if(!user)
+return;
+
+
+
+const result =
+
+await acceptRematch(
+
+id,
+
+user.uid
+
+);
+
+
+
+
+
+if(result.success && result.roomId){
+
+
+router.push(
+
+`/countdown/${result.roomId}`
 
 );
 
@@ -615,43 +559,54 @@ auth.currentUser.uid
 
 
 
-
-
-
-async function handleAcceptRematch(){
-
-
-try{
-
-
-await acceptRematch(id);
-
-
-}
-
-catch(error:any){
-
+if(result.error){
 
 alert(
-error.message
+result.error
+);
+
+}
+
+
+}
+
+
+
+
+
+
+
+
+
+async function reject(){
+
+
+const user =
+auth.currentUser;
+
+
+
+if(!user)
+return;
+
+
+
+await rejectRematch(
+
+id,
+
+user.uid
+
 );
 
 
-}
 
+router.push(
 
+"/dashboard"
 
-}
+);
 
-
-
-
-
-
-async function handleRejectRematch(){
-
-
-await rejectRematch(id);
 
 
 }
@@ -669,18 +624,7 @@ if(!room){
 
 return(
 
-<div
-
-className="
-min-h-screen
-bg-black
-text-white
-flex
-items-center
-justify-center
-"
-
->
+<div className="min-h-screen bg-black text-white flex items-center justify-center">
 
 Chargement...
 
@@ -697,23 +641,27 @@ Chargement...
 
 
 
+const currentUser =
+auth.currentUser;
+
+
 
 const myTurn =
-turn === mySymbol;
-
-
-
+turn===mySymbol;
 
 
 
 const reward =
 
-room.game?.reward ||
-
 Math.floor(
-Number(room.pot || 0)*0.9
-);
 
+Number(room.pot || 0)
+
+*
+
+0.8
+
+);
 
 
 
@@ -727,7 +675,10 @@ return(
 
 className="
 min-h-screen
-bg-black
+bg-gradient-to-br
+from-black
+via-blue-950
+to-black
 text-white
 p-4
 "
@@ -736,16 +687,11 @@ p-4
 
 
 
-
-<h1
-
-className="
+<h1 className="
 text-center
-text-2xl
-font-bold
-"
-
->
+text-3xl
+font-black
+">
 
 🎮 {room.name || "Ti Ta To"}
 
@@ -755,96 +701,46 @@ font-bold
 
 
 
-
-<p
-
-className="
+<div className="
+mt-5
 text-center
-mt-3
-"
+bg-yellow-500/10
+rounded-2xl
+p-4
+">
 
->
+💰 POT
 
-💰 Pot :
-
-<b>
-
-{room.pot || 0} HTG
-
-</b>
-
-</p>
-
-
-
-
-
-
-
-
-<p
-
-className="
-text-center
-mt-2
-"
-
->
-
-Ton symbole :
-
-<b>
-
-{mySymbol}
-
-</b>
-
-</p>
-
-
-
-
-
-
-
-{
-
-myTurn ?
-
-<p
-
-className="
-text-center
-text-green-400
-font-bold
-mt-3
-"
-
->
-
-🟢 Ton tour
-
-</p>
-
-
-:
-
-<p
-
-className="
-text-center
+<div className="
+text-3xl
+font-black
 text-yellow-400
-mt-3
-"
+">
 
->
+{room.pot} HTG
 
-⏳ Tour de {turn}
+</div>
 
-</p>
+</div>
 
 
-}
+
+
+
+
+<TiTaToBoard
+
+board={board}
+
+mySymbol={mySymbol as "X"|"O"}
+
+turn={turn}
+
+winner={winner}
+
+playMove={handleMove}
+
+/>
 
 
 
@@ -869,23 +765,14 @@ onTimeout={()=>{}}
 
 
 
+<GameChat
 
-<TiTaToBoard
+roomId={id}
 
-board={board}
+uid={currentUser?.uid || ""}
 
-mySymbol={
-mySymbol as "X"|"O"
-}
-
-turn={turn}
-
-winner={
-winner || null
-}
-
-playMove={
-handlePlayMove
+name={
+currentUser?.displayName || "Joueur"
 }
 
 />
@@ -897,35 +784,7 @@ handlePlayMove
 
 
 
-<button
-
-onClick={()=>router.push("/dashboard")}
-
-className="
-mt-6
-w-full
-bg-red-600
-py-3
-rounded-xl
-font-bold
-"
-
->
-
-❌ Quitter
-
-</button>
-
-
-
-
-
-
-
-
-
 {
-
 winner &&
 
 <WinnerModal
@@ -936,18 +795,13 @@ mySymbol={mySymbol}
 
 reward={reward}
 
-onClose={
-()=>router.push("/dashboard")
-}
+onClose={()=>router.push("/dashboard")}
 
-onRequestRematch={
-handleRequestRematch
-}
+onRequestRematch={askRematch}
 
 />
 
 }
-
 
 
 
@@ -957,31 +811,28 @@ handleRequestRematch
 
 
 {
-
-rematch
-&&
-auth.currentUser
-
-&&
+rematch && currentUser &&
 
 
 <RematchModal
 
-requestedBy={
-rematch.requestedBy
+
+requestedBy={rematch.requestedBy}
+
+
+requesterName={
+rematch.requesterName || "Joueur"
 }
 
-myUid={
-auth.currentUser.uid
-}
 
-onAccept={
-handleAcceptRematch
-}
+myUid={currentUser.uid}
 
-onReject={
-handleRejectRematch
-}
+
+onAccept={accept}
+
+
+onReject={reject}
+
 
 />
 
@@ -989,7 +840,10 @@ handleRejectRematch
 
 
 
+
+
 </main>
+
 
 );
 

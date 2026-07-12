@@ -1,15 +1,15 @@
-import type { Metadata } from "next";
-
 import "./globals.css";
 
-import Presence from "@/components/Presence";
+import {
+  LanguageProvider
+} from "@/context/LanguageContext";
 
 
-export const metadata: Metadata = {
+export const metadata = {
 
-  title: "Ti Ta To",
+  title: "DOMINOS HAITI",
 
-  description: "Plateforme de jeu Ti Ta To"
+  description: "Jeu de dominos en ligne avec portefeuille HTG"
 
 };
 
@@ -32,9 +32,11 @@ export default function RootLayout({
 
       <body>
 
-        <Presence />
+        <LanguageProvider>
 
-        {children}
+          {children}
+
+        </LanguageProvider>
 
       </body>
 

@@ -9,27 +9,28 @@ import {
   useRouter
 } from "next/navigation";
 
-
 import {
   auth,
   database
 } from "@/lib/firebase";
 
-
 import {
   onAuthStateChanged
 } from "firebase/auth";
-
 
 import {
   ref,
   onValue
 } from "firebase/database";
 
-
 import {
   useBalance
 } from "@/hooks/useBalance";
+
+import {
+  motion
+} from "framer-motion";
+
 
 
 
@@ -39,12 +40,10 @@ export default function Dashboard(){
 const router = useRouter();
 
 
-
 const {
-  balance,
-  loading:balanceLoading
+ balance,
+ loading:balanceLoading
 }=useBalance();
-
 
 
 
@@ -59,7 +58,6 @@ const [
  notificationCount,
  setNotificationCount
 ]=useState(0);
-
 
 
 
@@ -100,19 +98,12 @@ return;
 
 
 
-
-
 const userRef =
 
 ref(
-
 database,
-
 `users/${user.uid}`
-
 );
-
-
 
 
 
@@ -128,14 +119,11 @@ userRef,
 const data=snapshot.val();
 
 
-
 if(data){
 
 
 setUsername(
-
 data.username || "Joueur"
-
 );
 
 
@@ -205,9 +193,7 @@ Object.values(data)
 
 .filter(
 
-(item:any)=>
-
-item.read===false
+(item:any)=>item.read===false
 
 )
 
@@ -237,7 +223,6 @@ unsubscribeNotif();
 };
 
 
-
 }
 
 );
@@ -256,6 +241,7 @@ return()=>unsubscribeAuth();
 
 
 
+
 return(
 
 
@@ -263,8 +249,12 @@ return(
 
 className="
 min-h-screen
-overflow-y-auto
-bg-[#050505]
+relative
+overflow-hidden
+bg-gradient-to-br
+from-[#020617]
+via-[#07152f]
+to-black
 text-white
 px-4
 pb-40
@@ -275,18 +265,73 @@ justify-center
 >
 
 
+<motion.div
+
+animate={{
+x:[0,30,0],
+y:[0,20,0]
+}}
+
+transition={{
+duration:6,
+repeat:Infinity
+}}
+
+className="
+absolute
+w-52
+h-52
+bg-blue-500/20
+rounded-full
+blur-3xl
+top-10
+left-[-40px]
+"
+
+/>
+
+
+
+<motion.div
+
+animate={{
+x:[0,-30,0],
+y:[0,-20,0]
+}}
+
+transition={{
+duration:7,
+repeat:Infinity
+}}
+
+className="
+absolute
+w-52
+h-52
+bg-purple-500/20
+rounded-full
+blur-3xl
+bottom-20
+right-[-40px]
+"
+
+/>
+
+
+
+
+
 <section
 
 className="
+relative
+z-10
 w-full
 max-w-xs
-pt-20
+pt-16
 "
 
 >
-
-
-
 
 
 <header
@@ -296,10 +341,10 @@ fixed
 top-0
 left-0
 right-0
-bg-[#050505]/95
-backdrop-blur-xl
+bg-white/10
+backdrop-blur-2xl
 border-b
-border-white/10
+border-white/20
 z-50
 "
 
@@ -312,7 +357,7 @@ className="
 max-w-xs
 mx-auto
 px-4
-py-4
+py-3
 flex
 justify-between
 items-center
@@ -321,20 +366,32 @@ items-center
 >
 
 
-<h1
+<motion.h1
+
+animate={{
+y:[0,-4,0]
+}}
+
+transition={{
+duration:3,
+repeat:Infinity
+}}
 
 className="
 text-sm
 font-black
-text-blue-500
+bg-gradient-to-r
+from-blue-400
+to-cyan-300
+bg-clip-text
+text-transparent
 "
 
 >
 
 ⭕ TI TA TO
 
-</h1>
-
+</motion.h1>
 
 
 
@@ -344,42 +401,25 @@ text-blue-500
 onClick={()=>router.push("/wallet")}
 
 className="
-bg-white/5
+mr-[-8px]
+bg-white/10
 border
-border-white/10
+border-white/20
 rounded-xl
-px-3
+px-4
 py-2
 "
 
 >
 
 
-<span
-
-className="
+<span className="
 text-green-400
 font-black
 text-xs
-"
+">
 
->
-
-💰 {
-
-balanceLoading
-
-?
-
-"..."
-
-:
-
-Math.floor(balance)
-
-}
-
-HTG
+💰 {balanceLoading ? "..." : Math.floor(balance)} HTG
 
 </span>
 
@@ -387,31 +427,32 @@ HTG
 </button>
 
 
-
 </div>
 
 
-</header>
+</header><div className="mt-2">
 
 
+<p className="
+text-[11px]
+text-gray-400
+">
 
-
-
-<div className="mt-2">
-
-
-<div className="mb-8">
-
-
-<p className="text-xs text-gray-400">
-
-Salut
+Salut 👋
 
 </p>
 
 
 
-<h2 className="text-sm font-bold">
+<h2
+
+className="
+text-base
+font-bold
+mt-1
+"
+
+>
 
 {username}
 
@@ -420,14 +461,28 @@ Salut
 
 
 
-<div
+
+
+
+<motion.div
+
+initial={{
+opacity:0,
+y:15
+}}
+
+animate={{
+opacity:1,
+y:0
+}}
 
 className="
-mt-5
-bg-white/5
+mt-4
+bg-white/10
+backdrop-blur-2xl
 border
-border-white/10
-rounded-2xl
+border-white/20
+rounded-3xl
 p-4
 grid
 grid-cols-2
@@ -439,14 +494,21 @@ text-center
 
 <div>
 
-<p className="text-yellow-400 font-bold text-sm">
+<p className="
+text-yellow-300
+font-bold
+text-sm
+">
 
 🏆 {stats.wins}
 
 </p>
 
 
-<p className="text-[10px] text-gray-400">
+<p className="
+text-[10px]
+text-gray-400
+">
 
 Victoires
 
@@ -461,14 +523,21 @@ Victoires
 
 <div>
 
-<p className="text-blue-400 font-bold text-sm">
+<p className="
+text-cyan-300
+font-bold
+text-sm
+">
 
 🎮 {stats.games}
 
 </p>
 
 
-<p className="text-[10px] text-gray-400">
+<p className="
+text-[10px]
+text-gray-400
+">
 
 Parties
 
@@ -478,119 +547,9 @@ Parties
 </div>
 
 
-
-</div>
-
-
-</div><div
-
-className="
-flex
-flex-col
-gap-3
-"
-
->
+</motion.div>
 
 
-
-<button
-
-onClick={()=>router.push("/create-room")}
-
-className="
-w-full
-py-3
-rounded-xl
-bg-blue-600
-font-bold
-text-sm
-shadow-lg
-shadow-blue-600/30
-"
-
->
-
-🎮 Créer une partie
-
-</button>
-
-
-
-
-
-<button
-
-onClick={()=>router.push("/join-room")}
-
-className="
-w-full
-py-3
-rounded-xl
-bg-white/10
-border
-border-white/10
-font-bold
-text-sm
-"
-
->
-
-🚀 Rejoindre une partie
-
-</button>
-
-
-
-
-
-<button
-
-onClick={()=>router.push("/spectator")}
-
-className="
-w-full
-py-3
-rounded-xl
-bg-purple-600
-font-bold
-text-sm
-"
-
->
-
-👁️ Mode spectateur
-
-</button>
-
-
-
-
-
-<button
-
-onClick={()=>router.push("/leaderboard")}
-
-className="
-w-full
-py-3
-rounded-xl
-bg-yellow-600
-font-bold
-text-sm
-shadow-lg
-shadow-yellow-600/30
-"
-
->
-
-🏆 Classement
-
-</button>
-
-
-
-</div>
 
 
 
@@ -601,27 +560,121 @@ shadow-yellow-600/30
 <div
 
 className="
-mt-7
-bg-white/5
-border
-border-white/10
-rounded-2xl
-p-4
-mb-10
+flex
+flex-col
+gap-3
+mt-4
 "
 
 >
 
 
-<h2
+<ActionButton
+
+variant="blue"
+
+onClick={()=>router.push("/create-room")}
+
+>
+
+🎮 Créer une partie
+
+</ActionButton>
+
+
+
+
+
+
+<ActionButton
+
+variant="glass"
+
+onClick={()=>router.push("/join-room")}
+
+>
+
+🚀 Rejoindre une partie
+
+</ActionButton>
+
+
+
+
+
+
+
+<ActionButton
+
+variant="blue"
+
+onClick={()=>router.push("/spectator")}
+
+>
+
+👁️ Mode spectateur
+
+</ActionButton>
+
+
+
+
+
+
+
+<ActionButton
+
+variant="glass"
+
+onClick={()=>router.push("/leaderboard")}
+
+>
+
+🏆 Classement
+
+</ActionButton>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<motion.div
+
+animate={{
+opacity:[0.6,1,0.6]
+}}
+
+transition={{
+duration:3,
+repeat:Infinity
+}}
 
 className="
+mt-6
+bg-white/10
+backdrop-blur-2xl
+border
+border-white/20
+rounded-3xl
+p-4
+"
+
+>
+
+
+<h2 className="
 text-center
 font-bold
 text-sm
-"
-
->
+">
 
 ⭕ Ti Ta To
 
@@ -629,16 +682,11 @@ text-sm
 
 
 
-
-<p
-
-className="
+<p className="
 text-xs
-text-gray-400
+text-gray-300
 mt-3
-"
-
->
+">
 
 🧪 Version bêta : mode test activé.
 
@@ -646,16 +694,11 @@ mt-3
 
 
 
-
-<p
-
-className="
+<p className="
 text-xs
-text-gray-400
+text-gray-300
 mt-2
-"
-
->
+">
 
 🎁 Bonus test activé.
 
@@ -663,14 +706,15 @@ mt-2
 
 
 
+</motion.div>
+
+
+
+
+
 </div>
 
 
-
-
-
-
-</div>
 
 
 
@@ -687,9 +731,10 @@ left-1/2
 w-[92%]
 max-w-xs
 h-14
-bg-[#111]/95
+bg-white/10
+backdrop-blur-2xl
 border
-border-white/10
+border-white/20
 rounded-2xl
 flex
 justify-around
@@ -700,56 +745,43 @@ z-50
 >
 
 
+<NavItem
 
+icon="🏠"
 
-
-<button
+text="Accueil"
 
 onClick={()=>router.push("/dashboard")}
 
-className="text-[10px]"
-
->
-
-🏠
-<br/>
-Accueil
-
-</button>
+/>
 
 
 
 
+<NavItem
 
+icon="💼"
 
-
-<button
+text="Portefeuille"
 
 onClick={()=>router.push("/wallet")}
 
-className="text-[10px]"
-
->
-
-💼
-<br/>
-Portefeuille
-
-</button>
+/>
 
 
 
 
 
 
-
-<button
+<div
 
 onClick={()=>router.push("/notifications")}
 
 className="
-text-[10px]
 relative
+text-center
+text-[10px]
+cursor-pointer
 "
 
 >
@@ -757,30 +789,29 @@ relative
 🔔
 
 
-
 {
 
-notificationCount > 0 &&
+notificationCount>0 &&
 
 <span
 
 className="
 absolute
-right-[-10px]
+right-[-8px]
 top-[-8px]
-bg-red-600
+bg-red-500
 text-white
-text-[9px]
-font-black
 rounded-full
+text-[9px]
 px-1
+font-bold
 "
 
 >
 
 {
 
-notificationCount > 9
+notificationCount>9
 
 ?
 
@@ -803,7 +834,7 @@ notificationCount
 Notification
 
 
-</button>
+</div>
 
 
 
@@ -811,22 +842,15 @@ Notification
 
 
 
-<button
+<NavItem
+
+icon="⚙️"
+
+text="Paramètre"
 
 onClick={()=>router.push("/settings")}
 
-className="text-[10px]"
-
->
-
-⚙️
-<br/>
-Paramètre
-
-</button>
-
-
-
+/>
 
 
 
@@ -842,6 +866,181 @@ Paramètre
 
 
 </main>
+
+
+);
+
+
+}
+
+
+
+
+
+
+
+
+
+function ActionButton({
+
+children,
+
+onClick,
+
+variant="blue"
+
+}:{
+
+children:React.ReactNode;
+
+onClick:()=>void;
+
+variant?: "blue" | "glass";
+
+}){
+
+
+return(
+
+
+<motion.button
+
+
+whileHover={{
+
+scale:1.03,
+
+y:-3
+
+}}
+
+
+
+whileTap={{
+
+scale:.95,
+
+y:2
+
+}}
+
+
+
+onClick={onClick}
+
+
+
+className={
+
+variant==="blue"
+
+?
+
+`
+w-full
+py-3
+rounded-xl
+font-bold
+text-sm
+
+bg-gradient-to-b
+from-blue-400
+to-blue-700
+
+border
+border-blue-300/40
+
+shadow-[0_5px_0_#123a8a]
+
+`
+
+:
+
+`
+
+w-full
+py-3
+rounded-xl
+font-bold
+text-sm
+
+bg-white/20
+
+backdrop-blur-xl
+
+border
+border-white/30
+
+shadow-[0_5px_0_rgba(255,255,255,0.15)]
+
+`
+
+}
+
+
+>
+
+
+{children}
+
+
+</motion.button>
+
+
+);
+
+}
+
+
+
+
+
+
+
+
+
+function NavItem({
+
+icon,
+
+text,
+
+onClick
+
+}:{
+
+icon:string;
+
+text:string;
+
+onClick:()=>void;
+
+}){
+
+
+return(
+
+
+<button
+
+onClick={onClick}
+
+className="
+text-[10px]
+text-gray-200
+"
+
+>
+
+
+{icon}
+
+<br/>
+
+{text}
+
+
+</button>
 
 
 );

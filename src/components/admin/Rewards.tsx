@@ -2,25 +2,23 @@
 
 
 import {
-useEffect,
-useState
+  useEffect,
+  useState
 } from "react";
 
 
 import {
-database
-} from "@/lib/firebase";
-
-
-import {
-ref,
-onValue,
-get,
-set,
-push
+  ref,
+  onValue,
+  update,
+  push,
+  set
 } from "firebase/database";
 
 
+import {
+  database
+} from "@/lib/firebase";
 
 
 
@@ -30,14 +28,26 @@ export default function Rewards(){
 
 
 
-const [users,setUsers]=useState<any[]>([]);
+const [users,setUsers] =
+useState<any[]>([]);
 
 
-const [amount,setAmount]=useState("");
+const [rewards,setRewards] =
+useState<any[]>([]);
 
-const [preview,setPreview]=useState(false);
 
-const [sending,setSending]=useState(false);
+
+const [selectedUser,setSelectedUser] =
+useState("");
+
+const [amount,setAmount] =
+useState("");
+
+const [type,setType] =
+useState("bonus");
+
+const [reason,setReason] =
+useState("");
 
 
 
@@ -53,8 +63,16 @@ const usersRef =
 ref(database,"users");
 
 
+const rewardsRef =
+ref(database,"rewards");
 
-return onValue(
+
+
+
+
+
+const stopUsers =
+onValue(
 
 usersRef,
 
@@ -65,45 +83,17 @@ const data =
 snapshot.val() || {};
 
 
+const list =
 
-const list:any[]=[];
+Object.entries(data)
 
-
-
-Object.entries(data).forEach(
-
-([uid,user]:any)=>{
-
-
-if(
-user.role !== "admin"
-&&
-user.banned !== true
-){
-
-
-
-list.push({
+.map(([uid,user]:any)=>({
 
 uid,
 
-username:
-user.username || "Joueur",
+...user
 
-balance:
-Number(user.balance || 0)
-
-});
-
-
-}
-
-
-
-}
-
-
-);
+}));
 
 
 
@@ -118,6 +108,59 @@ setUsers(list);
 
 
 
+
+
+
+const stopRewards =
+onValue(
+
+rewardsRef,
+
+(snapshot)=>{
+
+
+const data =
+snapshot.val() || {};
+
+
+const list =
+
+Object.entries(data)
+
+.map(([id,reward]:any)=>({
+
+id,
+
+...reward
+
+}));
+
+
+
+setRewards(list);
+
+
+
+}
+
+
+);
+
+
+
+
+
+
+
+return()=>{
+
+stopUsers();
+
+stopRewards();
+
+};
+
+
 },[]);
 
 
@@ -128,32 +171,18 @@ setUsers(list);
 
 
 
-
-const bonus =
-Number(amount || 0);
-
-
-
-const total =
-bonus * users.length;
-
-
-
-
-
-
-
-
-
-async function sendReward(){
+async function giveReward(){
 
 
 
 if(
-bonus <=0
-||
-users.length===0
+!selectedUser ||
+!amount
 ){
+
+alert(
+"Informations manquantes"
+);
 
 return;
 
@@ -161,65 +190,24 @@ return;
 
 
 
-setSending(true);
+
+
+const value =
+Number(amount);
 
 
 
-try{
-
-
-
-
-
-for(const user of users){
-
-
-
-const balanceRef =
+const userRef =
 ref(
 database,
-`users/${user.uid}/balance`
+`users/${selectedUser}`
 );
 
 
 
-const snap =
-await get(balanceRef);
-
-
-
-const oldBalance =
-Number(
-snap.val() || 0
-);
-
-
-
-
-
-
-await set(
-
-balanceRef,
-
-oldBalance + bonus
-
-);
-
-
-
-
-
-
-
-const notifRef =
+const rewardRef =
 push(
-
-ref(
-database,
-`notifications/${user.uid}`
-)
-
+ref(database,"rewards")
 );
 
 
@@ -227,20 +215,37 @@ database,
 
 
 
+await update(
 
-await set(
-
-notifRef,
+userRef,
 
 {
 
-message:
+balance:
+(value || 0)
 
-`🎁 Ti Ta To vous offre un bonus de ${bonus} HTG`,
+}
 
-amount:bonus,
+);
 
-read:false,
+
+
+
+
+
+await set(
+
+rewardRef,
+
+{
+
+uid:selectedUser,
+
+amount:value,
+
+type,
+
+reason,
 
 createdAt:Date.now()
 
@@ -252,47 +257,15 @@ createdAt:Date.now()
 
 
 
-}
-
-
-
-
-
-
-
 alert(
-`✅ ${total} HTG distribués à ${users.length} joueurs`
+"🎁 Récompense ajoutée"
 );
 
 
 
 setAmount("");
 
-setPreview(false);
-
-
-
-}
-
-catch(error){
-
-
-console.log(error);
-
-
-alert(
-"Erreur pendant la distribution"
-);
-
-
-
-}
-
-
-
-setSending(false);
-
-
+setReason("");
 
 }
 
@@ -307,10 +280,7 @@ setSending(false);
 return(
 
 
-<div className="
-text-white
-w-full
-">
+<div className="text-white">
 
 
 
@@ -318,23 +288,22 @@ w-full
 
 
 <h1 className="
-text-2xl
+text-3xl
 font-black
 ">
 
-🎁 Récompenses
+🎁 Récompenses joueurs
 
 </h1>
 
 
 
-
 <p className="
-text-sm
 text-gray-400
+mt-2
 ">
 
-Distribuer un bonus aux joueurs actifs
+Bonus, cashback et récompenses DOMINOS HAÏTI
 
 </p>
 
@@ -347,100 +316,185 @@ Distribuer un bonus aux joueurs actifs
 
 
 <div className="
-mt-5
-bg-white/[0.05]
+mt-8
+grid
+md:grid-cols-2
+gap-5
+">
+
+
+
+
+
+
+
+{/* CREATION */}
+
+
+
+<div className="
+
+bg-[#111827]
+
 border
+
 border-white/10
-rounded-2xl
-p-5
+
+rounded-3xl
+
+p-6
+
 ">
-
-
-
-
-
-<p className="
-text-sm
-text-gray-400
-">
-
-👥 Joueurs concernés
-
-</p>
-
 
 
 <h2 className="
-text-3xl
+text-xl
 font-black
-mt-2
 ">
 
-{users.length}
+➕ Donner une récompense
 
 </h2>
 
 
 
 
-</div>
 
 
+<select
+
+value={selectedUser}
+
+onChange={(e)=>
+setSelectedUser(e.target.value)
+}
 
 
-
-
-
-
-
-<div className="
-mt-4
-bg-white/[0.05]
+className="
+mt-5
+w-full
+bg-black
 border
-border-white/10
-rounded-2xl
-p-5
-">
+border-white/20
+rounded-xl
+p-4
+"
+
+>
+
+
+<option value="">
+
+Choisir un joueur
+
+</option>
+
+
+
+{
+
+users.map(user=>(
+
+
+<option
+
+key={user.uid}
+
+value={user.uid}
+
+>
+
+{
+user.username || "Joueur"
+}
+
+</option>
+
+
+
+))
+
+
+}
+
+
+
+</select>
 
 
 
 
 
-<label className="
-text-sm
-text-gray-400
-">
 
-💰 Bonus par joueur (HTG)
 
-</label>
+
+
+<select
+
+
+value={type}
+
+
+onChange={(e)=>
+setType(e.target.value)
+}
+
+
+className="
+mt-4
+w-full
+bg-black
+border
+border-white/20
+rounded-xl
+p-4
+"
+
+>
+
+
+<option value="bonus">
+🎁 Bonus
+</option>
+
+
+<option value="cashback">
+💰 Cashback
+</option>
+
+
+<option value="reward">
+🏆 Récompense
+</option>
+
+
+</select>
+
+
+
+
 
 
 
 
 <input
 
-
-type="number"
-
-
 value={amount}
 
-
-onChange={
-e=>setAmount(e.target.value)
+onChange={(e)=>
+setAmount(e.target.value)
 }
 
 
-placeholder="Exemple : 1000"
+placeholder="Montant HTG"
 
 
 className="
-mt-3
+mt-4
 w-full
-bg-black/40
+bg-black
 border
-border-white/10
+border-white/20
 rounded-xl
 p-4
 "
@@ -452,52 +506,30 @@ p-4
 
 
 
-</div>
+
+<input
+
+value={reason}
+
+onChange={(e)=>
+setReason(e.target.value)
+}
 
 
+placeholder="Raison"
 
 
-
-
-
-
-
-<div className="
+className="
 mt-4
-bg-green-600/20
+w-full
+bg-black
 border
-border-green-500/20
-rounded-2xl
-p-5
-">
+border-white/20
+rounded-xl
+p-4
+"
 
-
-
-<p className="
-text-sm
-text-gray-300
-">
-
-💰 Total à distribuer
-
-</p>
-
-
-
-<h2 className="
-text-3xl
-font-black
-text-green-400
-mt-2
-">
-
-{total} HTG
-
-</h2>
-
-
-
-</div>
+/>
 
 
 
@@ -509,27 +541,44 @@ mt-2
 
 <button
 
-
-onClick={()=>setPreview(true)}
-
-
-disabled={!bonus}
+onClick={giveReward}
 
 
 className="
+
 mt-5
+
 w-full
+
 bg-blue-600
-hover:bg-blue-700
-py-3
+
+py-4
+
 rounded-xl
-font-bold
+
+font-black
+
+border-b-4
+
+border-blue-900
+
+shadow-[0_6px_0_#172554]
+
+hover:bg-blue-500
+
+active:translate-y-1
+
+active:border-b-0
+
+transition-all
+
 "
+
 
 >
 
 
-🎁 Préparer récompense
+🎁 Envoyer récompense
 
 
 </button>
@@ -539,35 +588,34 @@ font-bold
 
 
 
+</div>
 
 
 
-{
-
-preview &&
 
 
-<div className="
-fixed
-inset-0
-bg-black/70
-flex
-items-center
-justify-center
-z-50
-">
+
+
+
+
+
+{/* HISTORIQUE */}
 
 
 
 <div className="
-bg-[#090909]
+
+bg-[#111827]
+
 border
-border-white/10
-rounded-3xl
-p-6
-w-96
-">
 
+border-white/10
+
+rounded-3xl
+
+p-6
+
+">
 
 
 <h2 className="
@@ -575,138 +623,129 @@ text-xl
 font-black
 ">
 
-🎁 Confirmation
+📜 Historique
 
 </h2>
 
 
 
 
-<div className="
-mt-4
-space-y-2
-text-sm
-">
-
-
-
-<p>
-
-👥 Joueurs :
-<b>{users.length}</b>
-
-</p>
-
-
-
-<p>
-
-💰 Bonus chacun :
-<b>{bonus} HTG</b>
-
-</p>
-
-
-
-<p>
-
-🏦 Total :
-<b>{total} HTG</b>
-
-</p>
-
-
-
-</div>
-
-
-
-
-
 
 
 
 <div className="
-flex
-gap-3
-mt-6
+mt-5
+space-y-4
 ">
 
 
 
-<button
 
-onClick={()=>
-setPreview(false)
-}
-
-className="
-bg-gray-700
-flex-1
-py-3
-rounded-xl
-"
-
->
-
-Annuler
-
-</button>
-
-
-
-
-
-
-
-<button
-
-disabled={sending}
-
-onClick={sendReward}
-
-className="
-bg-green-600
-flex-1
-py-3
-rounded-xl
-font-bold
-"
-
->
 
 {
 
-sending
-?
-"Envoi..."
-:
-"Confirmer"
-
-}
-
-</button>
+rewards.length===0 &&
 
 
+<p className="
+text-gray-400
+">
 
+Aucune récompense
 
-</div>
-
-
-
-
-
-
-
-</div>
-
-
-
-</div>
-
+</p>
 
 
 }
+
+
+
+
+
+
+
+{
+
+rewards.map((reward)=>(
+
+
+
+<div
+
+key={reward.id}
+
+className="
+bg-black/30
+rounded-xl
+p-4
+"
+
+
+>
+
+
+<p>
+
+🎁
+
+{
+
+reward.type
+
+}
+
+</p>
+
+
+<p className="
+text-green-400
+font-bold
+">
+
++ {reward.amount} HTG
+
+</p>
+
+
+<p className="
+text-gray-400
+text-sm
+">
+
+{reward.reason}
+
+</p>
+
+
+
+</div>
+
+
+
+))
+
+
+}
+
+
+
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+</div>
 
 
 

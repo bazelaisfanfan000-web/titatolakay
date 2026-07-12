@@ -1,126 +1,214 @@
-import {initializeApp,cert,getApps} from "firebase-admin/app";
-import {getDatabase} from "firebase-admin/database";
-import {getAuth} from "firebase-admin/auth";
+import { NextResponse } from "next/server";
 
-
-let adminDB: any = null;
-let adminAuth: any = null;
-
-
+import {
+  adminDB,
+  adminAuth
+} from "@/lib/firebaseAdmin";
 
 
 
-function getAdminDB(){
+export async function POST(
+  request: Request
+){
 
-  if(!adminDB){
-
-    const firebaseAdminConfig = {
-
-      projectId:
-        process.env.FIREBASE_PROJECT_ID,
-
-      clientEmail:
-        process.env.FIREBASE_CLIENT_EMAIL,
-
-      privateKey:
-        process.env.FIREBASE_PRIVATE_KEY
-          ?.replace(/\\n/g, "\n"),
-
-    };
+  try{
 
 
+    const body =
+    await request.json();
 
 
-
-    const existingApps =
-    getApps();
-
-
-
+    const {
+      gameId,
+      dominoId
+    } = body;
 
 
-    let app: any;
 
     if(
-      existingApps.length === 0
+      !gameId ||
+      !dominoId
     ){
 
-      app = initializeApp({
-
-        credential:
-          cert(
-            firebaseAdminConfig as any
-          ),
-
-        databaseURL:
-          process.env.FIREBASE_DATABASE_URL ||
-          "https://domino-fad16-default-rtdb.firebaseio.com"
-
-      });
-
-    }
-    else{
-
-      app = existingApps[0];
+      return NextResponse.json(
+        {
+          error:"Informations manquantes"
+        },
+        {
+          status:400
+        }
+      );
 
     }
 
 
 
+    // Récupérer le token utilisateur
 
-
-    adminDB =
-    getDatabase(app);
-
-
-
-
-
-    adminAuth =
-    getAuth(app);
+    const authHeader =
+    request.headers.get(
+      "authorization"
+    );
 
 
 
+    if(!authHeader){
+
+      return NextResponse.json(
+        {
+          error:"Non authentifié"
+        },
+        {
+          status:401
+        }
+      );
+
+    }
+
+
+
+    const token =
+    authHeader.replace(
+      "Bearer ",
+      ""
+    );
+
+
+
+    const decoded =
+    await adminAuth()
+      .verifyIdToken(token);
+
+
+
+    const uid =
+    decoded.uid;
+
+
+
+    // Lire la partie
+
+    const db =
+    adminDB();
+
+
+
+    const gameRef =
+    db.ref(
+      `games/${gameId}`
+    );
+
+
+    const snapshot =
+    await gameRef.once(
+      "value"
+    );
+
+
+
+    if(!snapshot.exists()){
+
+      return NextResponse.json(
+        {
+          error:"Partie inexistante"
+        },
+        {
+          status:404
+        }
+      );
+
+    }
+
+
+
+    const game =
+    snapshot.val();
+
+
+
+    // Vérifier joueur dans partie
+
+    if(
+      !game.players ||
+      !game.players[uid]
+    ){
+
+      return NextResponse.json(
+        {
+          error:"Vous ne participez pas à cette partie"
+        },
+        {
+          status:403
+        }
+      );
+
+    }
+
+
+
+    // Vérifier le tour
+
+    if(
+      game.turn !== uid
+    ){
+
+      return NextResponse.json(
+        {
+          error:"Ce n'est pas votre tour"
+        },
+        {
+          status:403
+        }
+      );
+
+    }
+
+
+
+
+    // POUR L'INSTANT ON ARRÊTE ICI
+    // La validation domino viendra après
+
+
+
+    return NextResponse.json({
+
+      success:true,
+
+      message:
+      "Coup reçu par le serveur",
+
+      player:
+      uid,
+
+      domino:
+      dominoId
+
+    });
+
+
+
+  }
+  catch(error:any){
+
+
+    console.error(
+      error
+    );
+
+
+    return NextResponse.json(
+      {
+        error:
+        "Erreur serveur"
+      },
+      {
+        status:500
+      }
+    );
 
 
   }
 
 
-
-
-
-  return adminDB;
-
 }
-
-
-
-
-
-function getAdminAuth(){
-
-  if(!adminAuth){
-
-    getAdminDB();
-
-  }
-
-
-
-
-
-  return adminAuth;
-
-}
-
-
-
-
-
-export {
-
-  getAdminDB as adminDB,
-
-  getAdminAuth as adminAuth
-
-};
