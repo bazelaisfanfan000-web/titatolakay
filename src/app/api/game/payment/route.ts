@@ -8,25 +8,26 @@ import {
 
 
 
-
-
 export async function POST(
-request:Request
+request: Request
 ){
 
-
 try{
+
+
+console.log("🏆 ROUTE WINNER APPELÉE");
+
 
 
 const body =
 await request.json();
 
 
+
 const {
 roomId,
 winnerUid
 }=body;
-
 
 
 
@@ -45,9 +46,10 @@ status:400
 
 
 
+const db =
+adminDB();
 
 
-const db = adminDB();
 
 const roomRef =
 db.ref(
@@ -56,11 +58,8 @@ db.ref(
 
 
 
-
 const roomSnap =
 await roomRef.once("value");
-
-
 
 
 
@@ -79,34 +78,36 @@ status:404
 
 
 
-
-
 const room =
 roomSnap.val();
 
 
 
 
+console.log("ROOM:",room);
 
-// éviter double paiement
+
+
+
+// empêcher double paiement
 
 if(
 room.game?.paymentDone === true
 ){
 
-return NextResponse.json({
-
+return NextResponse.json(
+{
 success:true,
-
 message:"Paiement déjà effectué"
-
-});
+}
+);
 
 }
 
 
 
 
+// vérifier fin partie
 
 if(
 room.game?.status !== "finished"
@@ -114,7 +115,8 @@ room.game?.status !== "finished"
 
 return NextResponse.json(
 {
-error:"Partie non terminée"
+error:"Partie non terminée",
+statusActuel:room.game?.status
 },
 {
 status:400
@@ -126,9 +128,8 @@ status:400
 
 
 
-
 // ===============================
-// CALCUL DU POT TOTAL
+// CALCUL DU POT
 // ===============================
 
 
@@ -136,7 +137,6 @@ const pot =
 Math.floor(
 Number(room.pot || 0)
 );
-
 
 
 
@@ -156,9 +156,8 @@ status:400
 
 
 
-
 // ===============================
-// CALCUL GAIN (pot total x 0.80)
+// CALCUL DU GAIN
 // ===============================
 
 
@@ -169,18 +168,20 @@ pot * 0.80
 
 
 
-
-console.log("💰 PAIEMENT DETAILS:");
-console.log("Pot total:", pot, "HTG");
-console.log("Gain gagnant (pot x 0.80):", reward, "HTG");
-console.log("Gagnant UID:", winnerUid);
-
+console.log(
+"💰 GAIN:",
+{
+pot,
+reward,
+winnerUid
+}
+);
 
 
 
 
 // ===============================
-// VERIFICATION JOUEUR
+// VERIFIER UTILISATEUR
 // ===============================
 
 
@@ -191,11 +192,8 @@ db.ref(
 
 
 
-
 const userSnap =
 await userRef.once("value");
-
-
 
 
 
@@ -214,20 +212,15 @@ status:404
 
 
 
-
-
 const user =
 userSnap.val();
 
 
 
-
-
 const oldBalance =
-Math.floor(
-Number(user.balance || 0)
+Number(
+user.balance || 0
 );
-
 
 
 
@@ -239,10 +232,13 @@ oldBalance + reward
 
 
 
+// ===============================
+// MISE A JOUR
+// ===============================
+
+
 const transactionId =
-Date.now().toString();
-
-
+Date.now();
 
 
 
@@ -250,12 +246,7 @@ const updates:any = {};
 
 
 
-
-
-// ===============================
-// TRANSACTION ATOMIQUE SOLDE
-// ===============================
-
+// crédit portefeuille
 
 updates[
 `users/${winnerUid}/balance`
@@ -265,12 +256,7 @@ newBalance;
 
 
 
-
-
-// ===============================
-// HISTORIQUE TRANSACTION
-// ===============================
-
+// transaction
 
 updates[
 `transactions/${winnerUid}/${transactionId}`
@@ -292,20 +278,13 @@ createdAt:Date.now()
 
 
 
-
-
-// ===============================
-// MARQUER PARTIE PAYEE
-// ===============================
-
+// partie payée
 
 updates[
 `rooms/${roomId}/game/paymentDone`
 ]
 =
 true;
-
-
 
 
 updates[
@@ -315,15 +294,11 @@ updates[
 "paid";
 
 
-
-
 updates[
 `rooms/${roomId}/game/reward`
 ]
 =
 reward;
-
-
 
 
 updates[
@@ -335,11 +310,7 @@ Date.now();
 
 
 
-
-// ===============================
-// EXECUTION ATOMIQUE
-// ===============================
-
+// appliquer
 
 await db
 .ref()
@@ -348,29 +319,34 @@ await db
 
 
 
-
-console.log("✅ PAIEMENT EFFECTUE:",{
+console.log(
+"✅ PAIEMENT RÉUSSI",
+{
 winnerUid,
 reward,
-newBalance,
-pot
-});
+ancienSolde:oldBalance,
+nouveauSolde:newBalance
+}
+);
 
 
 
 
-
-return NextResponse.json({
+return NextResponse.json(
+{
 
 success:true,
 
+winnerUid,
+
 reward,
 
-newBalance,
+oldBalance,
 
-pot
+newBalance
 
-});
+}
+);
 
 
 
@@ -379,26 +355,22 @@ catch(error:any){
 
 
 console.error(
-"❌ PAYMENT ERROR",
+"❌ ERREUR PAIEMENT",
 error
 );
 
 
 
 return NextResponse.json(
-
 {
 error:error.message
 },
-
 {
 status:500
 }
-
 );
 
 
 }
-
 
 }
