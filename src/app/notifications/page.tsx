@@ -5,193 +5,67 @@ import {
   useState
 } from "react";
 
+import {
+  useRouter
+} from "next/navigation";
 
 import {
-  motion
-} from "framer-motion";
-
-
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-  updateDoc,
-  doc
-} from "firebase/firestore";
-
+  ref,
+  onValue,
+  remove,
+  set
+} from "firebase/database";
 
 import {
-  db,
-  auth
+  auth,
+  database
 } from "@/lib/firebase";
 
-
-import BackButton from "@/components/BackButton";
-
-
-
-
-
+import {
+  onAuthStateChanged
+} from "firebase/auth";
 
 
 export default function NotificationsPage(){
 
 
-
-const [
-notifications,
-setNotifications
-]=useState<any[]>([]);
+const router = useRouter();
 
 
+const [userId,setUserId] = useState("");
 
+const [notifications,setNotifications] = useState<any[]>([]);
 
 
 
 
-
+// ==========================
+// AUTH
+// ==========================
 
 useEffect(()=>{
 
 
-const user = auth.currentUser;
+const unsubscribeAuth = onAuthStateChanged(
 
+auth,
 
+(user)=>{
 
-if(!user)
-return;
 
+if(user){
 
-
-
-
-
-
-const q = query(
-
-
-collection(
-db,
-"notifications"
-),
-
-
-where(
-"userId",
-"==",
-user.uid
-),
-
-
-orderBy(
-"createdAt",
-"desc"
-)
-
-
-);
-
-
-
-
-
-
-
-
-const unsubscribe = onSnapshot(
-
-
-q,
-
-
-(snapshot)=>{
-
-
-
-const data = snapshot.docs.map((item)=>{
-
-
-return{
-
-
-id:item.id,
-
-
-...item.data()
-
-
-};
-
-
-});
-
-
-
-
-
-setNotifications(data);
-
-
-
-
-
-
-
-
-snapshot.docs.forEach(async(item)=>{
-
-
-if(item.data().read === false){
-
-
-await updateDoc(
-
-doc(
-
-db,
-
-"notifications",
-
-item.id
-
-),
-
-
-{
-
-read:true
+setUserId(user.uid);
 
 }
 
 
-);
-
-
 }
-
-
-
-});
-
-
-
-}
-
 
 );
 
 
-
-
-
-
-
-
-return()=>unsubscribe();
-
-
+return ()=>unsubscribeAuth();
 
 
 },[]);
@@ -201,140 +75,327 @@ return()=>unsubscribe();
 
 
 
+// ==========================
+// NOTIFICATIONS TEMPS RÉEL
+// ==========================
+
+useEffect(()=>{
+
+
+if(!userId)
+return;
 
 
 
-return(
+const notifRef = ref(
 
+database,
+
+`notifications/${userId}`
+
+);
+
+
+
+const unsubscribe = onValue(
+
+notifRef,
+
+(snapshot)=>{
+
+
+const data = snapshot.val();
+
+
+
+if(!data){
+
+setNotifications([]);
+
+return;
+
+}
+
+
+
+const list = Object.entries(data)
+
+.map(([id,value]:any)=>({
+
+id,
+
+...value
+
+}))
+
+
+.sort(
+
+(a,b)=>
+
+(b.createdAt || 0)
+
+-
+
+(a.createdAt || 0)
+
+);
+
+
+
+setNotifications(list);
+
+
+}
+
+
+);
+
+
+
+return ()=>unsubscribe();
+
+
+},[userId]);
+
+
+
+
+
+
+
+
+// ==========================
+// LIRE NOTIFICATION
+// ==========================
+
+async function markRead(item:any){
+
+
+if(item.read)
+return;
+
+
+
+await set(
+
+ref(
+
+database,
+
+`notifications/${userId}/${item.id}/read`
+
+),
+
+true
+
+);
+
+
+}
+
+
+
+
+
+
+
+// ==========================
+// OUVRIR MESSAGE
+// ==========================
+
+function openMessage(item:any){
+
+
+markRead(item);
+
+
+router.push("/friends");
+
+
+}
+
+
+
+
+
+
+// ==========================
+// ACCEPTER AMI
+// ==========================
+
+async function acceptFriend(notification:any){
+
+
+if(!notification.from)
+return;
+
+
+const friendId = notification.from;
+
+
+
+await set(
+
+ref(
+
+database,
+
+`friends/${userId}/${friendId}`
+
+),
+
+true
+
+);
+
+
+
+await set(
+
+ref(
+
+database,
+
+`friends/${friendId}/${userId}`
+
+),
+
+true
+
+);
+
+
+
+await remove(
+
+ref(
+
+database,
+
+`notifications/${userId}/${notification.id}`
+
+)
+
+);
+
+
+}
+
+
+
+
+
+
+
+// ==========================
+// REFUSER AMI
+// ==========================
+
+async function refuseFriend(notification:any){
+
+
+await remove(
+
+ref(
+
+database,
+
+`notifications/${userId}/${notification.id}`
+
+)
+
+);
+
+
+}return(
 
 <main
 
-
 className="
+
 min-h-screen
-relative
-overflow-hidden
+
 bg-gradient-to-br
-from-[#020617]
-via-[#07152f]
+
+from-black
+
+via-blue-950
+
 to-black
+
 text-white
-px-4
-py-10
+
+p-4
+
 "
 
 >
 
 
-
-
-
-
-
-
-<motion.div
-
-
-animate={{
-
-x:[0,40,0],
-
-y:[0,20,0]
-
-}}
-
-
-transition={{
-
-duration:6,
-
-repeat:Infinity
-
-}}
-
+<div
 
 className="
-absolute
-w-56
-h-56
-bg-blue-500/20
-rounded-full
-blur-3xl
-top-0
-left-[-60px]
+
+w-full
+
+max-w-md
+
+mx-auto
+
 "
 
-/>
-
-
-
-
-
-
-
-
-
-<motion.div
-
-
-animate={{
-
-x:[0,-40,0],
-
-y:[0,-20,0]
-
-}}
-
-
-transition={{
-
-duration:7,
-
-repeat:Infinity
-
-}}
-
-
-className="
-absolute
-w-56
-h-56
-bg-purple-500/20
-rounded-full
-blur-3xl
-bottom-10
-right-[-60px]
-"
-
-/>
-
-
-
-
-
-
+>
 
 
 
 <div
 
 className="
-relative
-z-10
-max-w-sm
-mx-auto
+
+flex
+
+justify-start
+
+mb-6
+
 "
 
 >
 
 
+<button
 
+onClick={()=>router.back()}
 
+className="
 
+bg-white/10
 
-<div className="mb-5">
+border
 
-<BackButton />
+border-white/20
+
+px-5
+
+py-3
+
+rounded-2xl
+
+font-bold
+
+active:scale-95
+
+transition
+
+"
+
+>
+
+⬅️ Retour
+
+</button>
+
 
 </div>
 
@@ -342,50 +403,25 @@ mx-auto
 
 
 
-
-
-
-
-<motion.h1
-
-
-animate={{
-
-y:[0,-5,0]
-
-}}
-
-
-transition={{
-
-duration:3,
-
-repeat:Infinity
-
-}}
-
+<h1
 
 className="
-text-xl
+
+text-2xl
+
 font-black
+
 text-center
+
 mb-8
-bg-gradient-to-r
-from-blue-400
-to-cyan-300
-bg-clip-text
-text-transparent
+
 "
 
 >
 
-
 🔔 Notifications
 
-
-</motion.h1>
-
-
+</h1>
 
 
 
@@ -395,55 +431,35 @@ text-transparent
 
 {
 
-notifications.length === 0 && (
+notifications.length === 0 &&
 
 
-
-<motion.div
-
-
-initial={{
-
-opacity:0,
-
-scale:.8
-
-}}
-
-
-
-animate={{
-
-opacity:1,
-
-scale:1
-
-}}
-
-
+<div
 
 className="
-bg-white/10
-backdrop-blur-2xl
+
+bg-white/5
+
 border
-border-white/20
-rounded-3xl
-p-5
+
+border-white/10
+
+rounded-2xl
+
+p-6
+
 text-center
-text-sm
-text-gray-300
+
+text-gray-400
+
 "
 
 >
 
+Aucune notification
 
-🔔 Aucune notification
+</div>
 
-
-</motion.div>
-
-
-)
 
 }
 
@@ -454,188 +470,259 @@ text-gray-300
 
 
 
-
 <div
 
 className="
+
 flex
+
 flex-col
+
 gap-4
+
 "
 
 >
+
+
+{
+
+notifications.map((item)=>(
+
+
+<div
+
+key={item.id}
+
+
+onClick={()=>{
+
+if(item.type==="message"){
+
+openMessage(item);
+
+}
+
+}}
+
+
+className="
+
+relative
+
+bg-white/10
+
+border
+
+border-white/20
+
+rounded-3xl
+
+p-5
+
+cursor-pointer
+
+"
+
+>
+
+
 
 
 
 {
 
-notifications.map((n,index)=>(
+!item.read &&
 
 
-
-
-
-<motion.div
-
-
-key={n.id}
-
-
-
-initial={{
-
-opacity:0,
-
-y:30
-
-}}
-
-
-
-animate={{
-
-opacity:1,
-
-y:0
-
-}}
-
-
-
-transition={{
-
-delay:index * 0.1
-
-}}
-
-
-
-whileHover={{
-
-scale:1.02,
-
-y:-3
-
-}}
-
-
+<span
 
 className="
-bg-white/10
-backdrop-blur-2xl
-border
-border-white/20
-rounded-3xl
-p-5
-shadow-2xl
+
+absolute
+
+right-4
+
+top-4
+
+w-3
+
+h-3
+
+bg-red-500
+
+rounded-full
+
+animate-pulse
+
 "
 
->
+/>
+
+}
 
 
 
 
 
 
-<div
+
+{
+
+item.type==="friend_request"
+
+&&
+
+<>
+
+
+<h2 className="font-bold text-lg">
+
+📩 Demande d'ami
+
+</h2>
+
+
+<p className="text-blue-300 mt-2">
+
+{item.senderName || "Un joueur"}
+
+</p>
+
+
+<p className="text-gray-300 mt-1">
+
+veut devenir ton ami
+
+</p>
+
+
+
+<div className="flex flex-col gap-3 mt-5">
+
+
+<button
+
+onClick={(e)=>{
+
+e.stopPropagation();
+
+acceptFriend(item);
+
+}}
 
 className="
-flex
-items-center
-gap-3
-"
 
->
+w-full
 
+bg-green-600
 
-<div
+py-3.5
 
-className="
-w-11
-h-11
 rounded-2xl
-bg-blue-500/20
-border
-border-blue-400/30
-flex
-items-center
-justify-center
-text-xl
+
+font-bold
+
 "
 
 >
 
-🔔
+✅ Accepter
+
+</button>
+
+
+
+
+
+<button
+
+onClick={(e)=>{
+
+e.stopPropagation();
+
+refuseFriend(item);
+
+}}
+
+className="
+
+w-full
+
+bg-red-600
+
+py-3.5
+
+rounded-2xl
+
+font-bold
+
+"
+
+>
+
+❌ Refuser
+
+</button>
+
 
 </div>
 
 
+</>
+
+}
 
 
 
 
 
-<div>
 
 
-<h2
 
-className="
-font-bold
-text-sm
-"
+{
 
->
+item.type==="message"
 
-{n.title}
+&&
+
+<>
+
+
+<h2 className="font-bold text-lg">
+
+💬 Nouveau message
 
 </h2>
 
 
 
+<p className="text-blue-300 mt-2">
 
-<p
-
-className="
-text-[10px]
-text-gray-400
-mt-1
-"
-
->
-
-Ti Ta To
+{item.senderName || "Joueur"}
 
 </p>
 
 
-</div>
 
+<p className="text-gray-300 mt-1">
 
-
-</div>
-
-
-
-
-
-
-
-
-<p
-
-className="
-text-xs
-text-gray-300
-mt-4
-leading-relaxed
-"
-
->
-
-{n.message}
+{item.text}
 
 </p>
+
+
+
+<p className="text-sm text-green-400 mt-4">
+
+Cliquez pour répondre 💬
+
+</p>
+
+
+</>
+
+}
 
 
 
@@ -646,47 +733,83 @@ leading-relaxed
 
 {
 
-n.amount && (
+item.type==="game_invite"
+
+&&
+
+<>
 
 
-<div
+<h2 className="font-bold text-lg">
 
+🎮 Invitation partie
+
+</h2>
+
+
+
+<p className="text-blue-300 mt-2">
+
+{item.senderName || "Joueur"}
+
+</p>
+
+
+
+<p className="text-gray-300 mt-1">
+
+t'invite à jouer
+
+</p>
+
+
+
+<button
+
+onClick={(e)=>{
+
+e.stopPropagation();
+
+
+if(item.gameId){
+
+router.push(`/game/${item.gameId}`);
+
+}
+
+
+}}
 
 className="
+
 mt-4
-inline-flex
-bg-green-500/20
-border
-border-green-400/30
-rounded-xl
-px-3
-py-1
-text-green-400
-text-xs
+
+w-full
+
+bg-green-600
+
+py-3.5
+
+rounded-2xl
+
 font-bold
+
 "
 
 >
 
+🎮 Rejoindre la partie
 
-🎁 +{n.amount} HTG
-
-
-</div>
+</button>
 
 
-)
-
+</>
 
 }
 
 
 
-
-
-
-</motion.div>
-
+</div>
 
 
 ))
@@ -695,70 +818,14 @@ font-bold
 }
 
 
-
 </div>
 
 
 
-
-
-
-
-
-
-<motion.p
-
-
-animate={{
-
-opacity:[0.4,1,0.4]
-
-}}
-
-
-
-transition={{
-
-duration:3,
-
-repeat:Infinity
-
-}}
-
-
-
-className="
-text-center
-text-[10px]
-text-cyan-300
-font-bold
-mt-8
-"
-
->
-
-
-🧪 Ti Ta To - Version bêta
-
-
-</motion.p>
-
-
-
-
-
-
-
-
 </div>
-
-
-
-
 
 
 </main>
-
 
 );
 

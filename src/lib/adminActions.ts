@@ -1,5 +1,5 @@
 import {
-  database
+  rtdb
 } from "@/lib/firebase";
 
 import {
@@ -19,7 +19,7 @@ export async function giveMoney(
 
 
 const walletRef = ref(
-  database,
+  rtdb,
   `wallets/${uid}`
 );
 
@@ -54,7 +54,7 @@ oldBalance + amount
 
 const transactionRef =
 push(
-  ref(database,"transactions")
+  ref(rtdb,"transactions")
 );
 
 
@@ -86,7 +86,7 @@ const notificationRef =
 push(
 
 ref(
-database,
+rtdb,
 `notifications/${uid}`
 )
 

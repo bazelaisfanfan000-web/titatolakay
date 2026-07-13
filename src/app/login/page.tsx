@@ -33,7 +33,6 @@ import {
 
 
 
-
 export default function Login(){
 
 
@@ -41,19 +40,14 @@ const router = useRouter();
 
 
 
-
 const [email,setEmail] =
 useState("");
-
 
 const [password,setPassword] =
 useState("");
 
-
-
 const [error,setError] =
 useState("");
-
 
 const [loading,setLoading] =
 useState(false);
@@ -62,12 +56,7 @@ useState(false);
 
 
 
-
-
-
-
 async function login(){
-
 
 
 if(!email || !password){
@@ -80,10 +69,7 @@ setError(
 
 return;
 
-
 }
-
-
 
 
 
@@ -97,9 +83,6 @@ setError("");
 
 
 
-
-
-
 await signInWithEmailAndPassword(
 
 auth,
@@ -109,9 +92,6 @@ email,
 password
 
 );
-
-
-
 
 
 
@@ -189,9 +169,6 @@ setLoading(false);
 
 
 
-
-
-
 return(
 
 
@@ -212,14 +189,7 @@ justify-center
 px-3
 "
 
->
-
-
-
-
-
-
-<div
+><div
 
 className="
 absolute
@@ -233,9 +203,6 @@ left-5
 "
 
 />
-
-
-
 
 
 
@@ -260,17 +227,17 @@ right-5
 
 
 
-
 <section
 
 className="
 relative
 z-10
-w-[240px]
+w-[280px]
 text-center
 "
 
 >
+
 
 
 
@@ -282,7 +249,7 @@ backdrop-blur-2xl
 border
 border-white/20
 rounded-3xl
-p-4
+p-3
 shadow-2xl
 "
 
@@ -336,6 +303,7 @@ text-transparent
 
 
 
+
 <p
 
 className="
@@ -348,24 +316,33 @@ mt-2
 
 Connexion à ton compte joueur
 
-</p><div
+</p>
+
+
+
+
+
+
+
+<div
 
 className="
 relative
-mt-5
+mt-4
 "
 
 >
 
 
+
 <Mail
 
-size={14}
+size={13}
 
 className="
 absolute
 left-3
-top-3
+top-2.5
 text-blue-400
 "
 
@@ -373,11 +350,12 @@ text-blue-400
 
 
 
+
 <input
 
 className="
 w-full
-h-9
+h-8
 pl-9
 rounded-xl
 bg-black/30
@@ -399,8 +377,8 @@ onChange={(e)=>setEmail(e.target.value)}
 />
 
 
-</div>
 
+</div>
 
 
 
@@ -419,14 +397,15 @@ mt-3
 >
 
 
+
 <Lock
 
-size={14}
+size={13}
 
 className="
 absolute
 left-3
-top-3
+top-2.5
 text-blue-400
 "
 
@@ -434,11 +413,12 @@ text-blue-400
 
 
 
+
 <input
 
 className="
 w-full
-h-9
+h-8
 pl-9
 rounded-xl
 bg-black/30
@@ -460,8 +440,8 @@ onChange={(e)=>setPassword(e.target.value)}
 />
 
 
-</div>
 
+</div>
 
 
 
@@ -489,17 +469,7 @@ mt-3
 </p>
 
 
-}
-
-
-
-
-
-
-
-
-
-<button
+}<button
 
 
 onClick={login}
@@ -510,8 +480,8 @@ disabled={loading}
 
 className="
 w-full
-h-9
-mt-4
+h-8
+mt-3
 rounded-xl
 text-[11px]
 font-bold
@@ -551,14 +521,12 @@ loading
 
 
 
-
-
 <p
 
 className="
 text-[10px]
 text-cyan-300
-mt-4
+mt-3
 "
 
 >
@@ -574,13 +542,12 @@ mt-4
 
 
 
-
 <p
 
 className="
 text-[10px]
 text-gray-400
-mt-5
+mt-4
 "
 
 >
@@ -616,27 +583,6 @@ transition
 🚀 Créer un compte
 
 </button>
-
-
-
-
-
-
-
-
-<p
-
-className="
-text-[9px]
-text-gray-500
-mt-5
-"
-
->
-
-🇭🇹 Créé avec fierté en l'honneur d'Haïti ❤️
-
-</p>
 
 
 

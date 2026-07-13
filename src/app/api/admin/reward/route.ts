@@ -75,7 +75,7 @@ adminUid
 
 const usersSnap =
 
-await adminDB()
+await adminDB
 
 .ref("users")
 
@@ -178,7 +178,7 @@ createdAt:Date.now()
 
 
 
-await adminDB()
+await adminDB
 
 .ref()
 

@@ -1,47 +1,62 @@
 "use client";
 
+
 import {
   useState
 } from "react";
+
 
 import {
   useRouter
 } from "next/navigation";
 
-import {
-  ref,
-  push,
-  set,
-  serverTimestamp
-} from "firebase/database";
 
 import {
-  database,
   auth
 } from "@/lib/firebase";
 
-import {
-  checkUserBalance,
-  deductBet
-} from "@/lib/firebaseEconomy";
 
-import BackButton from "@/components/BackButton";
+import BackButton
+from "@/components/BackButton";
+
+
+
+
 
 
 export default function CreateRoomPage(){
 
-const router = useRouter();
+
+const router =
+useRouter();
 
 
-const [name,setName] = useState("");
 
-const [bet,setBet] = useState("");
+const [name,setName] =
+useState("");
 
-const [mode,setMode] = useState("1v1");
 
-const [loading,setLoading] = useState(false);
 
-const [error,setError] = useState("");
+const [bet,setBet] =
+useState("");
+
+
+
+const [mode,setMode] =
+useState("1v1");
+
+
+
+const [loading,setLoading] =
+useState(false);
+
+
+
+const [error,setError] =
+useState("");
+
+
+
 
 
 
@@ -49,40 +64,49 @@ const [error,setError] = useState("");
 
 async function createRoom(){
 
+
 try{
 
 
 setError("");
 
 
-const user = auth.currentUser;
+
+const user =
+auth.currentUser;
 
 
 
 if(!user){
 
+
 throw new Error(
 "Connecte-toi d'abord"
 );
+
 
 }
 
 
 
-const betAmount = Number(bet);
 
 
 
 if(
-!betAmount ||
-betAmount <= 0
+!bet ||
+Number(bet)<=0
 ){
+
 
 throw new Error(
 "Entre une mise valide"
 );
 
+
 }
+
+
+
 
 
 
@@ -92,191 +116,67 @@ setLoading(true);
 
 
 
-const balance =
-await checkUserBalance(
-user.uid
-);
-
-
-
-
-if(balance < betAmount){
-
-throw new Error(
-`Solde insuffisant (${balance} HTG)`
-);
-
-}
-
-
-
-
-
-const roomRef =
-push(
-ref(database,"rooms")
-);
-
-
-
-const roomId =
-roomRef.key;
-
-
-
-if(!roomId){
-
-throw new Error(
-"Impossible de créer la partie"
-);
-
-}
-
-
-
-
-await deductBet(
-
-user.uid,
-
-betAmount,
-
-roomId
-
-);
+const token =
+await user.getIdToken();
 
 
 
 
 
 
-const board =
 
-Array.from(
+
+const response =
+await fetch(
+
+"/api/game/create",
 
 {
-length:10
+
+
+method:"POST",
+
+
+
+headers:{
+
+
+"Content-Type":
+"application/json",
+
+
+"Authorization":
+`Bearer ${token}`
+
+
 },
 
-()=>Array(10).fill("")
-
-);
 
 
 
 
-
-
-
-await set(
-
-roomRef,
-
-{
-
+body:JSON.stringify({
 
 name:
-
-name.trim() ||
-
-"Ti Ta To",
-
-
-
-gameType:
-
-"titato",
-
+name.trim()
+?
+name
+:
+"Partie TiTaTo",
 
 
 bet:
-
-betAmount,
-
+Number(bet),
 
 
 mode,
 
 
-
-type:
-
-"public",
+gameType:
+"titato"
 
 
-
-status:
-
-"waiting",
-
-
-
-maxPlayers:
-
-mode==="1v1"
-
-?
-
-2
-
-:
-
-4,
-
-
-
-playersCount:
-
-1,
-
-
-
-creatorId:
-
-user.uid,
-
-
-
-pot:
-
-betAmount,
-
-
-
-createdAt:
-
-serverTimestamp(),
-
-
-
-
-
-game:{
-
-
-board,
-
-
-turn:"X",
-
-
-winner:null,
-
-
-status:"waiting",
-
-
-turnStartedAt:null,
-
-
-turnDuration:30,
-
-
-paymentDone:false
-
-
-}
-
+})
 
 
 }
@@ -289,52 +189,33 @@ paymentDone:false
 
 
 
-await set(
-
-ref(
-
-database,
-
-`rooms/${roomId}/players/${user.uid}`
-
-),
 
 
-{
-
-
-uid:user.uid,
-
-
-name:
-
-user.displayName ||
-
-"Joueur",
+const data =
+await response.json();
 
 
 
-symbol:"X",
 
 
 
-ready:true,
 
 
-
-betPaid:true,
-
+if(!response.ok){
 
 
-joinedAt:
+throw new Error(
 
-serverTimestamp()
+data.error ||
 
+"Erreur création"
+
+);
 
 
 }
 
-);
+
 
 
 
@@ -343,9 +224,11 @@ serverTimestamp()
 
 router.push(
 
-`/room/${roomId}`
+`/room/${data.roomId}`
 
 );
+
+
 
 
 
@@ -357,11 +240,7 @@ catch(err:any){
 
 
 setError(
-
-err.message ||
-
-"Erreur création"
-
+err.message
 );
 
 
@@ -384,10 +263,13 @@ setLoading(false);
 
 
 
+
+
 return(
 
 
 <main
+
 
 className="
 min-h-screen
@@ -404,7 +286,9 @@ pt-16
 >
 
 
+
 <div
+
 
 className="
 max-w-sm
@@ -415,15 +299,11 @@ mx-auto
 >
 
 
-<div
 
-className="
-mb-5
-"
 
->
+<div className="mb-5">
 
-<BackButton />
+<BackButton/>
 
 </div>
 
@@ -434,6 +314,7 @@ mb-5
 
 
 <div
+
 
 className="
 bg-white/10
@@ -451,21 +332,22 @@ shadow-2xl
 
 
 
+
+
 <h1
+
 
 className="
 text-2xl
 font-black
 text-center
-mb-5
+mb-6
 "
 
 
 >
 
-🎮 Créer une partie
-<br/>
-
+🎮 Créer une partie TiTaTo
 
 </h1>
 
@@ -485,18 +367,12 @@ value={name}
 onChange={
 
 e=>
-
-setName(
-
-e.target.value
-
-)
+setName(e.target.value)
 
 }
 
 
-placeholder="Nom de la partie"
-
+placeholder="Nom de la partie (optionnel)"
 
 
 className="
@@ -506,11 +382,11 @@ rounded-xl
 bg-black/30
 border
 border-white/10
-outline-none
 mb-3
-text-white
 text-sm
+outline-none
 "
+
 
 />
 
@@ -534,18 +410,12 @@ value={bet}
 onChange={
 
 e=>
-
-setBet(
-
-e.target.value
-
-)
+setBet(e.target.value)
 
 }
 
 
-placeholder="Montant de la mise (HTG)"
-
+placeholder="Mise HTG"
 
 
 className="
@@ -555,11 +425,11 @@ rounded-xl
 bg-black/30
 border
 border-white/10
-outline-none
 mb-3
-text-white
 text-sm
+outline-none
 "
+
 
 />
 
@@ -580,12 +450,7 @@ value={mode}
 onChange={
 
 e=>
-
-setMode(
-
-e.target.value
-
-)
+setMode(e.target.value)
 
 }
 
@@ -597,13 +462,14 @@ rounded-xl
 bg-black/30
 border
 border-white/10
-outline-none
 mb-5
 text-sm
 "
 
 
 >
+
+
 
 
 <option value="1v1">
@@ -614,11 +480,15 @@ text-sm
 
 
 
+
+
 <option value="2v2">
 
 2 VS 2
 
 </option>
+
+
 
 
 
@@ -641,16 +511,21 @@ onClick={createRoom}
 disabled={loading}
 
 
-
 className="
 w-full
-p-3
-rounded-xl
-bg-blue-600
-hover:bg-blue-500
+py-3
+rounded-2xl
 font-black
 text-sm
-transition
+bg-gradient-to-b
+from-blue-400
+to-blue-700
+border-b-4
+border-blue-950
+shadow-[0_6px_0_#00143d]
+active:translate-y-1
+active:border-b-0
+transition-all
 "
 
 
@@ -667,13 +542,14 @@ loading
 
 :
 
-"Créer une partie"
+"🎮 Créer la partie"
 
 }
 
 
 
 </button>
+
 
 
 
@@ -689,19 +565,19 @@ error &&
 
 <p
 
+
 className="
-mt-4
 text-red-400
 text-xs
 text-center
+mt-4
 font-bold
 "
 
+
 >
 
-
 {error}
-
 
 </p>
 
@@ -713,10 +589,19 @@ font-bold
 
 
 
-</div>
 
 
 </div>
+
+
+
+
+
+
+</div>
+
+
+
 
 
 </main>

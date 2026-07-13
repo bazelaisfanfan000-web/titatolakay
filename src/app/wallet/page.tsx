@@ -27,10 +27,6 @@ import {
   useBalance
 } from "@/hooks/useBalance";
 
-import {
-  motion
-} from "framer-motion";
-
 
 
 export default function WalletPage(){
@@ -41,29 +37,57 @@ const router = useRouter();
 
 
 const {
- balance,
- loading:balanceLoading
+balance,
+loading:balanceLoading
 }=useBalance();
 
 
 
 const [
- username,
- setUsername
+username,
+setUsername
 ]=useState("Joueur");
 
 
+const [
+uid,
+setUid
+]=useState("");
+
 
 const [
- loading,
- setLoading
+loading,
+setLoading
 ]=useState(true);
 
 
+const [
+message,
+setMessage
+]=useState("");
+
 
 const [
- message,
- setMessage
+showDeposit,
+setShowDeposit
+]=useState(false);
+
+
+const [
+showWithdraw,
+setShowWithdraw
+]=useState(false);
+
+
+const [
+amount,
+setAmount
+]=useState("");
+
+
+const [
+moncashNumber,
+setMoncashNumber
 ]=useState("");
 
 
@@ -73,7 +97,7 @@ const [
 useEffect(()=>{
 
 
-const unsubscribeAuth =
+const unsub =
 
 onAuthStateChanged(
 
@@ -92,30 +116,28 @@ return;
 
 
 
+setUid(user.uid);
+
+
+
 const userRef =
 
 ref(
-
 database,
-
 `users/${user.uid}`
-
 );
 
 
 
-
-
-const unsubscribeData =
-
-onValue(
+return onValue(
 
 userRef,
 
-(snapshot)=>{
+snap=>{
 
 
-const data=snapshot.val();
+const data =
+snap.val();
 
 
 
@@ -128,6 +150,7 @@ data.username || "Joueur"
 }
 
 
+
 setLoading(false);
 
 
@@ -137,17 +160,13 @@ setLoading(false);
 
 
 
-return()=>unsubscribeData();
-
-
 }
 
 );
 
 
 
-return()=>unsubscribeAuth();
-
+return()=>unsub();
 
 
 },[router]);
@@ -158,8 +177,194 @@ return()=>unsubscribeAuth();
 
 
 
-if(loading || balanceLoading){
+async function deposit(){
 
+
+if(!amount){
+
+return setMessage(
+"Montant requis"
+);
+
+}
+
+
+
+try{
+
+
+const res =
+
+await fetch(
+
+"/api/wallet/deposit",
+
+{
+
+method:"POST",
+
+headers:{
+
+"Content-Type":
+"application/json"
+
+},
+
+body:JSON.stringify({
+
+uid,
+
+amount:Number(amount),
+
+username
+
+})
+
+}
+
+);
+
+
+
+const data =
+await res.json();
+
+
+
+if(!res.ok){
+
+throw new Error(
+data.error
+);
+
+}
+
+
+
+window.location.href =
+data.paymentUrl;
+
+
+
+}catch(e:any){
+
+setMessage(
+e.message
+);
+
+}
+
+
+}
+
+
+
+
+
+
+
+async function withdraw(){
+
+
+if(
+!amount ||
+!moncashNumber
+){
+
+return setMessage(
+"Numéro et montant obligatoires"
+);
+
+}
+
+
+
+try{
+
+
+const res =
+
+await fetch(
+
+"/api/wallet/withdraw",
+
+{
+
+method:"POST",
+
+headers:{
+
+"Content-Type":
+"application/json"
+
+},
+
+body:JSON.stringify({
+
+uid,
+
+amount:Number(amount),
+
+moncashNumber
+
+})
+
+}
+
+);
+
+
+
+const data =
+await res.json();
+
+
+
+if(!res.ok){
+
+throw new Error(
+data.error
+);
+
+}
+
+
+
+setMessage(
+
+"✅ Retrait envoyé vers MonCash"
+
+);
+
+
+setShowWithdraw(false);
+
+setAmount("");
+
+setMoncashNumber("");
+
+
+
+}catch(e:any){
+
+setMessage(
+e.message
+);
+
+}
+
+
+}
+
+
+
+
+
+
+if(
+loading ||
+balanceLoading
+){
 
 return(
 
@@ -172,12 +377,11 @@ items-center
 justify-center
 ">
 
-Chargement portefeuille...
+Chargement...
 
 </main>
 
 );
-
 
 }
 
@@ -185,222 +389,76 @@ Chargement portefeuille...
 
 
 
-
-return(
-
-
-<main
-
-className="
+return(<main className="
 min-h-screen
-relative
-overflow-hidden
 bg-gradient-to-br
 from-[#020617]
 via-[#07152f]
 to-black
 text-white
 px-4
-pb-20
-"
-
->
+py-10
+">
 
 
-<motion.div
-
-animate={{
-x:[0,30,0],
-y:[0,20,0]
-}}
-
-transition={{
-duration:6,
-repeat:Infinity
-}}
-
-className="
-absolute
-w-52
-h-52
-bg-blue-500/20
-rounded-full
-blur-3xl
-top-10
-left-[-40px]
-"
-
-/>
-
-
-
-
-
-<motion.div
-
-animate={{
-x:[0,-30,0],
-y:[0,-20,0]
-}}
-
-transition={{
-duration:7,
-repeat:Infinity
-}}
-
-className="
-absolute
-w-52
-h-52
-bg-purple-500/20
-rounded-full
-blur-3xl
-bottom-20
-right-[-40px]
-"/>
-
-
-
-
-
-<div
-
-className="
-relative
-z-10
-max-w-xs
+<div className="
+max-w-sm
 mx-auto
-pt-10
-"
-
->
-
-
-
-
-
-<header
-
-className="
-flex
-items-center
-justify-between
-mb-8
-"
-
->
+">
 
 
 <button
-
 onClick={()=>router.back()}
-
 className="
 text-gray-300
-text-sm
+mb-6
 "
-
 >
-
 ← Retour
-
 </button>
 
 
 
 
-<motion.h1
 
-animate={{
-y:[0,-4,0]
-}}
-
-transition={{
-duration:3,
-repeat:Infinity
-}}
-
-className="
+<h1 className="
+text-center
+text-2xl
 font-black
-text-lg
-bg-gradient-to-r
-from-blue-400
-to-cyan-300
-bg-clip-text
-text-transparent
-"
-
->
+mb-6
+text-cyan-300
+">
 
 💼 Portefeuille
 
-</motion.h1>
-
-
-<div></div>
-
-
-</header>
+</h1>
 
 
 
 
 
 
-<motion.section
-
-initial={{
-opacity:0,
-scale:.9
-}}
-
-animate={{
-opacity:1,
-scale:1
-}}
-
-transition={{
-duration:.5
-}}
-
-className="
+<section className="
 bg-white/10
-backdrop-blur-2xl
 border
 border-white/20
 rounded-3xl
 p-6
-shadow-xl
 text-center
-"
-
->
-
-
-<p className="
-text-sm
-text-gray-300
-font-medium
 ">
 
-💰 Solde disponible
 
+<p>
+💰 Solde disponible
 </p>
 
 
-
-
-
-<h2
-
-className="
+<h2 className="
 text-4xl
 font-black
-mt-4
 text-green-400
-"
-
->
+mt-3
+">
 
 {Math.floor(balance)} HTG
 
@@ -408,40 +466,32 @@ text-green-400
 
 
 
-
-
-<p className="
-text-xs
-text-gray-400
-mt-4
-">
+<p className="text-gray-400 mt-3">
 
 Compte : {username}
 
 </p>
 
 
-</motion.section>
-<section
+</section>
 
-className="
+
+
+
+
+
+
+<section className="
 mt-5
 bg-white/10
-backdrop-blur-xl
 border
 border-white/20
 rounded-3xl
 p-5
-"
-
->
-
-
-<h2 className="
-font-bold
-text-sm
-mb-4
 ">
+
+
+<h2 className="font-bold mb-4">
 
 💳 Actions
 
@@ -451,43 +501,70 @@ mb-4
 
 
 
+<button
 
-<WalletButton
+onClick={()=>setShowDeposit(true)}
 
-color="blue"
-
-onClick={()=>setMessage(
-"⭕ Ti Ta To est en version bêta 🧪\n\nLes dépôts ne sont pas disponibles en mode test."
-)}
-
->
-
-➕ Déposer
-
-</WalletButton>
-
-
-
-
-
-
-
-<WalletButton
-
-color="glass"
-
-onClick={()=>setMessage(
-"⭕ Ti Ta To est en version bêta 🧪\n\nLes retraits ne sont pas disponibles en mode test."
-)}
+className="
+w-full
+py-3
+rounded-xl
+font-black
+bg-gradient-to-b
+from-cyan-300
+via-blue-500
+to-blue-800
+border
+border-blue-300/50
+shadow-[0_7px_0_#082f75,0_12px_25px_rgba(0,0,0,0.5)]
+hover:translate-y-[-2px]
+active:translate-y-[4px]
+active:shadow-[0_2px_0_#082f75]
+transition-all
+duration-150
+mb-3
+"
 
 >
 
-💸 Retirer
+➕ Déposer MonCash
 
-</WalletButton>
+</button>
 
 
 
+
+
+
+
+<button
+
+onClick={()=>setShowWithdraw(true)}
+
+className="
+w-full
+py-3
+rounded-xl
+font-black
+bg-gradient-to-b
+from-purple-300
+via-purple-500
+to-purple-800
+border
+border-purple-300/50
+shadow-[0_7px_0_#4c1d95,0_12px_25px_rgba(0,0,0,0.5)]
+hover:translate-y-[-2px]
+active:translate-y-[4px]
+active:shadow-[0_2px_0_#4c1d95]
+transition-all
+duration-150
+"
+
+>
+
+💸 Retirer MonCash
+
+</button>
 
 
 </section>
@@ -498,53 +575,92 @@ onClick={()=>setMessage(
 
 
 
+{
+(showDeposit || showWithdraw) &&
+
+
+<section className="
+mt-5
+bg-black/40
+border
+border-white/20
+rounded-3xl
+p-5
+">
+
+
+<h2 className="font-bold mb-4">
+
+{
+showDeposit
+?
+"➕ Dépôt MonCash"
+:
+"💸 Retrait MonCash"
+}
+
+</h2>
+
+
+
 
 
 {
-message && (
+showWithdraw &&
 
-<motion.div
+<input
 
-initial={{
-opacity:0,
-y:50
-}}
+value={moncashNumber}
 
-animate={{
-opacity:1,
-y:0
-}}
+onChange={
+e=>setMoncashNumber(e.target.value)
+}
+
+placeholder="509XXXXXXXX"
 
 className="
-fixed
-bottom-24
-left-1/2
--translate-x-1/2
-w-[90%]
-max-w-xs
-bg-[#07152f]
+w-full
+mb-3
+p-3
+rounded-xl
+bg-white/10
 border
 border-white/20
-backdrop-blur-2xl
-rounded-3xl
-p-5
-text-center
-z-[100]
-shadow-2xl
 "
 
->
+/>
+
+}
 
 
-<p className="
-text-sm
-text-white
-whitespace-pre-line
-">
 
-{message}
 
-</p>
+
+<input
+
+value={amount}
+
+onChange={
+e=>setAmount(e.target.value)
+}
+
+placeholder="Montant HTG"
+
+type="number"
+
+className="
+w-full
+mb-3
+p-3
+rounded-xl
+bg-white/10
+border
+border-white/20
+"
+
+/>
+
+
 
 
 
@@ -552,26 +668,80 @@ whitespace-pre-line
 
 <button
 
-onClick={()=>setMessage("")}
+onClick={
+showDeposit
+?
+deposit
+:
+withdraw
+}
 
 className="
-mt-4
-text-blue-400
-text-xs
-font-bold
+w-full
+py-3
+rounded-xl
+font-black
+bg-gradient-to-b
+from-green-300
+via-green-500
+to-green-800
+border
+border-green-300/50
+shadow-[0_7px_0_#166534,0_12px_25px_rgba(0,0,0,0.5)]
+hover:translate-y-[-2px]
+active:translate-y-[4px]
+active:shadow-[0_2px_0_#166534]
+transition-all
+duration-150
 "
 
 >
 
-Fermer
+Confirmer
 
 </button>
 
 
 
-</motion.div>
 
-)
+
+
+
+<button
+
+onClick={()=>{
+
+setShowDeposit(false);
+
+setShowWithdraw(false);
+
+}}
+
+className="
+w-full
+mt-3
+py-3
+rounded-xl
+font-bold
+bg-gradient-to-b
+from-gray-300
+to-gray-700
+shadow-[0_5px_0_#111827]
+active:translate-y-[3px]
+active:shadow-[0_2px_0_#111827]
+transition-all
+duration-150
+"
+
+>
+
+Annuler
+
+</button>
+
+
+
+</section>
 
 }
 
@@ -581,51 +751,49 @@ Fermer
 
 
 
+{
+message &&
 
-<section
-
-className="
-mt-5
-bg-white/10
-backdrop-blur-xl
+<div className="
+fixed
+bottom-10
+left-1/2
+-translate-x-1/2
+bg-[#07152f]
 border
 border-white/20
-rounded-3xl
+rounded-2xl
 p-5
+w-[90%]
+text-center
+">
+
+
+{message}
+
+
+
+<button
+
+onClick={()=>setMessage("")}
+
+className="
+block
+mx-auto
+mt-3
+text-cyan-400
 "
 
 >
 
+Fermer
 
-<h2 className="
-font-bold
-text-sm
-">
-
-📌 Information
-
-</h2>
+</button>
 
 
+</div>
 
-
-<p className="
-text-xs
-text-gray-400
-mt-3
-">
-
-🧪 Ti Ta To est actuellement en version bêta.  
-Les paiements réels sont désactivés.
-
-</p>
-
-
-
-</section>
-
-
-
+}
 
 
 
@@ -637,124 +805,5 @@ Les paiements réels sont désactivés.
 
 );
 
-
-}
-
-
-
-
-
-
-
-
-
-function WalletButton({
-
-children,
-
-onClick,
-
-color="blue"
-
-}:{
-
-children:React.ReactNode;
-
-onClick:()=>void;
-
-color?:"blue"|"glass";
-
-}){
-
-
-return(
-
-
-<motion.button
-
-
-whileHover={{
-
-scale:1.03,
-
-y:-3
-
-}}
-
-
-
-whileTap={{
-
-scale:.95,
-
-y:2
-
-}}
-
-
-
-onClick={onClick}
-
-
-
-className={
-
-color==="blue"
-
-?
-
-`
-w-full
-py-3
-rounded-xl
-mb-3
-font-bold
-text-sm
-
-bg-gradient-to-b
-from-blue-400
-to-blue-700
-
-border
-border-blue-300/40
-
-shadow-[0_5px_0_#123a8a]
-`
-
-:
-
-`
-
-w-full
-py-3
-rounded-xl
-mb-3
-font-bold
-text-sm
-
-bg-white/20
-
-backdrop-blur-xl
-
-border
-border-white/30
-
-shadow-[0_5px_0_rgba(255,255,255,0.15)]
-
-`
-
-}
-
-
->
-
-
-{children}
-
-
-</motion.button>
-
-
-);
 
 }

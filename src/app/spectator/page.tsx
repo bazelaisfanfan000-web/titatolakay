@@ -1,45 +1,35 @@
 "use client";
 
-
 import {
   useEffect,
   useState
 } from "react";
 
-
 import {
   useRouter
 } from "next/navigation";
 
-
 import {
   motion
 } from "framer-motion";
-
 
 import {
   ref,
   onValue
 } from "firebase/database";
 
-
 import {
   database
 } from "@/lib/firebase";
 
-
 import BackButton from "@/components/BackButton";
-
-
 
 
 
 export default function SpectatorList(){
 
 
-
 const router = useRouter();
-
 
 
 const [
@@ -58,25 +48,14 @@ setLoading
 
 
 
-
-
 useEffect(()=>{
 
 
-
 const roomsRef =
-
 ref(
-
-database,
-
-"rooms"
-
+ database,
+ "rooms"
 );
-
-
-
-
 
 
 
@@ -89,15 +68,12 @@ roomsRef,
 (snapshot)=>{
 
 
-
-const data = snapshot.val();
-
-
+const data =
+snapshot.val();
 
 
 
 if(!data){
-
 
 setRooms([]);
 
@@ -105,10 +81,7 @@ setLoading(false);
 
 return;
 
-
 }
-
-
 
 
 
@@ -120,11 +93,9 @@ Object.entries(data).map(
 
 ([id,room]:[string,any])=>({
 
-
 id,
 
 ...room
-
 
 })
 
@@ -135,22 +106,24 @@ id,
 
 
 
+// Garde les parties en cours + terminées
 
-
-const playingRooms =
+const spectatorRooms =
 
 allRooms.filter(
 
-room=>room.status==="playing"
+room =>
+
+room.status === "playing" ||
+
+room.status === "finished"
 
 );
 
 
 
 
-
-
-setRooms(playingRooms);
+setRooms(spectatorRooms);
 
 
 setLoading(false);
@@ -160,15 +133,13 @@ setLoading(false);
 },
 
 
+
 (error)=>{
 
 
 console.error(
-
 "Erreur Firebase:",
-
 error
-
 );
 
 
@@ -178,12 +149,8 @@ setLoading(false);
 }
 
 
+
 );
-
-
-
-
-
 
 
 
@@ -207,27 +174,21 @@ if(loading){
 return(
 
 
-<main className="
+<main
 
+className="
 min-h-screen
-
 bg-gradient-to-br
-
 from-[#020617]
-
 via-[#07152f]
-
 to-black
-
 text-white
-
 flex
-
 items-center
-
 justify-center
+"
 
-">
+>
 
 
 <p>
@@ -278,15 +239,13 @@ to-black
 
 text-white
 
-px-4
+px-3
 
-py-10
+py-8
 
 "
 
 >
-
-
 
 
 
@@ -304,7 +263,6 @@ x:[0,40,0],
 y:[0,20,0]
 
 }}
-
 
 
 transition={{
@@ -338,8 +296,6 @@ left-[-60px]
 "
 
 />
-
-
 
 
 
@@ -398,9 +354,8 @@ right-[-60px]
 
 
 
-
-
 <div
+
 
 className="
 
@@ -408,7 +363,9 @@ relative
 
 z-10
 
-max-w-sm
+w-full
+
+max-w-md
 
 mx-auto
 
@@ -420,12 +377,7 @@ mx-auto
 
 
 
-
-
-
 <BackButton />
-
-
 
 
 
@@ -441,6 +393,7 @@ animate={{
 y:[0,-5,0]
 
 }}
+
 
 
 transition={{
@@ -506,7 +459,9 @@ mb-6
 
 >
 
+
 Regarde les parties en direct 🎮
+
 
 </p>
 
@@ -517,10 +472,13 @@ Regarde les parties en direct 🎮
 
 
 
-
 {
 
-rooms.length===0 ? (
+rooms.length===0 ?
+
+
+
+(
 
 
 
@@ -568,7 +526,6 @@ text-center
 >
 
 
-
 <div className="text-4xl mb-4">
 
 🎮
@@ -579,10 +536,9 @@ text-center
 
 <h2 className="font-bold">
 
-Aucune partie en direct
+Aucune partie disponible
 
 </h2>
-
 
 
 
@@ -611,8 +567,8 @@ Reviens plus tard pour regarder une partie 👁️
 
 {
 
-
 rooms.map((room,index)=>(
+
 
 
 
@@ -687,7 +643,7 @@ shadow-xl
 
 
 
-<div className="flex justify-between mb-3">
+<div className="flex justify-between items-center mb-3">
 
 
 <h2 className="font-bold">
@@ -699,15 +655,60 @@ shadow-xl
 
 
 
-<span className="text-green-400 text-xs font-bold">
 
-🔴 LIVE
+<span
+
+className={
+
+`
+
+text-xs
+
+font-bold
+
+${
+
+room.status==="finished"
+
+?
+
+"text-yellow-400"
+
+:
+
+"text-green-400"
+
+}
+
+`
+
+}
+
+>
+
+
+{
+
+room.status==="finished"
+
+?
+
+"🏆 TERMINÉ"
+
+:
+
+"🔴 LIVE"
+
+}
+
+
 
 </span>
 
 
 
 </div>
+
 
 
 
@@ -723,6 +724,7 @@ shadow-xl
 
 
 
+
 <p className="text-xs text-gray-300 mt-2">
 
 👥 Joueurs : {room.playersCount || 2}
@@ -731,13 +733,12 @@ shadow-xl
 
 
 
+
 <p className="text-xs text-gray-300 mt-2">
 
 🎲 Mode : {room.mode || "1v1"}
 
 </p>
-
-
 
 
 
@@ -803,7 +804,9 @@ shadow-[0_5px_0_#581c87]
 
 
 
+
 </motion.div>
+
 
 
 ))
@@ -819,13 +822,7 @@ shadow-[0_5px_0_#581c87]
 
 )
 
-
 }
-
-
-
-
-
 
 
 
@@ -877,10 +874,8 @@ mt-8
 
 
 
-
-
-
 </div>
+
 
 
 </main>

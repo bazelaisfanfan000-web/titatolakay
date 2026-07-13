@@ -6,7 +6,7 @@ import {
 } from "firebase/database";
 
 import {
-  database
+  rtdb
 } from "@/lib/firebase";
 
 
@@ -31,7 +31,7 @@ if(!text.trim()) return;
 const chatRef = push(
 
 ref(
-database,
+rtdb,
 `rooms/${roomId}/chat`
 )
 

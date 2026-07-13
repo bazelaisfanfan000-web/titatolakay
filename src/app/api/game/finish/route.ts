@@ -4,16 +4,20 @@ import {
 
 
 import {
-  adminDB
+  adminDB,
+  adminAuth
 } from "@/lib/firebaseAdmin";
 
 
-
+const COMMISSION_RATE = 0.10;
 
 
 export async function POST(
 request: Request
 ){
+
+
+console.log("🎮 PAYMENT_START", Date.now());
 
 
 try{
@@ -24,21 +28,19 @@ await request.json();
 
 
 const {
-roomId,
-winnerUid
-} = body;
+roomId
+}=body;
 
 
 
 
-if(
-!roomId ||
-!winnerUid
-){
+
+if(!roomId){
+
 
 return NextResponse.json(
 {
-error:"Informations manquantes"
+error:"RoomId manquant"
 },
 {
 status:400
@@ -51,33 +53,55 @@ status:400
 
 
 
-const db =
-adminDB();
+const authHeader =
+request.headers.get("authorization");
 
 
 
 
 
-// ===============================
-// RECUPERATION PARTIE
-// ===============================
+if(!authHeader){
+
+
+return NextResponse.json(
+{
+error:"Non connecté"
+},
+{
+status:401
+}
+);
+
+}
+
+
+
+
+const token =
+authHeader.replace("Bearer ", "");
+
+
+await adminAuth.verifyIdToken(token);
+
+
 
 
 const roomRef =
-db.ref(
-`rooms/${roomId}`
-);
-
+adminDB.ref(`rooms/${roomId}`);
 
 
 const roomSnap =
-await roomRef.once("value");
+await roomRef.get();
 
 
 
-if(
-!roomSnap.exists()
-){
+
+
+if(!roomSnap.exists()){
+
+
+console.log("❌ PAYMENT_ERROR: Partie introuvable");
+
 
 return NextResponse.json(
 {
@@ -92,6 +116,7 @@ status:404
 
 
 
+
 const room =
 roomSnap.val();
 
@@ -99,34 +124,11 @@ roomSnap.val();
 
 
 
-
-// ===============================
-// PROTECTION DOUBLE PAIEMENT
-// ===============================
+if(room.game?.status !== "finished"){
 
 
-if(
-room.game?.paymentDone === true
-){
+console.log("❌ PAYMENT_ERROR: Partie non terminée");
 
-return NextResponse.json({
-
-success:true,
-
-message:"Paiement déjà effectué"
-
-});
-
-}
-
-
-
-
-
-
-if(
-room.game?.status !== "finished"
-){
 
 return NextResponse.json(
 {
@@ -142,24 +144,112 @@ status:400
 
 
 
+const paymentStatusRef =
+adminDB.ref(`rooms/${roomId}/game/paymentStatus`);
+
+
+const paymentStatusSnap =
+await paymentStatusRef.get();
 
 
 
-// ===============================
-// CALCUL
-// ===============================
 
 
-const pot =
-Math.floor(
-Number(room.pot || 0)
+if(paymentStatusSnap.exists() && paymentStatusSnap.val() === "completed"){
+
+
+console.log("❌ PAYMENT_ERROR: Déjà payé");
+
+
+return NextResponse.json(
+{
+error:"Paiement déjà effectué"
+},
+{
+status:400
+}
 );
 
 
 
-if(
-pot <= 0
-){
+
+
+
+}
+
+
+
+
+
+
+await paymentStatusRef.set("processing");
+
+
+
+
+
+const winnerSymbol =
+room.game.winner;
+
+
+let winnerUid = "";
+
+
+
+
+
+Object.entries(room.players || {})
+.forEach(([uid, player]:any)=>{
+
+
+if(player.symbol === winnerSymbol){
+winnerUid = uid;
+}
+
+
+});
+
+
+
+
+
+if(!winnerUid){
+
+
+console.log("❌ PAYMENT_ERROR: Gagnant introuvable");
+
+
+await paymentStatusRef.set(null);
+
+
+return NextResponse.json(
+{
+error:"Gagnant introuvable"
+},
+{
+status:400
+}
+);
+
+}
+
+
+
+
+const pot =
+Number(room.pot || 0);
+
+
+
+
+if(pot <= 0){
+
+
+console.log("❌ PAYMENT_ERROR: Pot invalide");
+
+
+await paymentStatusRef.set(null);
+
 
 return NextResponse.json(
 {
@@ -175,12 +265,8 @@ status:400
 
 
 
-
 const commission =
-Math.floor(
-pot * 0.10
-);
-
+Math.floor(pot * COMMISSION_RATE);
 
 
 const reward =
@@ -189,219 +275,116 @@ pot - commission;
 
 
 
-
-
-
-
-// ===============================
-// CREDIT GAGNANT
-// ===============================
-
-
-const balanceRef =
-db.ref(
-`users/${winnerUid}/balance`
-);
-
-
-
-
-const balanceSnap =
-await balanceRef.once("value");
-
-
-
-if(
-!balanceSnap.exists()
-){
-
-return NextResponse.json(
-{
-error:"Utilisateur introuvable"
-},
-{
-status:404
-}
-);
-
-}
+console.log("💰 CALCUL GAIN", {
+pot,
+commission,
+reward,
+winnerUid
+});
 
 
 
 
 
-
-const transactionResult =
-
-await balanceRef.transaction(
-
-(current: unknown)=>{
+let oldBalance = 0;
+let newBalance = 0;
 
 
-const oldBalance =
+
+
+await adminDB.ref(`users/${winnerUid}/balance`)
+.transaction((current:any)=>{
+
+
+oldBalance =
 Number(current || 0);
 
 
-
-return oldBalance + reward;
-
-
-}
-
-);
+newBalance =
+oldBalance + reward;
 
 
 
 
+console.log("💳 TRANSACTION SOLDE", {
+winnerUid,
+oldBalance,
+newBalance,
+reward
+});
 
 
 
-if(
-!transactionResult.committed
-){
 
-return NextResponse.json(
-{
-error:"Erreur crédit wallet"
-},
-{
-status:500
-}
-);
+return newBalance;
 
-}
+
+});
 
 
 
 
 
-
-const newBalance =
-Number(
-transactionResult.snapshot.val()
-);
-
-
-
-const oldBalance =
-newBalance - reward;
-
-
-
-
-
-
-
-// ===============================
-// HISTORIQUE GAIN
-// ===============================
-
-
-const transactionId =
-Date.now();
-
-
-
-
-await db.ref(
-`transactions/${winnerUid}/${transactionId}`
-)
-.set({
-
-type:"game_win",
-
+await adminDB.ref(`transactions/${winnerUid}`)
+.push({
+type:"game_reward",
 amount:reward,
-
-pot,
-
-commission,
-
-gameId:roomId,
-
+roomId,
+oldBalance,
+newBalance,
 createdAt:Date.now()
-
 });
 
 
 
 
 
-
-
-// ===============================
-// COMMISSION PLATFORME
-// ===============================
-
-
-await db.ref(
-`platform/earnings/${transactionId}`
-)
-.set({
-
-type:"game_commission",
-
+await adminDB.ref("platform/earnings")
+.push({
+type:"commission",
 amount:commission,
-
-gameId:roomId,
-
+roomId,
 createdAt:Date.now()
-
 });
 
 
 
 
 
+await paymentStatusRef.set("completed");
 
 
-// ===============================
-// MARQUER LA PARTIE PAYEE
-// ===============================
 
 
-await db.ref(
-`rooms/${roomId}/game`
-)
-.update({
 
-paymentDone:true,
+await roomRef.update({
+"game/commission":commission,
+"game/winnerReward":reward,
+"game/paidAt":Date.now()
+});
 
+
+
+
+
+console.log("✅ PAYMENT_SUCCESS", {
+roomId,
+winnerUid,
 reward,
-
-commission,
-
-status:"paid",
-
-paidAt:Date.now()
-
+commission
 });
-
-
-
 
 
 
 
 return NextResponse.json({
-
 success:true,
-
 winnerUid,
-
 pot,
-
 commission,
-
 reward,
-
-oldBalance,
-
-newBalance
-
+message:"Récompense envoyée avec succès"
 });
-
-
-
 
 
 
@@ -409,20 +392,21 @@ newBalance
 catch(error:any){
 
 
-console.error(
-"Erreur paiement:",
-error
-);
+console.error("❌ PAYMENT_ERROR", {
+error:error.message,
+stack:error.stack
+});
+
+
 
 
 
 return NextResponse.json(
 {
-error:error.message
+error:error.message || "Erreur serveur"
 },
 {
-status:500
-}
+status:500}
 );
 
 

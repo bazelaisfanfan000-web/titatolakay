@@ -1,6 +1,5 @@
 "use client";
 
-
 import {
   useEffect,
   useState
@@ -56,9 +55,9 @@ const router = useRouter();
 
 
 const {
- language,
- setLanguage,
- t
+language,
+setLanguage,
+t
 }=useLanguage();
 
 
@@ -91,7 +90,9 @@ useEffect(()=>{
 
 
 const unsub = onAuthStateChanged(
+
 auth,
+
 (user)=>{
 
 
@@ -110,14 +111,19 @@ setUid(user.uid);
 
 
 const userRef = ref(
+
 database,
+
 `users/${user.uid}`
+
 );
 
 
 
 const stop = onValue(
+
 userRef,
+
 (snapshot)=>{
 
 
@@ -129,12 +135,17 @@ if(data){
 
 
 setUsername(
+
 data.username || "Joueur"
+
 );
 
 
+
 setNotifications(
+
 data.notificationsEnabled ?? true
+
 );
 
 
@@ -142,7 +153,9 @@ data.notificationsEnabled ?? true
 if(data.language){
 
 setLanguage(
+
 data.language
+
 );
 
 }
@@ -178,8 +191,6 @@ return()=>unsub();
 
 
 
-
-
 async function saveProfile(){
 
 
@@ -196,8 +207,11 @@ return;
 await update(
 
 ref(
+
 database,
+
 `users/${uid}`
+
 ),
 
 {
@@ -224,6 +238,7 @@ setMessage("Profil modifié ✅");
 
 
 
+
 async function changePassword(){
 
 
@@ -234,28 +249,39 @@ const user=auth.currentUser;
 
 
 if(!user || !user.email)
+
 return;
 
 
 
 const credential =
+
 EmailAuthProvider.credential(
+
 user.email,
+
 oldPassword
+
 );
 
 
 
 await reauthenticateWithCredential(
+
 user,
+
 credential
+
 );
 
 
 
 await updatePassword(
+
 user,
+
 newPassword
+
 );
 
 
@@ -267,7 +293,9 @@ setNewPassword("");
 setShowPassword(false);
 
 setMessage(
+
 "Mot de passe modifié ✅"
+
 );
 
 
@@ -278,20 +306,16 @@ catch{
 
 
 setMessage(
+
 "Ancien mot de passe incorrect"
+
 );
 
 
 }
 
 
-}
-
-
-
-
-
-async function saveNotifications(value:boolean){
+}async function saveNotifications(value:boolean){
 
 
 setNotifications(value);
@@ -301,8 +325,11 @@ setNotifications(value);
 await update(
 
 ref(
+
 database,
+
 `users/${uid}`
+
 ),
 
 {
@@ -320,8 +347,6 @@ notificationsEnabled:value
 
 
 
-
-
 async function saveLanguage(value:"fr"|"ht"){
 
 
@@ -332,8 +357,11 @@ setLanguage(value);
 await update(
 
 ref(
+
 database,
+
 `users/${uid}`
+
 ),
 
 {
@@ -351,8 +379,6 @@ language:value
 
 
 
-
-
 async function logout(){
 
 
@@ -362,7 +388,6 @@ router.push("/login");
 
 
 }
-
 
 
 
@@ -394,6 +419,7 @@ mx-auto
 
 
 
+
 <h1 className="
 text-xl
 font-black
@@ -405,6 +431,8 @@ text-blue-400
 ⚙️ {t.settings}
 
 </h1>
+
+
 
 
 
@@ -435,6 +463,8 @@ p-5
 
 
 
+
+
 <button
 
 onClick={()=>setShowProfile(true)}
@@ -443,8 +473,17 @@ className="
 w-full
 py-3
 rounded-xl
-bg-blue-600
-font-bold
+font-black
+bg-gradient-to-b
+from-cyan-300
+via-blue-500
+to-blue-800
+border
+border-blue-300/50
+shadow-[0_6px_0_#082f75]
+active:translate-y-[4px]
+active:shadow-[0_2px_0_#082f75]
+transition-all
 "
 
 >
@@ -454,8 +493,8 @@ font-bold
 </button>
 
 
-
 </div>
+
 
 
 
@@ -481,6 +520,8 @@ p-5
 
 
 
+
+
 <button
 
 onClick={()=>setShowPassword(true)}
@@ -489,7 +530,17 @@ className="
 w-full
 py-3
 rounded-xl
-bg-white/20
+font-black
+bg-gradient-to-b
+from-purple-300
+via-purple-500
+to-purple-800
+border
+border-purple-300/50
+shadow-[0_6px_0_#4c1d95]
+active:translate-y-[4px]
+active:shadow-[0_2px_0_#4c1d95]
+transition-all
 "
 
 >
@@ -526,6 +577,7 @@ p-5
 
 
 
+
 <div className="
 flex
 justify-between
@@ -539,6 +591,8 @@ mb-4
 🔔 Notifications
 
 </span>
+
+
 
 
 <button
@@ -580,9 +634,13 @@ t.notificationsOff
 value={language}
 
 onChange={(e)=>
+
 saveLanguage(
+
 e.target.value as "fr"|"ht"
+
 )
+
 }
 
 className="
@@ -609,12 +667,12 @@ rounded-xl
 </option>
 
 
-
 </select>
 
 
 
 </div>
+
 
 
 
@@ -635,8 +693,15 @@ mt-5
 w-full
 py-3
 rounded-xl
-bg-red-600
-font-bold
+font-black
+bg-gradient-to-b
+from-red-400
+via-red-600
+to-red-900
+shadow-[0_6px_0_#450a0a]
+active:translate-y-[4px]
+active:shadow-[0_2px_0_#450a0a]
+transition-all
 "
 
 >
@@ -695,243 +760,6 @@ OK
 
 
 
-
-
-
-
-
-{
-showProfile &&
-
-<div className="
-fixed
-inset-0
-bg-black/70
-flex
-items-center
-justify-center
-z-50
-">
-
-
-<div className="
-bg-[#07152f]
-p-5
-rounded-3xl
-w-80
-">
-
-
-<h2 className="font-bold mb-4">
-
-Modifier profil
-
-</h2>
-
-
-
-<input
-
-value={newUsername}
-
-onChange={(e)=>setNewUsername(e.target.value)}
-
-placeholder="Nouveau nom"
-
-className="
-w-full
-p-3
-bg-black/30
-rounded-xl
-"
-
-/>
-
-
-
-<button
-
-onClick={saveProfile}
-
-className="
-mt-4
-w-full
-bg-blue-600
-py-3
-rounded-xl
-"
-
->
-
-Sauvegarder
-
-</button>
-
-
-
-</div>
-
-</div>
-
-}
-
-
-
-
-
-
-
-{
-showPassword &&
-
-<div className="
-fixed
-inset-0
-bg-black/70
-flex
-items-center
-justify-center
-z-50
-">
-
-
-<div className="
-bg-[#07152f]
-p-5
-rounded-3xl
-w-80
-">
-
-
-<input
-
-type="password"
-
-placeholder="Ancien mot de passe"
-
-value={oldPassword}
-
-onChange={(e)=>setOldPassword(e.target.value)}
-
-className="
-w-full
-p-3
-bg-black/30
-rounded-xl
-mb-3
-"
-
-/>
-
-
-
-<input
-
-type="password"
-
-placeholder="Nouveau mot de passe"
-
-value={newPassword}
-
-onChange={(e)=>setNewPassword(e.target.value)}
-
-className="
-w-full
-p-3
-bg-black/30
-rounded-xl
-"
-
-/>
-
-
-
-<button
-
-onClick={changePassword}
-
-className="
-mt-4
-w-full
-bg-blue-600
-py-3
-rounded-xl
-"
-
->
-
-Changer
-
-</button>
-
-
-
-</div>
-
-</div>
-
-}
-
-
-
-
-
-
-
-{
-confirmLogout &&
-
-<div className="
-fixed
-inset-0
-bg-black/70
-flex
-items-center
-justify-center
-z-50
-">
-
-
-<div className="
-bg-[#07152f]
-p-5
-rounded-3xl
-text-center
-">
-
-
-<h2 className="font-bold">
-
-🚪 {t.logout}
-
-</h2>
-
-
-<button
-
-onClick={logout}
-
-className="
-mt-4
-bg-red-600
-px-6
-py-3
-rounded-xl
-"
-
->
-
-Oui
-
-</button>
-
-
-
-</div>
-
-</div>
-
-}
 
 
 

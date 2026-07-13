@@ -1,5 +1,5 @@
 import {
- database
+  rtdb
 } from "@/lib/firebase";
 
 
@@ -50,7 +50,7 @@ days *
 await set(
 
 ref(
-database,
+rtdb,
 `bans/${uid}`
 ),
 
@@ -78,7 +78,7 @@ createdAt:Date.now()
 await update(
 
 ref(
-database,
+rtdb,
 `users/${uid}`
 ),
 
@@ -103,7 +103,7 @@ const notif =
 push(
 
 ref(
-database,
+rtdb,
 `notifications/${uid}`
 )
 

@@ -8,43 +8,48 @@ import {
 
 
 import {
-  useRouter
-} from "next/navigation";
-
-
-import {
-  motion
-} from "framer-motion";
-
-
-import {
   ref,
-  onValue,
-  set,
-  update,
-  serverTimestamp
+  onValue
 } from "firebase/database";
 
 
 import {
-  database,
-  auth
+  auth,
+  database
 } from "@/lib/firebase";
 
 
 import {
-  checkUserBalance,
-  deductBet
-} from "@/lib/firebaseEconomy";
-
-
-import BackButton from "@/components/BackButton";
+  useRouter
+} from "next/navigation";
 
 
 
+type Room = {
+
+  id:string;
+
+  name:string;
+
+  bet:number;
+
+  mode:"1vs1" | "2vs2" | string;
+
+  gameType:"titato" | "dominos" | string;
+
+  playersCount:number;
+
+  maxPlayers:number;
+
+  status:string;
+
+};
 
 
-export default function JoinRoomPage(){
+
+
+
+export default function JoinGame(){
 
 
 
@@ -55,16 +60,14 @@ const router = useRouter();
 const [
 rooms,
 setRooms
-]=useState<any[]>([]);
+] = useState<Room[]>([]);
 
 
 
 const [
 loading,
 setLoading
-]=useState(true);
-
-
+] = useState(false);
 
 
 
@@ -74,7 +77,6 @@ useEffect(()=>{
 
 
 const roomsRef =
-
 ref(
 database,
 "rooms"
@@ -82,18 +84,14 @@ database,
 
 
 
-
 const unsubscribe =
-
 onValue(
-
 roomsRef,
-
 (snapshot)=>{
 
 
-const data = snapshot.val();
-
+const data =
+snapshot.val();
 
 
 
@@ -101,58 +99,70 @@ if(!data){
 
 setRooms([]);
 
-setLoading(false);
-
 return;
 
 }
 
 
 
+const list:Room[] = [];
 
 
-const list =
+
+
 
 Object.entries(data)
+.forEach(
+([id,value]:any)=>{
 
-.map(([id,room]:any)=>({
+
+if(
+
+value.status === "waiting"
+
+&&
+
+value.playersCount < value.maxPlayers
+
+){
+
+
+list.push({
 
 id,
 
-...room
+name:
+value.name || "Partie TiTaTo",
 
-}))
+bet:
+Number(value.bet || 0),
 
+mode:
+value.mode || "1vs1",
 
+gameType:
+value.gameType || "titato",
 
-.filter((room:any)=>
+playersCount:
+Number(value.playersCount || 0),
 
-room.gameType==="titato"
+maxPlayers:
+Number(value.maxPlayers || 2),
 
-&&
-
-room.status==="waiting"
-
-&&
-
-room.type==="public"
-
-&&
-
-(room.playersCount || 0)
-
-<
-
-room.maxPlayers
-
-);
+status:
+value.status
 
 
+});
+
+
+}
+
+
+});
 
 
 setRooms(list);
-
-setLoading(false);
 
 
 
@@ -174,115 +184,70 @@ return()=>unsubscribe();
 
 
 
+async function joinRoom(
+roomId:string
+){
 
-
-async function joinRoom(room:any){
 
 
 try{
 
 
-const user = auth.currentUser;
+setLoading(true);
+
+
+
+const user =
+auth.currentUser;
 
 
 
 if(!user){
 
-throw new Error(
-"Connecte-toi d'abord"
+
+alert(
+"Vous devez être connecté"
 );
 
-}
-
-
-
-
-
-const betAmount =
-Number(room.bet);
-
-
-
-
-
-const balance =
-
-await checkUserBalance(
-user.uid
-);
-
-
-
-
-
-if(balance < betAmount){
-
-throw new Error(
-`Solde insuffisant (${balance} HTG)`
-);
-
-}
-
-
-
-
-
-if(room.players?.[user.uid]){
-
-router.push(
-`/room/${room.id}`
-);
 
 return;
 
+
 }
 
 
 
-
-
-
-
-await deductBet(
-
-user.uid,
-
-betAmount,
-
-room.id
-
-);
+const token =
+await user.getIdToken();
 
 
 
 
 
-
-
-
-await set(
-
-ref(
-
-database,
-
-`rooms/${room.id}/players/${user.uid}`
-
-),
-
+const response =
+await fetch(
+"/api/game/join",
 {
 
-uid:user.uid,
+method:"POST",
 
-name:user.displayName || "Joueur",
+headers:{
 
-symbol:"O",
+"Content-Type":
+"application/json",
 
-ready:true,
+"Authorization":
+`Bearer ${token}`
 
-betPaid:true,
+},
 
-joinedAt:serverTimestamp()
+
+body:JSON.stringify({
+
+roomId
+
+})
+
 
 }
 
@@ -292,79 +257,23 @@ joinedAt:serverTimestamp()
 
 
 
-
-
-
-const newPlayersCount =
-
-(room.playersCount || 0)+1;
+const data =
+await response.json();
 
 
 
 
 
+if(!response.ok){
 
 
-if(newPlayersCount >= room.maxPlayers){
-
-
-
-await update(
-
-ref(
-
-database,
-
-`rooms/${room.id}`
-
-),
-
-{
-
-playersCount:newPlayersCount,
-
-pot:Number(room.pot || 0)+betAmount,
-
-status:"starting",
-
-countdownStart:Date.now()
-
-}
-
+throw new Error(
+data.error ||
+"Impossible de rejoindre"
 );
 
 
-
 }
-
-else{
-
-
-
-await update(
-
-ref(
-
-database,
-
-`rooms/${room.id}`
-
-),
-
-{
-
-playersCount:newPlayersCount,
-
-pot:Number(room.pot || 0)+betAmount
-
-}
-
-);
-
-
-
-}
-
 
 
 
@@ -372,28 +281,32 @@ pot:Number(room.pot || 0)+betAmount
 
 
 router.push(
-
-`/room/${room.id}`
-
+`/room/${roomId}`
 );
 
 
 
-}
 
+}
 
 catch(error:any){
 
 
 alert(
-
-error.message || "Erreur"
-
+error.message
 );
 
 
 }
 
+finally{
+
+
+setLoading(false);
+
+
+}
+
 
 
 }
@@ -406,297 +319,134 @@ error.message || "Erreur"
 
 
 
-return(
+return (
 
-
-
-<main
-
+<div
 
 className="
-
 min-h-screen
-
-relative
-
-overflow-hidden
-
 bg-gradient-to-br
-
-from-[#020617]
-
-via-[#07152f]
-
+from-slate-950
+via-slate-900
 to-black
-
-text-white
-
 px-4
-
-py-10
-
+py-5
+text-white
 "
 
 >
-
-
-
-
-
-
-
-<motion.div
-
-
-animate={{
-
-x:[0,40,0],
-
-y:[0,20,0]
-
-}}
-
-
-
-transition={{
-
-duration:6,
-
-repeat:Infinity
-
-}}
-
-
-
-className="
-
-absolute
-
-w-56
-
-h-56
-
-bg-blue-500/20
-
-rounded-full
-
-blur-3xl
-
-top-0
-
-left:-60px
-
-"
-
-/>
-
-
-
-
-
-
-
-
-<motion.div
-
-
-animate={{
-
-x:[0,-40,0],
-
-y:[0,-20,0]
-
-}}
-
-
-
-transition={{
-
-duration:7,
-
-repeat:Infinity
-
-}}
-
-
-
-className="
-
-absolute
-
-w-56
-
-h-56
-
-bg-green-500/20
-
-rounded-full
-
-blur-3xl
-
-bottom-10
-
-right-[-60px]
-
-"
-
-/>
-
-
-
-
-
-
 
 
 <div
 
 className="
-
-relative
-
-z-10
-
-max-w-sm
-
+max-w-md
 mx-auto
-
 "
 
 >
 
 
 
+<button
 
-
-
-
-<BackButton />
-
-
-
-
-
-
-
-
-<motion.h1
-
-
-animate={{
-
-y:[0,-5,0]
-
-}}
-
-
-
-transition={{
-
-duration:3,
-
-repeat:Infinity
-
-}}
-
-
+onClick={()=>router.back()}
 
 className="
-
-text-xl
-
-font-black
-
-text-center
-
+text-blue-400
+font-bold
 mb-6
-
-bg-gradient-to-r
-
-from-blue-400
-
-to-cyan-300
-
-bg-clip-text
-
-text-transparent
-
 "
 
 >
 
+← Retour
 
-🚀 Rejoindre une partie
-
-
-</motion.h1>
+</button>
 
 
 
 
 
+<h1
+
+className="
+text-3xl
+font-black
+mb-1
+"
+
+>
+
+🎮 Rejoindre TiTaTo
+
+</h1>
 
 
 
+<p
 
-{
+className="
+text-gray-400
+text-sm
+mb-6
+"
 
-loading &&
+>
 
-<p className="text-center text-gray-400">
-
-Chargement...
+Choisis une partie en attente
 
 </p>
 
-}
-
-
-
-
 
 
 
 
 
 {
-
-!loading && rooms.length===0 &&
+rooms.length === 0 &&
 
 
 <div
 
 className="
-
 bg-white/10
-
-backdrop-blur-2xl
-
+backdrop-blur-xl
 border
-
-border-white/20
-
+border-white/10
 rounded-3xl
-
 p-6
-
 text-center
-
 "
 
 >
 
-🎮 Aucune partie disponible
+<div
+className="
+text-3xl
+mb-2
+"
+>
 
+🎲
 
 </div>
 
 
+<p
+className="
+font-bold
+"
+>
+
+Aucune partie disponible
+
+</p>
+
+
+</div>
+
 }
-
-
-
-
 
 
 
@@ -705,185 +455,284 @@ text-center
 <div
 
 className="
-
-flex
-
-flex-col
-
-gap-4
-
+space-y-4
 "
 
 >
-
-
-
-
 
 
 {
-
-rooms.map((room,index)=>(
-
+rooms.map((room)=>(
 
 
-<motion.div
 
+<div
 
 key={room.id}
 
-
-
-initial={{
-
-opacity:0,
-
-y:30
-
-}}
-
-
-
-animate={{
-
-opacity:1,
-
-y:0
-
-}}
-
-
-
-transition={{
-
-delay:index*0.1
-
-}}
-
-
-
 className="
-
 bg-white/10
-
-backdrop-blur-2xl
-
+backdrop-blur-xl
 border
-
 border-white/20
-
 rounded-3xl
-
 p-5
-
 shadow-xl
-
 "
 
 >
 
 
 
+<div
+
+className="
+flex
+justify-between
+items-center
+mb-4
+"
+
+>
 
 
-<h2 className="font-black text-lg">
+<div>
 
-🎲 {room.name || "Ti Ta To"}
+
+<h2
+
+className="
+font-black
+text-lg
+"
+
+>
+
+🔥 {room.name}
 
 </h2>
 
 
 
-
-
-<p className="text-sm text-gray-300 mt-3">
-
-💰 Mise : {room.bet} HTG
-
-</p>
-
-
-
-
-
-<p className="text-sm text-gray-300 mt-2">
-
-👥 Joueurs :
-
-{room.playersCount || 0}
-
-/
-
-{room.maxPlayers}
-
-</p>
-
-
-
-
-
-
-
-
-<motion.button
-
-
-whileHover={{
-
-scale:1.03
-
-}}
-
-
-
-whileTap={{
-
-scale:.95
-
-}}
-
-
-
-onClick={()=>joinRoom(room)}
-
-
+<p
 
 className="
-
-mt-5
-
-w-full
-
-py-3
-
-rounded-xl
-
-font-bold
-
-bg-gradient-to-b
-
-from-green-400
-
-to-green-700
-
-shadow-[0_5px_0_#166534]
-
+text-xs
+text-gray-400
 "
 
 >
 
 
-🚀 Rejoindre
+{
+
+room.gameType==="titato"
+
+?
+
+"⭕ TiTaTo"
+
+:
+
+"🁫 Dominos"
+
+}
 
 
-</motion.button>
+</p>
+
+
+</div>
+
+
+
+<div
+
+className="
+bg-blue-500/20
+border
+border-blue-400/30
+rounded-xl
+px-3
+py-1
+text-xs
+font-bold
+"
+
+>
+
+{room.mode}
+
+</div>
+
+
+
+</div>
 
 
 
 
 
 
-</motion.div>
+<div
+
+className="
+grid
+grid-cols-2
+gap-3
+mb-4
+"
+
+>
+
+
+
+<div
+
+className="
+bg-black/30
+rounded-2xl
+p-3
+"
+
+>
+
+
+<p
+
+className="
+text-xs
+text-gray-400
+"
+
+>
+
+Mise
+
+</p>
+
+
+<p
+className="
+font-black
+"
+
+>
+
+💰 {room.bet} HTG
+
+</p>
+
+
+</div>
+
+
+
+
+
+
+<div
+
+className="
+bg-black/30
+rounded-2xl
+p-3
+"
+
+>
+
+
+<p
+
+className="
+text-xs
+text-gray-400
+"
+
+>
+
+Joueurs
+
+</p>
+
+
+<p
+
+className="
+font-black
+"
+
+>
+
+👥 {room.playersCount}/{room.maxPlayers}
+
+</p>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+<button
+
+
+disabled={loading}
+
+
+onClick={()=>joinRoom(room.id)}
+
+
+
+className="
+w-full
+py-3
+rounded-2xl
+font-black
+bg-gradient-to-b
+from-blue-400
+to-blue-700
+border-b-4
+border-blue-950
+shadow-[0_6px_0_#00143d]
+active:translate-y-1
+active:border-b-0
+transition
+"
+
+>
+
+
+{
+
+loading
+
+?
+
+"Connexion..."
+
+:
+
+"🎮 Rejoindre"
+
+}
+
+
+
+</button>
+
+
+
+
+
+</div>
 
 
 ))
@@ -897,13 +746,10 @@ shadow-[0_5px_0_#166534]
 
 
 
-
-
-
 </div>
 
 
-</main>
+</div>
 
 
 );

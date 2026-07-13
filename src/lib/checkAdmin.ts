@@ -5,38 +5,56 @@ import {
 
 
 
+
 export async function checkAdmin(
+
 uid:string
+
 ){
+
 
 
 const snapshot =
 
-await adminDB()
+await adminDB
 
 .ref(
+
 `users/${uid}`
+
 )
 
-.once("value");
+.get();
+
+
+
 
 
 
 
 const user =
+
 snapshot.val();
 
 
 
 
+
+
+
 if(
+
 !user ||
+
 user.role !== "admin"
+
 ){
 
 
 throw new Error(
+
 "Accès refusé : administrateur uniquement"
+
 );
 
 
@@ -45,7 +63,10 @@ throw new Error(
 
 
 
+
+
 return true;
+
 
 
 }

@@ -8,17 +8,16 @@ import {
   useRouter
 } from "next/navigation";
 
+import Link from "next/link";
 
 import {
   auth,
   database
 } from "../../lib/firebase";
 
-
 import {
   createUserWithEmailAndPassword
 } from "firebase/auth";
-
 
 import {
   ref,
@@ -26,11 +25,9 @@ import {
   push
 } from "firebase/database";
 
-
 import {
   motion
 } from "framer-motion";
-
 
 import {
   User,
@@ -39,16 +36,10 @@ import {
 } from "lucide-react";
 
 
-
-
-
-
 export default function Register(){
 
 
 const router = useRouter();
-
-
 
 
 const [username,setUsername] =
@@ -60,6 +51,8 @@ useState("");
 const [password,setPassword] =
 useState("");
 
+const [accepted,setAccepted] =
+useState(false);
 
 
 const [error,setError] =
@@ -70,46 +63,42 @@ useState(false);
 
 
 
-
-
-
-
-
 async function register(){
 
 
-
 if(!username || !email || !password){
-
 
 setError(
 "Tous les champs sont obligatoires"
 );
 
-
 return;
 
-
 }
-
-
 
 
 
 if(password.length < 6){
 
-
 setError(
 "Le mot de passe doit avoir au moins 6 caractères"
 );
 
-
 return;
-
 
 }
 
 
+
+if(!accepted){
+
+setError(
+"Tu dois accepter les conditions d'utilisation"
+);
+
+return;
+
+}
 
 
 
@@ -122,17 +111,11 @@ setError("");
 
 
 
-
-
 const result =
 await createUserWithEmailAndPassword(
-
 auth,
-
 email,
-
 password
-
 );
 
 
@@ -141,12 +124,8 @@ const user =
 result.user;
 
 
-
 const uid =
 user.uid;
-
-
-
 
 
 
@@ -155,7 +134,6 @@ await set(
 ref(database,`users/${uid}`),
 
 {
-
 
 uid,
 
@@ -167,10 +145,13 @@ balance:1000,
 
 currency:"HTG",
 
+bonusReceived:true,
+
 createdAt:Date.now(),
 
-lastBonus:Date.now()
+acceptedTerms:true,
 
+acceptedTermsAt:Date.now()
 
 }
 
@@ -178,20 +159,10 @@ lastBonus:Date.now()
 
 
 
-
-
-
-
 const notificationRef =
 push(
-
 ref(database,`notifications/${uid}`)
-
 );
-
-
-
-
 
 
 
@@ -201,24 +172,18 @@ notificationRef,
 
 {
 
-
 title:"🎁 Bonus de bienvenue",
 
 message:
-"Tu as reçu +1000 HTG pour commencer à jouer sur Ti Ta To.",
-
+"Tu as reçu +1000 HTG de bonus de bienvenue pour commencer à jouer.",
 
 amount:1000,
 
-
 type:"bonus",
-
 
 read:false,
 
-
 createdAt:Date.now()
-
 
 }
 
@@ -226,12 +191,7 @@ createdAt:Date.now()
 
 
 
-
-
-
-
 router.push("/dashboard");
-
 
 
 }
@@ -239,64 +199,41 @@ router.push("/dashboard");
 catch(err:any){
 
 
-
 if(err.code==="auth/email-already-in-use"){
-
 
 setError(
 "Cet email existe déjà"
 );
 
-
 }
 
-
 else if(err.code==="auth/invalid-email"){
-
 
 setError(
 "Email invalide"
 );
 
-
 }
 
-
 else{
-
 
 setError(
 err.message
 );
 
-
 }
-
 
 
 }
 
 finally{
 
-
 setLoading(false);
 
-
 }
 
 
-
-}
-
-
-
-
-
-
-
-
-
-return(
+}return(
 
 
 <main
@@ -319,9 +256,6 @@ px-3
 >
 
 
-
-
-
 <div
 
 className="
@@ -336,8 +270,6 @@ left-5
 "
 
 />
-
-
 
 
 
@@ -358,23 +290,16 @@ right-5
 
 
 
-
-
-
-
 <section
 
 className="
 relative
 z-10
-w-[240px]
+w-[280px]
 text-center
 "
 
 >
-
-
-
 
 
 <div
@@ -385,15 +310,11 @@ backdrop-blur-2xl
 border
 border-white/20
 rounded-3xl
-p-4
+p-3
 shadow-2xl
 "
 
 >
-
-
-
-
 
 
 <motion.h1
@@ -450,24 +371,24 @@ mt-2
 
 Créer ton compte joueur
 
-</p><div
+</p>
 
-className="
-relative
-mt-5
-"
 
->
 
+
+
+
+
+<div className="relative mt-4">
 
 <User
 
-size={14}
+size={13}
 
 className="
 absolute
 left-3
-top-3
+top-2.5
 text-blue-400
 "
 
@@ -479,7 +400,7 @@ text-blue-400
 
 className="
 w-full
-h-9
+h-8
 pl-9
 rounded-xl
 bg-black/30
@@ -498,7 +419,6 @@ onChange={(e)=>setUsername(e.target.value)}
 
 />
 
-
 </div>
 
 
@@ -506,25 +426,16 @@ onChange={(e)=>setUsername(e.target.value)}
 
 
 
-
-<div
-
-className="
-relative
-mt-3
-"
-
->
-
+<div className="relative mt-3">
 
 <Mail
 
-size={14}
+size={13}
 
 className="
 absolute
 left-3
-top-3
+top-2.5
 text-blue-400
 "
 
@@ -536,7 +447,7 @@ text-blue-400
 
 className="
 w-full
-h-9
+h-8
 pl-9
 rounded-xl
 bg-black/30
@@ -557,7 +468,6 @@ onChange={(e)=>setEmail(e.target.value)}
 
 />
 
-
 </div>
 
 
@@ -565,25 +475,16 @@ onChange={(e)=>setEmail(e.target.value)}
 
 
 
-
-<div
-
-className="
-relative
-mt-3
-"
-
->
-
+<div className="relative mt-3">
 
 <Lock
 
-size={14}
+size={13}
 
 className="
 absolute
 left-3
-top-3
+top-2.5
 text-blue-400
 "
 
@@ -595,7 +496,7 @@ text-blue-400
 
 className="
 w-full
-h-9
+h-8
 pl-9
 rounded-xl
 bg-black/30
@@ -616,11 +517,7 @@ onChange={(e)=>setPassword(e.target.value)}
 
 />
 
-
 </div>
-
-
-
 
 
 
@@ -629,7 +526,6 @@ onChange={(e)=>setPassword(e.target.value)}
 
 {
 error &&
-
 
 <p
 
@@ -645,10 +541,71 @@ mt-3
 
 </p>
 
+}<div
 
-}
+className="
+mt-3
+flex
+items-start
+gap-2
+text-[9px]
+text-gray-300
+"
+
+>
 
 
+<input
+
+type="checkbox"
+
+checked={accepted}
+
+onChange={(e)=>setAccepted(e.target.checked)}
+
+className="mt-1"
+
+/>
+
+
+
+<p>
+
+J'accepte les{" "}
+
+<Link
+
+href="/conditions-utilisation"
+
+className="text-blue-400"
+
+>
+
+conditions d'utilisation
+
+</Link>
+
+
+{" "}et la{" "}
+
+
+<Link
+
+href="/politique-confidentialite"
+
+className="text-blue-400"
+
+>
+
+politique de confidentialité
+
+</Link>
+
+
+</p>
+
+
+</div>
 
 
 
@@ -664,11 +621,10 @@ onClick={register}
 disabled={loading}
 
 
-
 className="
 w-full
-h-9
-mt-4
+h-8
+mt-3
 rounded-xl
 text-[11px]
 font-bold
@@ -708,14 +664,12 @@ loading
 
 
 
-
-
 <p
 
 className="
 text-[10px]
 text-yellow-300
-mt-4
+mt-3
 "
 
 >
@@ -730,14 +684,12 @@ mt-4
 
 
 
-
-
 <p
 
 className="
 text-[10px]
 text-gray-400
-mt-5
+mt-4
 "
 
 >
@@ -752,14 +704,15 @@ Déjà enregistré ?
 
 
 
-<button
+<Link
 
 
-onClick={()=>router.push("/login")}
+href="/login"
 
 
 
 className="
+block
 mt-2
 text-[11px]
 font-bold
@@ -772,9 +725,7 @@ transition
 
 🔐 Connexion
 
-</button>
-
-
+</Link>
 
 
 
@@ -786,6 +737,7 @@ transition
 
 
 </section>
+
 
 
 

@@ -33,17 +33,19 @@ import {
 
 
 
-
 export default function Dashboard(){
 
 
-const router = useRouter();
+const router =
+useRouter();
+
 
 
 const {
  balance,
  loading:balanceLoading
 }=useBalance();
+
 
 
 
@@ -61,6 +63,8 @@ const [
 
 
 
+
+
 const [
  stats,
  setStats
@@ -71,6 +75,22 @@ wins:0,
 games:0
 
 });
+
+
+
+
+
+const winRate = stats.games > 0
+
+?
+
+Math.round(
+(stats.wins / stats.games) * 100
+)
+
+:
+
+0;
 
 
 
@@ -98,12 +118,20 @@ return;
 
 
 
+
+
 const userRef =
 
 ref(
+
 database,
+
 `users/${user.uid}`
+
 );
+
+
+
 
 
 
@@ -116,14 +144,18 @@ userRef,
 (snapshot)=>{
 
 
-const data=snapshot.val();
+const data =
+snapshot.val();
+
 
 
 if(data){
 
 
 setUsername(
+
 data.username || "Joueur"
+
 );
 
 
@@ -163,6 +195,7 @@ database,
 
 
 
+
 const unsubscribeNotif =
 
 onValue(
@@ -172,36 +205,111 @@ notifRef,
 (snapshot)=>{
 
 
-const data=snapshot.val();
+const data =
+snapshot.val();
 
 
 
-if(!data){
-
-setNotificationCount(0);
-
-return;
-
-}
+let unreadNotifications = 0;
 
 
 
+if(data){
 
-const unread =
+
+unreadNotifications =
 
 Object.values(data)
 
 .filter(
 
-(item:any)=>item.read===false
+(item:any)=>
+
+item.read === false
 
 )
 
 .length;
 
 
+}
 
-setNotificationCount(unread);
+
+
+
+
+const friendRequestRef =
+
+ref(
+
+database,
+
+"friendRequests"
+
+);
+
+
+
+
+
+
+onValue(
+
+friendRequestRef,
+
+(friendSnapshot)=>{
+
+
+const requests =
+friendSnapshot.val();
+
+
+
+let friendRequestsCount = 0;
+
+
+
+
+
+if(requests){
+
+
+friendRequestsCount =
+
+Object.values(requests)
+
+.filter(
+
+(item:any)=>
+
+item.to === user.uid &&
+
+item.status === "pending"
+
+)
+
+.length;
+
+
+}
+
+
+
+
+
+setNotificationCount(
+
+unreadNotifications +
+
+friendRequestsCount
+
+);
+
+
+
+}
+
+);
 
 
 
@@ -213,14 +321,16 @@ setNotificationCount(unread);
 
 
 
-
 return()=>{
+
 
 unsubscribeUser();
 
 unsubscribeNotif();
 
+
 };
+
 
 
 }
@@ -234,11 +344,6 @@ return()=>unsubscribeAuth();
 
 
 },[router]);
-
-
-
-
-
 
 
 
@@ -268,13 +373,19 @@ justify-center
 <motion.div
 
 animate={{
+
 x:[0,30,0],
+
 y:[0,20,0]
+
 }}
 
 transition={{
+
 duration:6,
+
 repeat:Infinity
+
 }}
 
 className="
@@ -292,16 +403,23 @@ left-[-40px]
 
 
 
+
 <motion.div
 
 animate={{
+
 x:[0,-30,0],
+
 y:[0,-20,0]
+
 }}
 
 transition={{
+
 duration:7,
+
 repeat:Infinity
+
 }}
 
 className="
@@ -316,8 +434,6 @@ right-[-40px]
 "
 
 />
-
-
 
 
 
@@ -369,12 +485,17 @@ items-center
 <motion.h1
 
 animate={{
+
 y:[0,-4,0]
+
 }}
 
 transition={{
+
 duration:3,
+
 repeat:Infinity
+
 }}
 
 className="
@@ -393,31 +514,37 @@ text-transparent
 
 </motion.h1>
 
-
-
-
 <button
 
 onClick={()=>router.push("/wallet")}
 
 className="
-mr-[-8px]
-bg-white/10
+bg-gradient-to-b
+from-green-400
+to-green-700
 border
-border-white/20
+border-green-300/50
 rounded-xl
 px-4
 py-2
+shadow-[0_5px_0_#166534]
+active:translate-y-1
+active:shadow-[0_2px_0_#166534]
+transition-all
+duration-150
 "
 
 >
 
+<span
 
-<span className="
-text-green-400
+className="
+text-white
 font-black
 text-xs
-">
+"
+
+>
 
 💰 {balanceLoading ? "..." : Math.floor(balance)} HTG
 
@@ -427,16 +554,27 @@ text-xs
 </button>
 
 
+
 </div>
 
 
-</header><div className="mt-2">
+</header>
 
 
-<p className="
+
+
+
+<div className="mt-4">
+
+
+<p
+
+className="
 text-[11px]
 text-gray-400
-">
+"
+
+>
 
 Salut 👋
 
@@ -462,19 +600,7 @@ mt-1
 
 
 
-
-
-<motion.div
-
-initial={{
-opacity:0,
-y:15
-}}
-
-animate={{
-opacity:1,
-y:0
-}}
+<div
 
 className="
 mt-4
@@ -485,7 +611,8 @@ border-white/20
 rounded-3xl
 p-4
 grid
-grid-cols-2
+grid-cols-3
+items-center
 text-center
 "
 
@@ -494,26 +621,17 @@ text-center
 
 <div>
 
-<p className="
-text-yellow-300
-font-bold
-text-sm
-">
+<p className="text-yellow-300 font-bold text-sm">
 
 🏆 {stats.wins}
 
 </p>
 
+<p className="text-[10px] text-gray-400">
 
-<p className="
-text-[10px]
-text-gray-400
-">
-
-Victoires
+Victoire
 
 </p>
-
 
 </div>
 
@@ -523,34 +641,42 @@ Victoires
 
 <div>
 
-<p className="
-text-cyan-300
-font-bold
-text-sm
-">
+<p className="text-green-400 font-bold text-sm">
+
+📈 {winRate}%
+
+</p>
+
+<p className="text-[10px] text-gray-400">
+
+Taux gagner
+
+</p>
+
+</div>
+
+
+
+
+
+<div>
+
+<p className="text-cyan-300 font-bold text-sm">
 
 🎮 {stats.games}
 
 </p>
 
-
-<p className="
-text-[10px]
-text-gray-400
-">
+<p className="text-[10px] text-gray-400">
 
 Parties
 
 </p>
 
-
 </div>
 
 
-</motion.div>
-
-
-
+</div>
 
 
 
@@ -562,8 +688,8 @@ Parties
 className="
 flex
 flex-col
-gap-3
-mt-4
+gap-4
+mt-5
 "
 
 >
@@ -571,7 +697,9 @@ mt-4
 
 <ActionButton
 
-variant="blue"
+variant="glass"
+
+big
 
 onClick={()=>router.push("/create-room")}
 
@@ -585,10 +713,11 @@ onClick={()=>router.push("/create-room")}
 
 
 
-
 <ActionButton
 
 variant="glass"
+
+big
 
 onClick={()=>router.push("/join-room")}
 
@@ -602,45 +731,41 @@ onClick={()=>router.push("/join-room")}
 
 
 
+<div className="mt-12">
+
+
+<motion.div
+
+animate={{
+
+scale:[1,1.08,1]
+
+}}
+
+transition={{
+
+duration:2,
+
+repeat:Infinity
+
+}}
+
+className="relative"
+
+>
 
 
 <ActionButton
 
 variant="blue"
 
-onClick={()=>router.push("/spectator")}
+onClick={()=>router.push("/more")}
 
 >
 
-👁️ Mode spectateur
+➕ Plus
 
 </ActionButton>
-
-
-
-
-
-
-
-<ActionButton
-
-variant="glass"
-
-onClick={()=>router.push("/leaderboard")}
-
->
-
-🏆 Classement
-
-</ActionButton>
-
-
-
-</div>
-
-
-
-
 
 
 
@@ -649,72 +774,47 @@ onClick={()=>router.push("/leaderboard")}
 <motion.div
 
 animate={{
-opacity:[0.6,1,0.6]
+
+y:[0,8,0]
+
 }}
 
 transition={{
-duration:3,
+
+duration:1.2,
+
 repeat:Infinity
+
 }}
 
 className="
-mt-6
-bg-white/10
-backdrop-blur-2xl
-border
-border-white/20
-rounded-3xl
-p-4
+absolute
+left-1/2
+-translate-x-1/2
+top-full
+mt-2
+text-2xl
 "
 
 >
 
+👆
 
-<h2 className="
-text-center
-font-bold
-text-sm
-">
-
-⭕ Ti Ta To
-
-</h2>
-
-
-
-<p className="
-text-xs
-text-gray-300
-mt-3
-">
-
-🧪 Version bêta : mode test activé.
-
-</p>
-
-
-
-<p className="
-text-xs
-text-gray-300
-mt-2
-">
-
-🎁 Bonus test activé.
-
-</p>
-
+</motion.div>
 
 
 </motion.div>
 
 
+</div>
 
 
 
 </div>
 
+</div>
 
+</section>
 
 
 
@@ -746,30 +846,17 @@ z-50
 
 
 <NavItem
-
 icon="🏠"
-
 text="Accueil"
-
 onClick={()=>router.push("/dashboard")}
-
 />
-
-
 
 
 <NavItem
-
 icon="💼"
-
 text="Portefeuille"
-
 onClick={()=>router.push("/wallet")}
-
 />
-
-
-
 
 
 
@@ -828,16 +915,11 @@ notificationCount
 }
 
 
-
 <br/>
 
 Notification
 
-
 </div>
-
-
-
 
 
 
@@ -853,16 +935,8 @@ onClick={()=>router.push("/settings")}
 />
 
 
-
 </nav>
 
-
-
-
-
-
-
-</section>
 
 
 </main>
@@ -878,16 +952,16 @@ onClick={()=>router.push("/settings")}
 
 
 
-
-
-
 function ActionButton({
 
 children,
 
 onClick,
 
-variant="blue"
+variant="blue",
+
+big=false
+
 
 }:{
 
@@ -895,7 +969,9 @@ children:React.ReactNode;
 
 onClick:()=>void;
 
-variant?: "blue" | "glass";
+variant?:"blue"|"glass";
+
+big?:boolean;
 
 }){
 
@@ -904,7 +980,6 @@ return(
 
 
 <motion.button
-
 
 whileHover={{
 
@@ -915,19 +990,14 @@ y:-3
 }}
 
 
-
 whileTap={{
 
-scale:.95,
-
-y:2
+scale:.95
 
 }}
 
 
-
 onClick={onClick}
-
 
 
 className={
@@ -937,20 +1007,24 @@ variant==="blue"
 ?
 
 `
+
 w-full
-py-3
-rounded-xl
+
+${big ? "py-5 text-base rounded-2xl" : "py-3 text-sm rounded-xl"}
+
 font-bold
-text-sm
 
 bg-gradient-to-b
+
 from-blue-400
+
 to-blue-700
 
 border
+
 border-blue-300/40
 
-shadow-[0_5px_0_#123a8a]
+shadow-[0_6px_0_#123a8a]
 
 `
 
@@ -959,19 +1033,20 @@ shadow-[0_5px_0_#123a8a]
 `
 
 w-full
-py-3
-rounded-xl
+
+${big ? "py-5 text-base rounded-2xl" : "py-3 text-sm rounded-xl"}
+
 font-bold
-text-sm
 
 bg-white/20
 
 backdrop-blur-xl
 
 border
+
 border-white/30
 
-shadow-[0_5px_0_rgba(255,255,255,0.15)]
+shadow-[0_6px_0_rgba(255,255,255,0.15)]
 
 `
 
@@ -980,19 +1055,15 @@ shadow-[0_5px_0_rgba(255,255,255,0.15)]
 
 >
 
-
 {children}
-
 
 </motion.button>
 
 
 );
 
+
 }
-
-
-
 
 
 
@@ -1006,6 +1077,7 @@ icon,
 text,
 
 onClick
+
 
 }:{
 
@@ -1026,12 +1098,14 @@ return(
 onClick={onClick}
 
 className="
+
 text-[10px]
+
 text-gray-200
+
 "
 
 >
-
 
 {icon}
 

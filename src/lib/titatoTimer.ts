@@ -2,11 +2,11 @@ import {
   ref,
   get,
   update,
-  serverTimestamp
+  set
 } from "firebase/database";
 
 import {
-  database
+  rtdb
 } from "@/lib/firebase";
 
 
@@ -34,14 +34,14 @@ roomId:string
 await update(
 
 ref(
-database,
+rtdb,
 `rooms/${roomId}/game`
 ),
 
 {
 
 turnStartedAt:
-serverTimestamp(),
+Date.now(),
 
 turnDuration:
 TURN_TIME
@@ -74,7 +74,7 @@ roomId:string
 
 const roomRef =
 ref(
-database,
+rtdb,
 `rooms/${roomId}`
 );
 
@@ -178,7 +178,7 @@ nextTurn,
 
 "game/turnStartedAt":
 
-serverTimestamp()
+Date.now()
 
 
 

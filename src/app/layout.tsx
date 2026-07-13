@@ -1,28 +1,24 @@
+import type { Metadata } from "next";
+
 import "./globals.css";
 
-import {
-  LanguageProvider
-} from "@/context/LanguageContext";
+import OnlineTracker from "@/components/OnlineTracker";
+
+import { LanguageProvider } from "@/context/LanguageContext";
 
 
-export const metadata = {
 
-  title: "DOMINOS HAITI",
-
-  description: "Jeu de dominos en ligne avec portefeuille HTG"
-
+export const metadata: Metadata = {
+  title: "TI TA TO",
+  description: "Jeu multijoueur TI TA TO",
 };
 
 
 
 export default function RootLayout({
-
   children,
-
 }: Readonly<{
-
   children: React.ReactNode;
-
 }>) {
 
 
@@ -34,6 +30,8 @@ export default function RootLayout({
 
         <LanguageProvider>
 
+          <OnlineTracker />
+
           {children}
 
         </LanguageProvider>
@@ -43,6 +41,5 @@ export default function RootLayout({
     </html>
 
   );
-
 
 }

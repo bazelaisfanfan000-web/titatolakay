@@ -5,7 +5,7 @@ import {
 } from "firebase/database";
 
 import {
-  database
+  rtdb
 } from "@/lib/firebase";
 
 
@@ -25,7 +25,7 @@ console.log("💰 CREDIT WINNER DEMANDE", {
 
 const userRef =
 ref(
- database,
+ rtdb,
  `users/${uid}`
 );
 
@@ -88,7 +88,7 @@ updates[
 
 
 await update(
-ref(database),
+ref(rtdb),
 updates
 );
 
