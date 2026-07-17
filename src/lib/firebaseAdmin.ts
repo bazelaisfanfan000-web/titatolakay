@@ -4,30 +4,37 @@ import {
   initializeApp
 } from "firebase-admin/app";
 
+
 import {
   getDatabase
 } from "firebase-admin/database";
 
 
+import {
+  getAuth
+} from "firebase-admin/auth";
+
+
 const firebaseAdminConfig = {
 
-  credential: cert({
+credential: cert({
 
-    projectId:
-      process.env.FIREBASE_PROJECT_ID,
+projectId:
+process.env.FIREBASE_PROJECT_ID,
 
-    clientEmail:
-      process.env.FIREBASE_CLIENT_EMAIL,
+clientEmail:
+process.env.FIREBASE_CLIENT_EMAIL,
 
-    privateKey:
-      process.env.FIREBASE_PRIVATE_KEY
-      ?.replace(/\\n/g,"\n"),
+privateKey:
+process.env.FIREBASE_PRIVATE_KEY
+?.replace(/\\n/g,"\n")
 
-  }),
+}),
 
-  databaseURL:
-    process.env.FIREBASE_DATABASE_URL ||
-    "https://domino-fad16-default-rtdb.firebaseio.com"
+
+databaseURL:
+process.env.FIREBASE_DATABASE_URL ||
+"https://domino-fad16-default-rtdb.firebaseio.com"
 
 };
 
@@ -44,3 +51,8 @@ initializeApp(firebaseAdminConfig);
 
 export const adminDB =
 getDatabase(app);
+
+
+
+export const adminAuth =
+getAuth(app);

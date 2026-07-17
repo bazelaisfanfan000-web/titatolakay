@@ -9,13 +9,9 @@ export const dynamic = "force-dynamic";
 
 
 import {
-  adminDB
-} from "@/lib/firebaseAdmin";
-
-
-import {
+  adminDB,
   adminAuth
-} from "@/lib/firebaseAuthAdmin";
+} from "@/lib/firebaseAdmin";
 
 
 import {
@@ -65,25 +61,19 @@ if(!amount || amount <= 0){
 
 
 return NextResponse.json(
-
 {
-
 success:false,
-
 error:"Mise invalide"
-
 },
-
 {
-
 status:400
-
 }
-
 );
 
 
 }
+
+
 
 
 
@@ -105,21 +95,13 @@ if(!authHeader){
 
 
 return NextResponse.json(
-
 {
-
 success:false,
-
 error:"Token manquant"
-
 },
-
 {
-
 status:401
-
 }
-
 );
 
 
@@ -142,25 +124,19 @@ if(!token){
 
 
 return NextResponse.json(
-
 {
-
 success:false,
-
 error:"Token vide"
-
 },
-
 {
-
 status:401
-
 }
-
 );
 
 
 }
+
+
 
 
 
@@ -193,25 +169,20 @@ err
 
 
 return NextResponse.json(
-
 {
-
 success:false,
-
 error:"Token Firebase invalide"
-
 },
-
 {
-
 status:401
-
 }
-
 );
 
 
 }
+
+
+
 
 
 
@@ -228,6 +199,9 @@ uid,
 amount
 }
 );
+
+
+
 
 
 
@@ -252,26 +226,20 @@ if(balance < amount){
 
 
 return NextResponse.json(
-
 {
-
 success:false,
-
 error:
 `Solde insuffisant (${balance} HTG)`
-
 },
-
 {
-
 status:400
-
 }
-
 );
 
 
 }
+
+
 
 
 
@@ -283,13 +251,9 @@ status:400
 
 
 await deductBet(
-
 uid,
-
 amount,
-
 "create-room"
-
 );
 
 
@@ -297,8 +261,10 @@ amount,
 
 
 
+
+
 // ===============================
-// ROOM
+// CREATION ROOM
 // ===============================
 
 
@@ -319,10 +285,12 @@ mode === "2v2"
 
 
 
+
 const newRoomRef =
 adminDB
 .ref("rooms")
 .push();
+
 
 
 
@@ -347,6 +315,8 @@ throw new Error(
 
 
 
+
+
 const playerName =
 
 decoded.name ||
@@ -360,9 +330,10 @@ decoded.email ||
 
 
 
+
+
+
 await newRoomRef.set({
-
-
 
 id:roomId,
 
@@ -424,7 +395,6 @@ createdAt:Date.now(),
 players:{
 
 
-
 [uid]:{
 
 
@@ -461,23 +431,18 @@ joinedAt:Date.now()
 
 
 
-return NextResponse.json(
 
-{
 
+return NextResponse.json({
 
 success:true,
 
-
 roomId,
-
 
 status:"waiting"
 
+});
 
-}
-
-);
 
 
 
@@ -490,11 +455,8 @@ catch(error:any){
 
 
 console.error(
-
 "CREATE ROOM CRASH:",
-
 error
-
 );
 
 
@@ -502,28 +464,15 @@ error
 
 
 return NextResponse.json(
-
 {
-
-
 success:false,
-
-
 error:
-
 error?.message ||
-
 "Erreur serveur création partie"
-
-
 },
-
 {
-
 status:500
-
 }
-
 );
 
 

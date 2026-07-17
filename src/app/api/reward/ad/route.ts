@@ -9,13 +9,9 @@ export const dynamic = "force-dynamic";
 
 
 import {
-  adminDB
-} from "@/lib/firebaseAdmin";
-
-
-import {
+  adminDB,
   adminAuth
-} from "@/lib/firebaseAuthAdmin";
+} from "@/lib/firebaseAdmin";
 
 
 import {
@@ -54,6 +50,11 @@ Number(body?.amount);
 
 
 
+
+
+// ===============================
+// VERIFICATION DONNEES
+// ===============================
 
 
 if(!token){
@@ -106,6 +107,11 @@ status:400
 
 
 
+// ===============================
+// VERIFICATION FIREBASE
+// ===============================
+
+
 if(!adminAuth){
 
 throw new Error(
@@ -113,7 +119,6 @@ throw new Error(
 );
 
 }
-
 
 
 if(!adminDB){
@@ -126,6 +131,11 @@ throw new Error(
 
 
 
+
+
+// ===============================
+// VERIFICATION TOKEN ADMIN
+// ===============================
 
 
 const decoded =
@@ -141,6 +151,10 @@ decoded.uid;
 
 
 
+
+// ===============================
+// VERIFICATION ROLE ADMIN
+// ===============================
 
 
 const adminSnap =
@@ -175,6 +189,12 @@ status:403
 
 
 
+
+// ===============================
+// AJOUT SOLDE
+// ===============================
+
+
 const result =
 await addBalance(
 
@@ -185,6 +205,7 @@ amount,
 "admin_reward"
 
 );
+
 
 
 
@@ -208,6 +229,7 @@ result.newBalance
 
 }
 );
+
 
 
 

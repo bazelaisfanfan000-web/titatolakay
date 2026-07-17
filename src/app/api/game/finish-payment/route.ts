@@ -9,13 +9,9 @@ export const dynamic = "force-dynamic";
 
 
 import {
-  adminDB
-} from "@/lib/firebaseAdmin";
-
-
-import {
+  adminDB,
   adminAuth
-} from "@/lib/firebaseAuthAdmin";
+} from "@/lib/firebaseAdmin";
 
 
 const COMMISSION_RATE = 0.10;
@@ -144,11 +140,9 @@ status:400
 
 
 
-/*
-------------------------------
-VERROU ANTI DOUBLE PAIEMENT
-------------------------------
-*/
+// ===============================
+// ANTI DOUBLE PAIEMENT
+// ===============================
 
 
 const paymentRef =
@@ -160,7 +154,7 @@ adminDB.ref(
 
 const lock =
 await paymentRef.transaction(
-(current: any)=>{
+(current:any)=>{
 
 
 if(
@@ -200,11 +194,9 @@ status:409
 
 
 
-/*
-------------------------------
-TROUVER GAGNANT
-------------------------------
-*/
+// ===============================
+// TROUVER GAGNANT
+// ===============================
 
 
 const winnerSymbol =
@@ -241,6 +233,7 @@ winnerUid = uid;
 
 if(!winnerUid){
 
+
 await paymentRef.set(null);
 
 
@@ -260,12 +253,9 @@ status:400
 
 
 
-
-/*
-------------------------------
-CALCUL GAIN
-------------------------------
-*/
+// ===============================
+// CALCUL
+// ===============================
 
 
 const bet =
@@ -300,6 +290,7 @@ pot - commission;
 
 if(reward <= 0){
 
+
 await paymentRef.set(null);
 
 
@@ -319,13 +310,9 @@ status:400
 
 
 
-
-
-/*
-------------------------------
-CREDIT GAGNANT
-------------------------------
-*/
+// ===============================
+// CREDIT GAGNANT
+// ===============================
 
 
 const balanceRef =
@@ -342,7 +329,7 @@ let newBalance = 0;
 
 
 await balanceRef.transaction(
-(current: any)=>{
+(current:any)=>{
 
 
 oldBalance =
@@ -366,13 +353,9 @@ return newBalance;
 
 
 
-
-
-/*
-------------------------------
-HISTORIQUE TRANSACTION
-------------------------------
-*/
+// ===============================
+// TRANSACTION
+// ===============================
 
 
 await adminDB
@@ -403,16 +386,10 @@ createdAt:Date.now()
 
 
 
+// ===============================
+// STATS GAGNANT
+// ===============================
 
-
-/*
-------------------------------
-STATISTIQUES JOUEURS
-------------------------------
-*/
-
-
-// GAGNANT
 
 const winnerRef =
 adminDB.ref(
@@ -420,20 +397,24 @@ adminDB.ref(
 );
 
 
+
 const winnerSnap =
 await winnerRef.get();
+
 
 
 const winnerData =
 winnerSnap.val() || {};
 
 
+
 const wins =
-Number(winnerData.wins || 0) + 1;
+Number(winnerData.wins || 0)+1;
+
 
 
 const winnerGames =
-Number(winnerData.gamesPlayed || 0) + 1;
+Number(winnerData.gamesPlayed || 0)+1;
 
 
 
@@ -456,7 +437,10 @@ Math.round(
 
 
 
-// PERDANT
+// ===============================
+// STATS PERDANT
+// ===============================
+
 
 let loserUid = "";
 
@@ -469,9 +453,7 @@ room.players || {}
 ([uid]:any)=>{
 
 
-if(
-uid !== winnerUid
-){
+if(uid !== winnerUid){
 
 loserUid = uid;
 
@@ -504,16 +486,12 @@ loserSnap.val() || {};
 
 
 const loserGames =
-Number(
-loserData.gamesPlayed || 0
-) + 1;
+Number(loserData.gamesPlayed || 0)+1;
 
 
 
 const loserWins =
-Number(
-loserData.wins || 0
-);
+Number(loserData.wins || 0);
 
 
 
@@ -523,7 +501,7 @@ gamesPlayed:loserGames,
 
 winRate:
 Math.round(
-(loserWins / loserGames) * 100
+(loserWins / loserGames)*100
 )
 
 });
@@ -537,13 +515,9 @@ Math.round(
 
 
 
-
-
-/*
-------------------------------
-FERMER PAIEMENT
-------------------------------
-*/
+// ===============================
+// FERMER PAIEMENT
+// ===============================
 
 
 await roomRef.update({
@@ -592,6 +566,7 @@ newBalance
 
 
 
+
 }
 catch(error:any){
 
@@ -606,7 +581,7 @@ error
 return NextResponse.json(
 {
 error:
-error.message ||
+error?.message ||
 "Erreur serveur"
 },
 {
