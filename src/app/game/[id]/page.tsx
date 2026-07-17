@@ -27,8 +27,7 @@ import {
 
 
 import {
-  playGameMove,
-  finishGamePayment
+  playGameMove
 } from "@/lib/firebaseGame";
 
 
@@ -341,7 +340,7 @@ return;
 
 
 if(
-room.game.paymentDone === true
+room.game.paymentStatus === "completed"
 )
 return;
 
@@ -365,19 +364,38 @@ async function pay(){
 try{
 
 
-const result =
-await finishGamePayment(
-id
-);
+    // Appel API serveur pour paiement (utilise Firebase Admin côté serveur)
+    const user = auth.currentUser;
 
+    if(!user){
+      throw new Error("Utilisateur non connecté");
+    }
 
+    const token = await user.getIdToken();
 
-if(result.success){
+    const res = await fetch(
+      "/api/game/finish-payment",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ gameId: id })
+      }
+    );
 
+    const result = await res.json();
 
-await addPlayerWin(
-result.winnerUid
-);
+    if(!res.ok || !result.success){
+      throw new Error(result?.error || "Erreur paiement");
+    }
+
+    paymentDone.current = true;
+
+    await addPlayerWin(
+      result.winnerUid
+    );
 
 
 
@@ -428,16 +446,8 @@ console.log(
 
 
 },5000);
-
-
-
-}
-
-
-
-}
-catch(error){
-
+  }
+  catch(error){
 
 console.log(
 "PAYMENT ERROR",
@@ -834,7 +844,7 @@ uid={
 user?.uid || ""
 }
 
-name={
+userName={
 user?.displayName || "Joueur"
 }
 

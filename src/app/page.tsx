@@ -14,12 +14,26 @@ import {
   Gamepad2
 } from "lucide-react";
 
+import {
+  useState,
+  useEffect
+} from "react";
+
 
 
 export default function Home(){
 
 
 const router = useRouter();
+
+const [countdown, setCountdown] = useState(10);
+
+useEffect(() => {
+  if (countdown > 0) {
+    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    return () => clearTimeout(timer);
+  }
+}, [countdown]);
 
 
 
@@ -468,7 +482,6 @@ text-gray-400
 
 
 
-
 <p
 
 className="
@@ -482,10 +495,6 @@ mt-3
 🧪 version Beta
 
 </p>
-
-
-
-
 
 
 
@@ -507,16 +516,11 @@ text-[9px]
 text-yellow-300
 mt-8
 font-bold
-"
+">
 
->
-
-
+{countdown > 0 ? "Prochaine mise à jour dans " + countdown + "s" : "Mise à jour disponible !"}
 
 </motion.p>
-
-
-
 
 
 
@@ -530,7 +534,6 @@ font-bold
 );
 
 }
-
 
 
 
@@ -616,3 +619,4 @@ text-gray-300
 
 
 }
+

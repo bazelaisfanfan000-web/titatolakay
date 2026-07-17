@@ -137,29 +137,29 @@ Number(deposit.amount);
 
 
 
-await adminDB.ref(
+// créditer solde utilisateur de manière atomique
+const balanceRef = adminDB.ref(`users/${uid}/balance`);
 
-`wallets/${uid}`
+let oldBal = 0;
+let newBal = 0;
 
-).transaction(
+await balanceRef.transaction((current:any)=>{
+  oldBal = Number(current || 0);
+  newBal = oldBal + amount;
+  return newBal;
+});
 
-(current)=>{
-
-
-return (
-
-Number(current || 0)
-
-+
-
-amount
-
-);
-
-
-}
-
-);
+// enregistrer transaction
+await adminDB.ref(`transactions/${uid}`).push({
+  type: "deposit",
+  amount,
+  provider: "MonCash",
+  reference: orderId,
+  status: "completed",
+  createdAt: Date.now(),
+  oldBalance: oldBal,
+  newBalance: newBal
+});
 
 
 

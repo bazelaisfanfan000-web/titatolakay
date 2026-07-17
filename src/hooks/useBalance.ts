@@ -6,11 +6,6 @@ import {
 } from "react";
 
 import {
-  ref,
-  onValue
-} from "firebase/database";
-
-import {
   auth,
   database
 } from "@/lib/firebase";
@@ -19,27 +14,38 @@ import {
   onAuthStateChanged
 } from "firebase/auth";
 
+import {
+  ref,
+  onValue
+} from "firebase/database";
 
 
 export function useBalance(){
 
 
-const [balance,setBalance] = useState<number>(0);
+const [balance,setBalance] =
+useState(0);
 
-const [loading,setLoading] = useState(true);
+
+const [loading,setLoading] =
+useState(true);
 
 
 
 useEffect(()=>{
 
 
+let unsubscribeBalance:any;
+
+
 const unsubscribeAuth =
-onAuthStateChanged(auth,(user)=>{
+onAuthStateChanged(
+auth,
+(user)=>{
 
 
 if(!user){
 
-console.log("useBalance: Aucun utilisateur connecté");
 setBalance(0);
 setLoading(false);
 
@@ -49,21 +55,16 @@ return;
 
 
 
-console.log("useBalance: USER UID:", user.uid);
 
-
-const balanceRef = ref(
-
+const balanceRef =
+ref(
 database,
-
 `users/${user.uid}/balance`
-
 );
 
 
 
-
-const unsubscribeBalance =
+unsubscribeBalance =
 onValue(
 
 balanceRef,
@@ -76,38 +77,49 @@ snapshot.val();
 
 
 
-console.log("useBalance: BALANCE FIREBASE:", value);
+console.log(
+"💰 DASHBOARD BALANCE",
+value
+);
+
 
 
 setBalance(
-Math.floor(
 Number(value || 0)
-)
 );
+
 
 
 setLoading(false);
 
 
-
 }
-
 
 
 );
 
 
 
+}
 
-return ()=>unsubscribeBalance();
-
-
-
-});
+);
 
 
 
-return ()=>unsubscribeAuth();
+return()=>{
+
+
+unsubscribeAuth();
+
+
+if(unsubscribeBalance){
+
+unsubscribeBalance();
+
+}
+
+
+};
 
 
 

@@ -120,6 +120,7 @@ return;
 
 
 
+
 const userRef =
 
 ref(
@@ -160,11 +161,12 @@ data.username || "Joueur"
 
 
 
+
 setStats({
 
 wins:Number(data.wins || 0),
 
-games:Number(data.games || 0)
+games:Number(data.gamesPlayed || 0)
 
 });
 
@@ -175,12 +177,6 @@ games:Number(data.games || 0)
 }
 
 );
-
-
-
-
-
-
 const notifRef =
 
 ref(
@@ -190,7 +186,6 @@ database,
 `notifications/${user.uid}`
 
 );
-
 
 
 
@@ -238,6 +233,7 @@ item.read === false
 
 
 
+
 const friendRequestRef =
 
 ref(
@@ -247,6 +243,7 @@ database,
 "friendRequests"
 
 );
+
 
 
 
@@ -297,6 +294,7 @@ item.status === "pending"
 
 
 
+
 setNotificationCount(
 
 unreadNotifications +
@@ -313,9 +311,12 @@ friendRequestsCount
 
 
 
+
 }
 
 );
+
+
 
 
 
@@ -333,9 +334,12 @@ unsubscribeNotif();
 
 
 
+
 }
 
 );
+
+
 
 
 
@@ -343,7 +347,11 @@ return()=>unsubscribeAuth();
 
 
 
+
+
 },[router]);
+
+
 
 
 
@@ -368,6 +376,9 @@ justify-center
 "
 
 >
+
+
+
 
 
 <motion.div
@@ -400,6 +411,8 @@ left-[-40px]
 "
 
 />
+
+
 
 
 
@@ -437,6 +450,8 @@ right-[-40px]
 
 
 
+
+
 <section
 
 className="
@@ -448,6 +463,9 @@ pt-16
 "
 
 >
+
+
+
 
 
 <header
@@ -514,6 +532,10 @@ text-transparent
 
 </motion.h1>
 
+
+
+
+
 <button
 
 onClick={()=>router.push("/wallet")}
@@ -554,17 +576,10 @@ text-xs
 </button>
 
 
-
 </div>
 
 
-</header>
-
-
-
-
-
-<div className="mt-4">
+</header><div className="mt-4">
 
 
 <p
@@ -582,6 +597,7 @@ Salut 👋
 
 
 
+
 <h2
 
 className="
@@ -595,6 +611,7 @@ mt-1
 {username}
 
 </h2>
+
 
 
 
@@ -617,6 +634,7 @@ text-center
 "
 
 >
+
 
 
 <div>
@@ -676,6 +694,7 @@ Parties
 </div>
 
 
+
 </div>
 
 
@@ -693,6 +712,7 @@ mt-5
 "
 
 >
+
 
 
 <ActionButton
@@ -713,6 +733,7 @@ onClick={()=>router.push("/create-room")}
 
 
 
+
 <ActionButton
 
 variant="glass"
@@ -726,6 +747,7 @@ onClick={()=>router.push("/join-room")}
 🚀 Rejoindre une partie
 
 </ActionButton>
+
 
 
 
@@ -755,6 +777,7 @@ className="relative"
 >
 
 
+
 <ActionButton
 
 variant="blue"
@@ -766,7 +789,6 @@ onClick={()=>router.push("/more")}
 ➕ Plus
 
 </ActionButton>
-
 
 
 
@@ -803,6 +825,7 @@ text-2xl
 </motion.div>
 
 
+
 </motion.div>
 
 
@@ -810,7 +833,9 @@ text-2xl
 
 
 
+
 </div>
+
 
 </div>
 
@@ -845,6 +870,7 @@ z-50
 >
 
 
+
 <NavItem
 icon="🏠"
 text="Accueil"
@@ -852,11 +878,13 @@ onClick={()=>router.push("/dashboard")}
 />
 
 
+
 <NavItem
 icon="💼"
 text="Portefeuille"
 onClick={()=>router.push("/wallet")}
 />
+
 
 
 
@@ -915,11 +943,13 @@ notificationCount
 }
 
 
+
 <br/>
 
 Notification
 
 </div>
+
 
 
 
@@ -935,6 +965,7 @@ onClick={()=>router.push("/settings")}
 />
 
 
+
 </nav>
 
 
@@ -946,6 +977,7 @@ onClick={()=>router.push("/settings")}
 
 
 }
+
 
 
 
@@ -989,13 +1021,11 @@ y:-3
 
 }}
 
-
 whileTap={{
 
 scale:.95
 
 }}
-
 
 onClick={onClick}
 
@@ -1052,7 +1082,6 @@ shadow-[0_6px_0_rgba(255,255,255,0.15)]
 
 }
 
-
 >
 
 {children}
@@ -1064,6 +1093,7 @@ shadow-[0_6px_0_rgba(255,255,255,0.15)]
 
 
 }
+
 
 
 

@@ -13,7 +13,7 @@ import Link from "next/link";
 import {
   auth,
   database
-} from "../../lib/firebase";
+} from "@/lib/firebase";
 
 import {
   createUserWithEmailAndPassword
@@ -36,10 +36,13 @@ import {
 } from "lucide-react";
 
 
+
 export default function Register(){
 
 
-const router = useRouter();
+const router =
+useRouter();
+
 
 
 const [username,setUsername] =
@@ -55,6 +58,7 @@ const [accepted,setAccepted] =
 useState(false);
 
 
+
 const [error,setError] =
 useState("");
 
@@ -63,10 +67,16 @@ useState(false);
 
 
 
+
+
 async function register(){
 
 
-if(!username || !email || !password){
+if(
+!username ||
+!email ||
+!password
+){
 
 setError(
 "Tous les champs sont obligatoires"
@@ -112,10 +122,15 @@ setError("");
 
 
 const result =
+
 await createUserWithEmailAndPassword(
+
 auth,
+
 email,
+
 password
+
 );
 
 
@@ -124,14 +139,22 @@ const user =
 result.user;
 
 
+
 const uid =
 user.uid;
 
 
 
+
 await set(
 
-ref(database,`users/${uid}`),
+ref(
+
+database,
+
+`users/${uid}`
+
+),
 
 {
 
@@ -151,17 +174,26 @@ createdAt:Date.now(),
 
 acceptedTerms:true,
 
-acceptedTermsAt:Date.now()
+acceptedTermsAt:Date.now(),
+
+balanceUpdatedAt:Date.now(),
+
+lastReward:1000
 
 }
 
-);
+);const notificationRef =
 
-
-
-const notificationRef =
 push(
-ref(database,`notifications/${uid}`)
+
+ref(
+
+database,
+
+`notifications/${uid}`
+
+)
+
 );
 
 
@@ -172,16 +204,24 @@ notificationRef,
 
 {
 
-title:"🎁 Bonus de bienvenue",
+title:
+
+"🎁 Bonus de bienvenue",
+
 
 message:
+
 "Tu as reçu +1000 HTG de bonus de bienvenue pour commencer à jouer.",
+
 
 amount:1000,
 
+
 type:"bonus",
 
+
 read:false,
+
 
 createdAt:Date.now()
 
@@ -191,7 +231,10 @@ createdAt:Date.now()
 
 
 
-router.push("/dashboard");
+router.push(
+"/dashboard"
+);
+
 
 
 }
@@ -199,41 +242,58 @@ router.push("/dashboard");
 catch(err:any){
 
 
-if(err.code==="auth/email-already-in-use"){
+if(
+err.code === "auth/email-already-in-use"
+){
 
 setError(
 "Cet email existe déjà"
 );
 
+
 }
 
-else if(err.code==="auth/invalid-email"){
+else if(
+err.code === "auth/invalid-email"
+){
 
 setError(
 "Email invalide"
 );
 
+
 }
 
 else{
+
 
 setError(
 err.message
 );
 
+
 }
+
 
 
 }
 
 finally{
 
+
 setLoading(false);
+
 
 }
 
 
-}return(
+}
+
+
+
+
+
+return(
 
 
 <main
@@ -302,6 +362,7 @@ text-center
 >
 
 
+
 <div
 
 className="
@@ -317,8 +378,8 @@ shadow-2xl
 >
 
 
-<motion.h1
 
+<motion.h1
 
 animate={{
 
@@ -328,7 +389,6 @@ rotate:[0,2,-2,0]
 
 }}
 
-
 transition={{
 
 duration:3,
@@ -336,8 +396,6 @@ duration:3,
 repeat:Infinity
 
 }}
-
-
 
 className="
 text-xl
@@ -357,8 +415,6 @@ text-transparent
 
 
 
-
-
 <p
 
 className="
@@ -371,29 +427,17 @@ mt-2
 
 Créer ton compte joueur
 
-</p>
-
-
-
-
-
-
-
-<div className="relative mt-4">
+</p><div className="relative mt-4">
 
 <User
-
 size={13}
-
 className="
 absolute
 left-3
 top-2.5
 text-blue-400
 "
-
 />
-
 
 
 <input
@@ -415,13 +459,13 @@ placeholder="Nom joueur"
 
 value={username}
 
-onChange={(e)=>setUsername(e.target.value)}
+onChange={(e)=>
+setUsername(e.target.value)
+}
 
 />
 
 </div>
-
-
 
 
 
@@ -440,7 +484,6 @@ text-blue-400
 "
 
 />
-
 
 
 <input
@@ -464,7 +507,9 @@ type="email"
 
 value={email}
 
-onChange={(e)=>setEmail(e.target.value)}
+onChange={(e)=>
+setEmail(e.target.value)
+}
 
 />
 
@@ -474,8 +519,8 @@ onChange={(e)=>setEmail(e.target.value)}
 
 
 
-
 <div className="relative mt-3">
+
 
 <Lock
 
@@ -489,7 +534,6 @@ text-blue-400
 "
 
 />
-
 
 
 <input
@@ -513,12 +557,14 @@ type="password"
 
 value={password}
 
-onChange={(e)=>setPassword(e.target.value)}
+onChange={(e)=>
+setPassword(e.target.value)
+}
 
 />
 
-</div>
 
+</div>
 
 
 
@@ -541,7 +587,12 @@ mt-3
 
 </p>
 
-}<div
+}
+
+
+
+
+<div
 
 className="
 mt-3
@@ -554,19 +605,19 @@ text-gray-300
 
 >
 
-
 <input
 
 type="checkbox"
 
 checked={accepted}
 
-onChange={(e)=>setAccepted(e.target.checked)}
+onChange={(e)=>
+setAccepted(e.target.checked)
+}
 
 className="mt-1"
 
 />
-
 
 
 <p>
@@ -601,7 +652,6 @@ politique de confidentialité
 
 </Link>
 
-
 </p>
 
 
@@ -612,9 +662,7 @@ politique de confidentialité
 
 
 
-
 <button
-
 
 onClick={register}
 
@@ -640,7 +688,6 @@ disabled:opacity-50
 
 >
 
-
 {
 
 loading
@@ -657,8 +704,6 @@ loading
 
 
 </button>
-
-
 
 
 
@@ -683,7 +728,6 @@ mt-3
 
 
 
-
 <p
 
 className="
@@ -702,14 +746,9 @@ Déjà enregistré ?
 
 
 
-
-
 <Link
 
-
 href="/login"
-
-
 
 className="
 block
@@ -730,18 +769,10 @@ transition
 
 
 
-
-
-
 </div>
 
 
 </section>
-
-
-
-
-
 
 
 </main>

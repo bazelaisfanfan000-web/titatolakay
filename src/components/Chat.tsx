@@ -6,28 +6,32 @@ import React, {
   useRef
 } from "react";
 
+
 import {
   ref,
   onValue,
-  off,
   query,
   limitToLast,
   push,
   set
 } from "firebase/database";
 
+
 import {
   useRouter
 } from "next/navigation";
+
 
 import {
   rtdb,
   database
 } from "@/lib/firebase";
 
+
 import {
   ref as dbRef
 } from "firebase/database";
+
 
 
 interface ChatMessage {
@@ -60,6 +64,7 @@ userName:string;
 
 
 
+
 export default function Chat({
 
 roomId,
@@ -72,7 +77,9 @@ userName
 
 
 
-const router = useRouter();
+const router =
+useRouter();
+
 
 
 
@@ -97,6 +104,14 @@ setIsPremium
 
 
 
+const [
+sending,
+setSending
+]=useState(false);
+
+
+
+
 const messagesEndRef =
 useRef<HTMLDivElement>(null);
 
@@ -109,14 +124,21 @@ useRef<HTMLInputElement>(null);
 
 
 
+
+
 useEffect(()=>{
 
 
 const userPremiumRef =
+
 dbRef(
+
 database,
+
 `users/${uid}/premium`
+
 );
+
 
 
 
@@ -134,6 +156,7 @@ snapshot.val();
 
 
 
+
 if(!data){
 
 setIsPremium(false);
@@ -144,8 +167,13 @@ return;
 
 
 
+
 const expire =
-new Date(data.expireDate);
+
+new Date(
+data.expireDate
+);
+
 
 
 
@@ -165,8 +193,13 @@ expire > new Date()
 
 
 
-return()=>unsubscribe();
 
+
+return()=>{
+
+unsubscribe();
+
+};
 
 
 },[uid]);
@@ -181,18 +214,30 @@ useEffect(()=>{
 
 
 const chatRef =
+
 ref(
+
 rtdb,
+
 `rooms/${roomId}/chat`
+
 );
+
+
 
 
 
 const chatQuery =
+
 query(
+
 chatRef,
+
 limitToLast(50)
+
 );
+
+
 
 
 
@@ -210,6 +255,7 @@ snap.val();
 
 
 
+
 if(data){
 
 
@@ -223,7 +269,16 @@ id,
 
 ...msg
 
-}));
+}))
+
+
+.sort(
+
+(a,b)=>
+
+a.timestamp - b.timestamp
+
+);
 
 
 
@@ -241,21 +296,26 @@ setMessages([]);
 }
 
 
+
 }
 
 );
 
 
 
+
+
+
 return()=>{
 
-off(chatRef);
+unsubscribe();
 
 };
 
 
 
 },[roomId]);
+
 
 
 
@@ -272,46 +332,54 @@ behavior:"smooth"
 });
 
 
-
-},[messages]);
-
+},[messages]);const handleSendMessage = async()=>{
 
 
-
-
-
-const handleSendMessage = async()=>{
-
-
-if(!newMessage.trim())
+if(
+!newMessage.trim()
+||
+sending
+)
 
 return;
+
+
 
 
 
 if(!isPremium){
 
+
 alert(
 "⭐ Le chat texte est réservé aux membres Premium"
 );
 
+
 router.push("/premium");
 
+
 return;
+
 
 }
 
 
 
-if(newMessage.length>200){
+
+
+if(newMessage.length > 200){
+
 
 alert(
 "Message trop long"
 );
 
+
 return;
 
+
 }
+
 
 
 
@@ -319,16 +387,31 @@ return;
 try{
 
 
+setSending(true);
+
+
+
+
 const chatRef =
+
 ref(
+
 rtdb,
+
 `rooms/${roomId}/chat`
+
 );
 
 
 
+
+
 const messageRef =
+
 push(chatRef);
+
+
+
 
 
 
@@ -354,6 +437,9 @@ timestamp:Date.now()
 
 
 
+
+
+
 setNewMessage("");
 
 
@@ -362,25 +448,53 @@ setNewMessage("");
 
 catch(error){
 
-console.log(error);
+
+console.log(
+"CHAT ERROR",
+error
+);
+
+
+
+}
+
+finally{
+
+
+setSending(false);
+
 
 }
 
 
-};const addEmoji=(emoji:string)=>{
+
+};
+
+
+
+
+
+
+
+const addEmoji=(emoji:string)=>{
 
 
 setNewMessage(
 
-prev=>prev+emoji
+prev=>
+
+prev + emoji
 
 );
+
 
 
 inputRef.current?.focus();
 
 
+
 };
+
 
 
 
@@ -414,6 +528,7 @@ minute:"2-digit"
 
 
 
+
 const emojis=[
 
 "😀",
@@ -437,6 +552,7 @@ const emojis=[
 
 return(
 
+
 <div
 
 className="
@@ -449,6 +565,8 @@ overflow-hidden
 "
 
 >
+
+
 
 
 
@@ -478,14 +596,19 @@ font-bold
 
 
 
+
 {
 
 isPremium &&
 
-<span className="
+<span
+
+className="
 text-yellow-400
 text-xs
-">
+"
+
+>
 
 ⭐ Premium
 
@@ -515,10 +638,34 @@ space-y-3
 >
 
 
+
+{
+
+messages.length === 0 &&
+
+<p
+
+className="
+text-gray-500
+text-center
+text-sm
+"
+
+>
+
+Aucun message
+
+</p>
+
+}
+
+
+
+
+
 {
 
 messages.map((msg)=>(
-
 
 
 <div
@@ -527,7 +674,7 @@ key={msg.id}
 
 className={
 
-msg.uid===uid
+msg.uid === uid
 
 ?
 
@@ -542,13 +689,16 @@ msg.uid===uid
 >
 
 
+<div
 
-<div className="
+className="
 flex
 gap-2
 text-xs
 text-gray-400
-">
+"
+
+>
 
 
 <span>
@@ -561,6 +711,7 @@ text-gray-400
 
 
 
+
 <span>
 
 {formatTime(msg.timestamp)}
@@ -568,14 +719,8 @@ text-gray-400
 </span>
 
 
-</div>
 
-
-
-
-
-
-<div
+</div><div
 
 className={
 
@@ -593,13 +738,9 @@ msg.uid===uid
 
 >
 
-
 {msg.message}
 
-
 </div>
-
-
 
 
 </div>
@@ -608,7 +749,6 @@ msg.uid===uid
 ))
 
 }
-
 
 
 
@@ -636,7 +776,9 @@ p-3
 >
 
 
-<div className="
+<div
+
+className="
 flex
 gap-1
 overflow-x-auto
@@ -670,7 +812,6 @@ text-2xl
 
 ))
 
-
 }
 
 
@@ -680,7 +821,6 @@ text-2xl
 
 
 </div>
-
 
 
 
@@ -701,7 +841,9 @@ p-3
 
 
 
-<div className="
+<div
+
+className="
 flex
 gap-2
 "
@@ -710,23 +852,37 @@ gap-2
 
 
 
+
 <input
+
 
 ref={inputRef}
 
+
 value={newMessage}
 
+
 onChange={(e)=>
+
 setNewMessage(e.target.value)
+
 }
+
+
 
 onKeyDown={(e)=>{
 
-if(e.key==="Enter")
+
+if(e.key==="Enter"){
 
 handleSendMessage();
 
+}
+
+
 }}
+
+
 
 placeholder={
 
@@ -741,6 +897,8 @@ isPremium
 "⭐ Chat Premium"
 
 }
+
+
 
 className="
 flex-1
@@ -762,7 +920,14 @@ outline-none
 
 <button
 
+
 onClick={handleSendMessage}
+
+
+
+disabled={sending}
+
+
 
 className="
 bg-gradient-to-b
@@ -779,23 +944,45 @@ hover:scale-105
 active:translate-y-1
 active:shadow-[0_2px_0_#123a8a]
 transition-all
+disabled:opacity-50
 "
 
 >
 
-🚀 Envoyer
+
+
+{
+
+sending
+
+?
+
+"⏳"
+
+:
+
+"🚀 Envoyer"
+
+}
+
+
 
 </button>
 
 
 
 
+
+</div>
+
+
+
+
+
 </div>
 
 
 
-
-</div>
 
 
 
@@ -805,6 +992,7 @@ transition-all
 
 
 );
+
 
 
 }

@@ -15,10 +15,6 @@ import {
 } from "@/lib/firebaseEconomyAdmin";
 
 
-import {
-  push,
-  ref
-} from "firebase/database";
 
 
 
@@ -51,18 +47,30 @@ gameType
 
 
 
-if(!bet || Number(bet)<=0){
+const amount =
+Number(bet);
+
+
+
+
+
+if(
+!amount ||
+amount <= 0
+){
 
 
 return NextResponse.json(
+
 {
 error:"Mise invalide"
 },
+
 {
 status:400
 }
-);
 
+);
 
 }
 
@@ -79,21 +87,23 @@ request.headers.get(
 
 
 
+
 if(!authHeader){
 
 
 return NextResponse.json(
+
 {
 error:"Utilisateur non connecté"
 },
+
 {
 status:401
 }
+
 );
 
-
 }
-
 
 
 
@@ -116,6 +126,8 @@ token
 
 
 
+
+
 const uid =
 decoded.uid;
 
@@ -123,6 +135,20 @@ decoded.uid;
 
 
 
+console.log(
+"👤 CREATE ROOM UID:",
+uid
+);
+
+
+
+
+
+
+
+// =============================
+// VERIFICATION SOLDE
+// =============================
 
 
 const balance =
@@ -132,22 +158,33 @@ uid
 
 
 
+console.log(
+"💰 CREATE ROOM BALANCE:",
+balance
+);
 
 
 
-if(balance < Number(bet)){
+
+
+
+if(
+balance < amount
+){
 
 
 return NextResponse.json(
+
 {
 error:
 `Solde insuffisant (${balance} HTG)`
 },
+
 {
 status:400
 }
-);
 
+);
 
 }
 
@@ -156,10 +193,31 @@ status:400
 
 
 
+
+
+// =============================
+// DEBIT
+// =============================
+
+
+const debit =
 await deductBet(
+
 uid,
-Number(bet),
+
+amount,
+
 "create-room"
+
+);
+
+
+
+
+
+console.log(
+  "BET DEBIT",
+  debit
 );
 
 
@@ -168,12 +226,30 @@ Number(bet),
 
 
 
+// =============================
+// CREATION SALLE
+// =============================
+
+
 const maxPlayers =
-mode==="2v2"
+
+mode === "2v2"
+
 ?
+
 4
+
 :
-2;const roomRef =
+
+2;
+
+
+
+
+
+
+
+const roomRef =
 adminDB.ref(
 "rooms"
 );
@@ -185,9 +261,9 @@ roomRef.push();
 
 
 
+
 const roomId =
 newRoomRef.key;
-
 
 
 
@@ -200,11 +276,7 @@ throw new Error(
 "Impossible de créer la salle"
 );
 
-
 }
-
-
-
 
 
 
@@ -224,8 +296,6 @@ decoded.email ||
 
 
 
-
-
 const roomData = {
 
 
@@ -233,38 +303,50 @@ id:roomId,
 
 
 name:
-name ||
+
+name?.trim()
+
+?
+
+name.trim()
+
+:
+
 "Partie TiTaTo",
 
 
 
-bet:
-Number(bet),
+
+bet:amount,
 
 
 
-mode,
+mode:
+
+mode || "1v1",
+
 
 
 
 gameType:
-gameType ||
-"titato",
+
+gameType || "titato",
 
 
 
-creatorId:
-uid,
+
+creatorId:uid,
 
 
 
-status:
-"waiting",
+
+status:"waiting",
 
 
 
-playersCount:
-1,
+
+playersCount:1,
+
 
 
 
@@ -272,13 +354,14 @@ maxPlayers,
 
 
 
-pot:
-Number(bet),
+
+pot:amount,
 
 
 
-createdAt:
-Date.now(),
+
+createdAt:Date.now(),
+
 
 
 
@@ -305,21 +388,18 @@ ready:true,
 betPaid:true,
 
 
-joinedAt:
-Date.now()
+joinedAt:Date.now()
 
 
 }
 
 
 }
-
 
 
 
 
 };
-
 
 
 
@@ -337,24 +417,44 @@ roomData
 
 
 
-
-
-
-
-return NextResponse.json({
-
-success:true,
-
+console.log(
+"✅ ROOM CREATED",
+{
 
 roomId,
 
+uid,
+
+amount,
+
+before:balance,
+
+after:
+balance - amount
+
+}
+
+);
+
+
+
+
+
+
+
+return NextResponse.json(
+
+{
+
+success:true,
+
+roomId,
 
 status:"waiting"
 
+}
 
-});
-
-
+);
 
 
 
@@ -364,26 +464,33 @@ status:"waiting"
 catch(error:any){
 
 
-
 console.error(
-"CREATE ROOM ERROR",
+
+"❌ CREATE ROOM ERROR",
+
 error
+
 );
 
 
 
 
+
 return NextResponse.json(
+
 {
 
 error:
 error.message ||
+
 "Erreur serveur"
 
 },
+
 {
 status:500
 }
+
 );
 
 
