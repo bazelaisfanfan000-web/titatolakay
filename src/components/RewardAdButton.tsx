@@ -9,227 +9,451 @@ import {
 } from "@/lib/firebase";
 
 import {
-  MONETAG_CONFIG
-} from "@/lib/monetag";
+  onAuthStateChanged
+} from "firebase/auth";
+
+
+const MONETAG_DIRECT_LINK =
+"https://omg10.com/4/11336319";
+
+
+const MIN_TIME = 15;
 
 
 
 export default function RewardAdButton(){
 
 
-  const [loading,setLoading] =
-  useState(false);
+const [loading,setLoading] =
+useState(false);
 
 
+const [seconds,setSeconds] =
+useState(0);
 
-  async function watchAd(){
 
 
-    try{
 
 
-      setLoading(true);
+function getUser(){
 
 
+return new Promise<any>((resolve)=>{
 
-      const user =
-      auth.currentUser;
 
+const unsubscribe =
 
+onAuthStateChanged(
 
-      if(!user){
+auth,
 
-        alert(
-          "Connecte-toi pour regarder une publicité"
-        );
+(user)=>{
 
-        return;
 
-      }
+unsubscribe();
 
+resolve(user);
 
 
+}
 
-      // ==========================
-      // OUVERTURE PUBLICITE MONETAG
-      // ==========================
+);
 
 
-      window.open(
+});
 
-        `https://${MONETAG_CONFIG.domain}`,
 
-        "_blank"
+}
 
-      );
 
 
 
 
-      // Temps minimum d'attente pub
 
-      await new Promise(
-        resolve =>
-        setTimeout(resolve,15000)
-      );
 
+async function watchAd(){
 
 
+if(loading)
+return;
 
 
-      // ==========================
-      // VALIDATION RECOMPENSE
-      // ==========================
 
 
-      const token =
-      await user.getIdToken();
+const user =
 
+await getUser();
 
 
 
-      const response =
-      await fetch(
-        "/api/reward/ad",
-        {
 
-          method:"POST",
 
-          headers:{
+if(!user){
 
-            "Content-Type":
-            "application/json"
 
-          },
+alert(
+"Connecte-toi pour regarder une publicité"
+);
 
 
-          body:JSON.stringify({
+return;
 
-            token
 
-          })
+}
 
-        }
-      );
 
 
 
 
+setLoading(true);
 
-      const data =
-      await response.json();
 
 
+let hiddenTime:number|null = null;
 
 
 
-      if(data.success){
+function visibilityHandler(){
 
 
-        alert(
-          "🎉 +50 HTG ajouté à ton solde"
-        );
+if(
+document.visibilityState === "hidden"
+){
 
 
-      }
-      else{
+hiddenTime =
+Date.now();
 
 
-        alert(
+}
 
-          data.error ||
-          "Impossible de recevoir la récompense"
 
-        );
 
 
-      }
 
+if(
+document.visibilityState === "visible"
+&&
+hiddenTime
+){
 
 
 
+const timeAway =
 
-    }
-    catch(error){
+(Date.now()-hiddenTime)/1000;
 
 
-      console.error(
-        "REWARD AD ERROR",
-        error
-      );
 
+if(timeAway < MIN_TIME){
 
-      alert(
-        "Erreur pendant la publicité"
-      );
 
+alert(
+"❌ Publicité non terminée"
+);
 
-    }
-    finally{
 
 
-      setLoading(false);
+setLoading(false);
 
 
-    }
+}
 
 
-  }
 
+}
 
 
+}
 
-  return (
 
 
-    <button
 
 
-      onClick={watchAd}
 
+document.addEventListener(
 
-      disabled={loading}
+"visibilitychange",
 
+visibilityHandler
 
-      className="
-      w-full
-      max-w-sm
-      mx-auto
-      bg-blue-600
-      hover:bg-blue-700
-      text-white
-      font-bold
-      py-3
-      px-6
-      rounded-2xl
-      shadow-lg
-      transition
-      disabled:opacity-50
-      "
+);
 
 
-    >
 
 
-      {
 
-        loading
 
-        ?
+// Ouvre publicité Monetag
 
-        "⏳ Publicité en cours..."
+window.open(
 
-        :
+MONETAG_DIRECT_LINK,
 
-        "🎬 Regarder une pub +50 HTG"
+"_blank"
 
-      }
+);
 
 
-    </button>
 
 
-  );
+
+
+// Compteur
+
+for(
+let i = MIN_TIME;
+i >= 0;
+i--
+){
+
+
+setSeconds(i);
+
+
+
+await new Promise(
+
+resolve=>
+
+setTimeout(resolve,1000)
+
+);
+
+
+}
+
+
+
+
+
+
+document.removeEventListener(
+
+"visibilitychange",
+
+visibilityHandler
+
+);
+
+
+
+
+
+
+
+if(hiddenTime === null){
+
+
+alert(
+"❌ Publicité non ouverte"
+);
+
+
+setLoading(false);
+
+return;
+
+
+}
+
+
+
+
+
+
+
+const elapsed =
+
+(Date.now()-hiddenTime)/1000;
+
+
+
+
+if(elapsed < MIN_TIME){
+
+
+setLoading(false);
+
+return;
+
+
+}
+
+
+
+
+
+
+
+const token =
+
+await user.getIdToken(true);
+
+
+
+
+
+
+
+const response =
+
+await fetch(
+
+"/api/reward/ad",
+
+{
+
+method:"POST",
+
+headers:{
+
+"Content-Type":
+
+"application/json"
+
+},
+
+body:JSON.stringify({
+
+token
+
+})
+
+}
+
+);
+
+
+
+
+
+
+
+const data =
+
+await response.json();
+
+
+
+
+
+
+if(data.success){
+
+
+
+alert(
+
+`🎉 +5 HTG ajouté\n💰 Solde: ${data.balance} HTG`
+
+);
+
+
+}
+
+else{
+
+
+alert(
+
+data.error ||
+
+"Erreur récompense"
+
+);
+
+
+}
+
+
+
+
+
+
+setLoading(false);
+
+setSeconds(0);
+
+
+
+}
+
+
+
+
+
+
+
+return(
+
+
+<button
+
+
+onClick={watchAd}
+
+
+disabled={loading}
+
+
+
+className="
+
+w-auto
+
+mx-auto
+
+bg-blue-600
+
+hover:bg-blue-700
+
+text-white
+
+font-bold
+
+text-xs
+
+py-2
+
+px-3
+
+rounded-xl
+
+shadow-md
+
+transition
+
+disabled:opacity-50
+
+"
+
+
+>
+
+
+
+{
+
+loading
+
+?
+
+`⏳ Pub ${seconds}s`
+
+:
+
+"🎬 Pub +5 HTG"
+
+}
+
+
+
+</button>
+
+
+
+);
 
 
 }

@@ -31,6 +31,8 @@ import {
   motion
 } from "framer-motion";
 
+import RewardAdButton from "@/components/RewardAdButton";
+
 
 
 export default function Dashboard(){
@@ -80,7 +82,9 @@ games:0
 
 
 
-const winRate = stats.games > 0
+const winRate =
+
+stats.games > 0
 
 ?
 
@@ -91,6 +95,8 @@ Math.round(
 :
 
 0;
+
+
 
 
 
@@ -120,7 +126,6 @@ return;
 
 
 
-
 const userRef =
 
 ref(
@@ -130,7 +135,6 @@ database,
 `users/${user.uid}`
 
 );
-
 
 
 
@@ -161,7 +165,6 @@ data.username || "Joueur"
 
 
 
-
 setStats({
 
 wins:Number(data.wins || 0),
@@ -177,6 +180,11 @@ games:Number(data.gamesPlayed || 0)
 }
 
 );
+
+
+
+
+
 const notifRef =
 
 ref(
@@ -209,6 +217,7 @@ let unreadNotifications = 0;
 
 
 
+
 if(data){
 
 
@@ -231,9 +240,6 @@ item.read === false
 
 
 
-
-
-
 const friendRequestRef =
 
 ref(
@@ -243,8 +249,6 @@ database,
 "friendRequests"
 
 );
-
-
 
 
 
@@ -263,8 +267,6 @@ friendSnapshot.val();
 
 
 let friendRequestsCount = 0;
-
-
 
 
 
@@ -293,8 +295,6 @@ item.status === "pending"
 
 
 
-
-
 setNotificationCount(
 
 unreadNotifications +
@@ -304,19 +304,14 @@ friendRequestsCount
 );
 
 
-
 }
 
 );
 
 
-
-
 }
 
 );
-
-
 
 
 
@@ -333,13 +328,9 @@ unsubscribeNotif();
 };
 
 
-
-
 }
 
 );
-
-
 
 
 
@@ -347,16 +338,7 @@ return()=>unsubscribeAuth();
 
 
 
-
-
-},[router]);
-
-
-
-
-
-return(
-
+},[router]);return(
 
 <main
 
@@ -376,7 +358,6 @@ justify-center
 "
 
 >
-
 
 
 
@@ -452,6 +433,7 @@ right-[-40px]
 
 
 
+
 <section
 
 className="
@@ -463,6 +445,7 @@ pt-16
 "
 
 >
+
 
 
 
@@ -485,6 +468,7 @@ z-50
 >
 
 
+
 <div
 
 className="
@@ -498,6 +482,8 @@ items-center
 "
 
 >
+
+
 
 
 <motion.h1
@@ -536,6 +522,8 @@ text-transparent
 
 
 
+
+
 <button
 
 onClick={()=>router.push("/wallet")}
@@ -550,13 +538,10 @@ rounded-xl
 px-4
 py-2
 shadow-[0_5px_0_#166534]
-active:translate-y-1
-active:shadow-[0_2px_0_#166534]
-transition-all
-duration-150
 "
 
 >
+
 
 <span
 
@@ -576,10 +561,25 @@ text-xs
 </button>
 
 
+
+
 </div>
 
 
-</header><div className="mt-4">
+</header>
+
+
+
+
+
+
+
+
+
+<div className="mt-4">
+
+
+
 
 
 <p
@@ -594,6 +594,7 @@ text-gray-400
 Salut 👋
 
 </p>
+
 
 
 
@@ -617,6 +618,9 @@ mt-1
 
 
 
+
+
+
 <div
 
 className="
@@ -634,6 +638,7 @@ text-center
 "
 
 >
+
 
 
 
@@ -695,7 +700,11 @@ Parties
 
 
 
+
 </div>
+
+
+
 
 
 
@@ -715,6 +724,7 @@ mt-5
 
 
 
+
 <ActionButton
 
 variant="glass"
@@ -728,6 +738,7 @@ onClick={()=>router.push("/create-room")}
 🎮 Créer une partie
 
 </ActionButton>
+
 
 
 
@@ -753,7 +764,21 @@ onClick={()=>router.push("/join-room")}
 
 
 
-<div className="mt-12">
+
+
+<div
+
+className="
+mt-8
+flex
+flex-col
+items-center
+"
+
+>
+
+
+
 
 
 <motion.div
@@ -772,7 +797,7 @@ repeat:Infinity
 
 }}
 
-className="relative"
+className="relative w-full"
 
 >
 
@@ -789,6 +814,7 @@ onClick={()=>router.push("/more")}
 ➕ Plus
 
 </ActionButton>
+
 
 
 
@@ -826,20 +852,33 @@ text-2xl
 
 
 
+
+
 </motion.div>
 
 
+
+
+
+<div className="mt-32">
+
+
+<RewardAdButton />
+
+
+</div></div>
+
+
+
 </div>
 
 
-
-
 </div>
 
-
-</div>
 
 </section>
+
+
 
 
 
@@ -872,18 +911,32 @@ z-50
 
 
 <NavItem
+
 icon="🏠"
+
 text="Accueil"
+
 onClick={()=>router.push("/dashboard")}
+
 />
+
+
+
 
 
 
 <NavItem
+
 icon="💼"
+
 text="Portefeuille"
+
 onClick={()=>router.push("/wallet")}
+
 />
+
+
+
 
 
 
@@ -902,6 +955,8 @@ cursor-pointer
 >
 
 🔔
+
+
 
 
 {
@@ -948,7 +1003,11 @@ notificationCount
 
 Notification
 
+
 </div>
+
+
+
 
 
 
@@ -966,7 +1025,10 @@ onClick={()=>router.push("/settings")}
 
 
 
+
+
 </nav>
+
 
 
 
@@ -977,6 +1039,8 @@ onClick={()=>router.push("/settings")}
 
 
 }
+
+
 
 
 
@@ -1008,6 +1072,7 @@ big?:boolean;
 }){
 
 
+
 return(
 
 
@@ -1030,11 +1095,14 @@ scale:.95
 onClick={onClick}
 
 
+
 className={
 
 variant==="blue"
 
+
 ?
+
 
 `
 
@@ -1058,7 +1126,10 @@ shadow-[0_6px_0_#123a8a]
 
 `
 
+
+
 :
+
 
 `
 
@@ -1100,6 +1171,8 @@ shadow-[0_6px_0_rgba(255,255,255,0.15)]
 
 
 
+
+
 function NavItem({
 
 icon,
@@ -1118,6 +1191,7 @@ text:string;
 onClick:()=>void;
 
 }){
+
 
 
 return(

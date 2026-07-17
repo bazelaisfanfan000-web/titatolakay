@@ -2,9 +2,7 @@
 
 import Script from "next/script";
 
-
 export default function MonetagLoader(){
-
 
 return (
 
@@ -23,6 +21,5 @@ data-cfasync="false"
 />
 
 );
-
 
 }
