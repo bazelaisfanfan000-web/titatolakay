@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 
 import "./globals.css";
 
-import Script from "next/script";
-
 import OnlineTracker from "@/components/OnlineTracker";
 
 import { LanguageProvider } from "@/context/LanguageContext";
@@ -34,30 +32,6 @@ export default function RootLayout({
 return (
 
 <html lang="fr">
-
-
-<head>
-
-
-{/* Monetag Multitag */}
-
-<Script
-
-id="monetag-multitag"
-
-src="https://quge5.com/88/tag.min.js"
-
-data-zone="260585"
-
-async
-
-data-cfasync="false"
-
-/>
-
-
-</head>
-
 
 
 <body>
