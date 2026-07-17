@@ -3,10 +3,19 @@ import {
 } from "next/server";
 
 
+export const runtime = "nodejs";
+
+export const dynamic = "force-dynamic";
+
+
 import {
-  adminDB,
-  adminAuth
+  adminDB
 } from "@/lib/firebaseAdmin";
+
+
+import {
+  adminAuth
+} from "@/lib/firebaseAuthAdmin";
 
 
 import {
@@ -20,10 +29,10 @@ import {
 
 export async function POST(
   request: Request
-) {
-
+){
 
 try{
+
 
 
 const body =
@@ -42,6 +51,7 @@ if(!roomId){
 
 return NextResponse.json(
 {
+success:false,
 error:"Salle introuvable"
 },
 {
@@ -54,6 +64,9 @@ status:400
 
 
 
+// ===============================
+// AUTH
+// ===============================
 
 
 const authHeader =
@@ -67,6 +80,7 @@ if(!authHeader){
 
 return NextResponse.json(
 {
+success:false,
 error:"Utilisateur non connecté"
 },
 {
@@ -79,14 +93,27 @@ status:401
 
 
 
-
-
-
 const token =
 authHeader.replace(
 "Bearer ",
 ""
 );
+
+
+
+if(!token){
+
+return NextResponse.json(
+{
+success:false,
+error:"Token vide"
+},
+{
+status:401
+}
+);
+
+}
 
 
 
@@ -106,12 +133,15 @@ decoded.uid;
 
 
 
+// ===============================
+// ROOM
+// ===============================
+
+
 const roomRef =
 adminDB.ref(
 `rooms/${roomId}`
 );
-
-
 
 
 
@@ -121,13 +151,11 @@ await roomRef.get();
 
 
 
-
-
 if(!snap.exists()){
-
 
 return NextResponse.json(
 {
+success:false,
 error:"Cette partie n'existe pas"
 },
 {
@@ -135,12 +163,7 @@ status:404
 }
 );
 
-
 }
-
-
-
-
 
 
 
@@ -151,13 +174,11 @@ snap.val();
 
 
 
-
-
 if(room.status !== "waiting"){
-
 
 return NextResponse.json(
 {
+success:false,
 error:"La partie a déjà commencé"
 },
 {
@@ -165,11 +186,7 @@ status:400
 }
 );
 
-
 }
-
-
-
 
 
 
@@ -180,14 +197,11 @@ room.players || {};
 
 
 
-
-
-
 if(players[uid]){
-
 
 return NextResponse.json(
 {
+success:false,
 error:"Vous êtes déjà dans cette partie"
 },
 {
@@ -195,21 +209,16 @@ status:400
 }
 );
 
-
 }
-
-
-
-
 
 
 
 
 if(room.creatorId === uid){
 
-
 return NextResponse.json(
 {
+success:false,
 error:"Vous êtes le créateur de cette partie"
 },
 {
@@ -217,12 +226,7 @@ status:400
 }
 );
 
-
 }
-
-
-
-
 
 
 
@@ -234,8 +238,6 @@ room.playersCount || 0
 
 
 
-
-
 const maxPlayers =
 Number(
 room.maxPlayers || 2
@@ -244,14 +246,11 @@ room.maxPlayers || 2
 
 
 
-
-
-
 if(playersCount >= maxPlayers){
-
 
 return NextResponse.json(
 {
+success:false,
 error:"Partie complète"
 },
 {
@@ -259,13 +258,7 @@ status:400
 }
 );
 
-
 }
-
-
-
-
-
 
 
 
@@ -274,9 +267,6 @@ const bet =
 Number(
 room.bet || 0
 );
-
-
-
 
 
 
@@ -291,12 +281,11 @@ uid
 
 
 
-
 if(balance < bet){
-
 
 return NextResponse.json(
 {
+success:false,
 error:
 `Solde insuffisant (${balance} HTG)`
 },
@@ -305,10 +294,7 @@ status:400
 }
 );
 
-
 }
-
-
 
 
 
@@ -325,10 +311,10 @@ roomId
 
 
 
+// ===============================
+// PLAYER
+// ===============================
 
-
-
-// Attribution du symbole TiTaTo
 
 const currentPlayers =
 Object.keys(players).length;
@@ -341,10 +327,6 @@ currentPlayers === 0
 "X"
 :
 "O";
-
-
-
-
 
 
 
@@ -379,15 +361,8 @@ Date.now()
 
 
 
-
-
-
 const newPlayersCount =
 playersCount + 1;
-
-
-
-
 
 
 
@@ -399,9 +374,6 @@ bet;
 
 
 
-
-
-
 const roomFull =
 newPlayersCount >= maxPlayers;
 
@@ -409,21 +381,14 @@ newPlayersCount >= maxPlayers;
 
 
 
-
-
-
-
 await roomRef.update({
-
 
 playersCount:
 newPlayersCount,
 
 
-
 pot:
 newPot,
-
 
 
 status:
@@ -434,10 +399,8 @@ roomFull
 "waiting",
 
 
-
 started:
 roomFull,
-
 
 
 startedAt:
@@ -448,7 +411,6 @@ Date.now()
 null,
 
 
-
 "game/status":
 roomFull
 ?
@@ -457,21 +419,15 @@ roomFull
 "waiting",
 
 
-
 "game/turn":
 "X",
-
 
 
 "game/turnStartedAt":
 Date.now()
 
 
-
 });
-
-
-
 
 
 
@@ -504,8 +460,6 @@ roomFull
 
 
 
-
-
 }
 catch(error:any){
 
@@ -518,14 +472,23 @@ error
 
 
 return NextResponse.json(
+
 {
+
+success:false,
+
 error:
-error.message ||
+error?.message ||
 "Erreur serveur"
+
 },
+
 {
+
 status:500
+
 }
+
 );
 
 

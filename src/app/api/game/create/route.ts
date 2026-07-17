@@ -1,14 +1,29 @@
-import { NextResponse } from "next/server";
+import {
+  NextResponse
+} from "next/server";
+
+
+export const runtime = "nodejs";
+
+export const dynamic = "force-dynamic";
+
 
 import {
-  adminDB,
-  adminAuth
+  adminDB
 } from "@/lib/firebaseAdmin";
+
+
+import {
+  adminAuth
+} from "@/lib/firebaseAuthAdmin";
+
 
 import {
   checkUserBalance,
   deductBet
 } from "@/lib/firebaseEconomyAdmin";
+
+
 
 
 export async function POST(
@@ -18,38 +33,65 @@ export async function POST(
 try {
 
 
-const body = await request.json();
+
+const body =
+await request.json();
+
 
 
 const {
+
 name,
+
 bet,
+
 mode,
+
 gameType
+
 } = body;
 
 
 
-const amount = Number(bet);
+
+const amount =
+Number(bet);
+
+
 
 
 
 if(!amount || amount <= 0){
 
+
 return NextResponse.json(
+
 {
+
 success:false,
+
 error:"Mise invalide"
+
 },
+
 {
+
 status:400
+
 }
+
 );
 
+
 }
 
 
 
+
+
+// ===============================
+// AUTH TOKEN
+// ===============================
 
 
 const authHeader =
@@ -61,15 +103,25 @@ request.headers.get(
 
 if(!authHeader){
 
+
 return NextResponse.json(
+
 {
+
 success:false,
+
 error:"Token manquant"
+
 },
+
 {
+
 status:401
+
 }
+
 );
+
 
 }
 
@@ -84,17 +136,29 @@ authHeader.replace(
 
 
 
+
+
 if(!token){
 
+
 return NextResponse.json(
+
 {
+
 success:false,
+
 error:"Token vide"
+
 },
+
 {
+
 status:401
+
 }
+
 );
+
 
 }
 
@@ -103,6 +167,7 @@ status:401
 
 
 let decoded;
+
 
 
 try {
@@ -114,7 +179,9 @@ token
 );
 
 
+
 }
+
 catch(err:any){
 
 
@@ -124,19 +191,27 @@ err
 );
 
 
+
 return NextResponse.json(
+
 {
+
 success:false,
+
 error:"Token Firebase invalide"
+
 },
+
 {
+
 status:401
+
 }
+
 );
 
 
 }
-
 
 
 
@@ -158,6 +233,12 @@ amount
 
 
 
+
+// ===============================
+// CHECK BALANCE
+// ===============================
+
+
 const balance =
 await checkUserBalance(
 uid
@@ -165,29 +246,50 @@ uid
 
 
 
+
+
 if(balance < amount){
 
+
 return NextResponse.json(
+
 {
+
 success:false,
+
 error:
 `Solde insuffisant (${balance} HTG)`
+
 },
+
 {
+
 status:400
+
 }
+
 );
 
+
 }
 
 
 
+
+
+// ===============================
+// DEBIT MISE
+// ===============================
 
 
 await deductBet(
+
 uid,
+
 amount,
+
 "create-room"
+
 );
 
 
@@ -195,13 +297,23 @@ amount,
 
 
 
+// ===============================
+// ROOM
+// ===============================
+
 
 const maxPlayers =
+
 mode === "2v2"
+
 ?
+
 4
+
 :
+
 2;
+
 
 
 
@@ -214,16 +326,20 @@ adminDB
 
 
 
+
 const roomId =
 newRoomRef.key;
 
 
 
+
 if(!roomId){
+
 
 throw new Error(
 "Room ID impossible"
 );
+
 
 }
 
@@ -232,8 +348,11 @@ throw new Error(
 
 
 const playerName =
+
 decoded.name ||
+
 decoded.email ||
+
 "Joueur";
 
 
@@ -243,47 +362,67 @@ decoded.email ||
 
 await newRoomRef.set({
 
+
+
 id:roomId,
 
 
 name:
+
 name?.trim()
+
 ?
+
 name.trim()
+
 :
+
 "Partie TiTaTo",
+
 
 
 bet:amount,
 
 
+
 mode:
+
 mode || "1v1",
 
 
+
 gameType:
+
 gameType || "titato",
+
 
 
 creatorId:uid,
 
 
+
 status:"waiting",
+
 
 
 playersCount:1,
 
 
+
 maxPlayers,
+
 
 
 pot:amount,
 
 
+
 createdAt:Date.now(),
 
 
+
 players:{
+
 
 
 [uid]:{
@@ -313,48 +452,80 @@ joinedAt:Date.now()
 }
 
 
-});
-
-
-
-
-
-
-return NextResponse.json({
-
-success:true,
-
-roomId,
-
-status:"waiting"
 
 });
 
 
 
 
-}
-catch(error:any){
-
-
-console.error(
-"CREATE ROOM CRASH:",
-error
-);
 
 
 
 return NextResponse.json(
+
 {
-success:false,
-error:
-error?.message ||
-"Erreur serveur création partie"
-},
-{
-status:500
+
+
+success:true,
+
+
+roomId,
+
+
+status:"waiting"
+
+
 }
+
 );
+
+
+
+
+
+}
+
+catch(error:any){
+
+
+
+console.error(
+
+"CREATE ROOM CRASH:",
+
+error
+
+);
+
+
+
+
+
+return NextResponse.json(
+
+{
+
+
+success:false,
+
+
+error:
+
+error?.message ||
+
+"Erreur serveur création partie"
+
+
+},
+
+{
+
+status:500
+
+}
+
+);
+
 
 
 }

@@ -9,9 +9,13 @@ export const dynamic = "force-dynamic";
 
 
 import {
-  adminAuth,
   adminDB
 } from "@/lib/firebaseAdmin";
+
+
+import {
+  adminAuth
+} from "@/lib/firebaseAuthAdmin";
 
 
 import {
@@ -29,207 +33,214 @@ export async function POST(
   request: Request
 ){
 
-  try{
+try{
 
 
-    const body =
-      await request.json();
+const body =
+await request.json();
 
 
 
-    const token =
-      body?.token;
+const token =
+body?.token;
 
 
-    const uid =
-      body?.uid;
+const uid =
+body?.uid;
 
 
-    const amount =
-      Number(body?.amount);
+const amount =
+Number(body?.amount);
 
 
 
 
-    // ===============================
-    // VERIFICATION DONNEES
-    // ===============================
 
+if(!token){
 
-    if(!token){
+return NextResponse.json(
+{
+success:false,
+error:"Token manquant"
+},
+{
+status:400
+}
+);
 
-      return NextResponse.json(
-        {
-          success:false,
-          error:"Token manquant"
-        },
-        {
-          status:400
-        }
-      );
+}
 
-    }
 
 
+if(!uid){
 
-    if(!uid){
+return NextResponse.json(
+{
+success:false,
+error:"UID utilisateur manquant"
+},
+{
+status:400
+}
+);
 
-      return NextResponse.json(
-        {
-          success:false,
-          error:"UID utilisateur manquant"
-        },
-        {
-          status:400
-        }
-      );
+}
 
-    }
 
 
+if(!amount || amount <= 0){
 
-    if(!amount || amount <= 0){
+return NextResponse.json(
+{
+success:false,
+error:"Montant invalide"
+},
+{
+status:400
+}
+);
 
-      return NextResponse.json(
-        {
-          success:false,
-          error:"Montant invalide"
-        },
-        {
-          status:400
-        }
-      );
+}
 
-    }
 
 
 
 
-    // ===============================
-    // VERIFICATION TOKEN ADMIN
-    // ===============================
+if(!adminAuth){
 
+throw new Error(
+"Firebase Auth non disponible"
+);
 
-    const decoded =
-      await adminAuth.verifyIdToken(
-        token
-      );
+}
 
 
 
-    const adminUid =
-      decoded.uid;
+if(!adminDB){
 
+throw new Error(
+"Firebase Database non disponible"
+);
 
+}
 
 
-    // ===============================
-    // VERIFICATION ROLE ADMIN
-    // ===============================
 
 
-    const adminSnap =
-      await adminDB
-        .ref(
-          `admins/${adminUid}`
-        )
-        .get();
 
+const decoded =
+await adminAuth.verifyIdToken(
+token
+);
 
 
 
-    if(!adminSnap.exists()){
+const adminUid =
+decoded.uid;
 
 
-      return NextResponse.json(
-        {
-          success:false,
-          error:"Accès administrateur refusé"
-        },
-        {
-          status:403
-        }
-      );
 
 
-    }
 
 
+const adminSnap =
+await adminDB
+.ref(
+`admins/${adminUid}`
+)
+.get();
 
 
-    // ===============================
-    // AJOUT ARGENT
-    // ===============================
 
 
-    const result =
-      await addBalance(
 
-        uid,
+if(!adminSnap.exists()){
 
-        amount,
 
-        "admin_reward"
+return NextResponse.json(
+{
+success:false,
+error:"Accès administrateur refusé"
+},
+{
+status:403
+}
+);
 
-      );
 
+}
 
 
 
 
-    return NextResponse.json(
-      {
 
-        success:true,
 
-        message:"Récompense ajoutée",
+const result =
+await addBalance(
 
-        reward:amount,
+uid,
 
-        oldBalance:
-          result.oldBalance,
+amount,
 
-        newBalance:
-          result.newBalance
+"admin_reward"
 
-      }
-    );
+);
 
 
 
 
-  }
-  catch(error:any){
 
 
-    console.error(
-      "[ADMIN REWARD ERROR]",
-      error
-    );
+return NextResponse.json(
+{
 
+success:true,
 
+message:"Récompense ajoutée",
 
-    return NextResponse.json(
+reward:amount,
 
-      {
+oldBalance:
+result.oldBalance,
 
-        success:false,
+newBalance:
+result.newBalance
 
-        error:
-          error?.message ||
-          "Erreur serveur"
+}
+);
 
-      },
 
-      {
 
-        status:500
 
-      }
 
-    );
+}
+catch(error:any){
 
 
-  }
+console.error(
+"[ADMIN REWARD ERROR]",
+error
+);
+
+
+
+return NextResponse.json(
+{
+
+success:false,
+
+error:
+error?.message ||
+"Erreur serveur"
+
+},
+{
+status:500
+}
+);
+
+
+}
+
 
 }

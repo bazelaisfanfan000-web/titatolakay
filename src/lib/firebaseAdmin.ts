@@ -4,24 +4,12 @@ import {
   initializeApp
 } from "firebase-admin/app";
 
-
 import {
   getDatabase
 } from "firebase-admin/database";
 
 
-import {
-  getAuth
-} from "firebase-admin/auth";
-
-
-
-// ===============================
-// FIREBASE ADMIN CONFIG
-// ===============================
-
 const firebaseAdminConfig = {
-
 
   credential: cert({
 
@@ -33,51 +21,26 @@ const firebaseAdminConfig = {
 
     privateKey:
       process.env.FIREBASE_PRIVATE_KEY
-        ?.replace(/\\n/g, "\n"),
+      ?.replace(/\\n/g,"\n"),
 
   }),
-
-
 
   databaseURL:
     process.env.FIREBASE_DATABASE_URL ||
     "https://domino-fad16-default-rtdb.firebaseio.com"
 
-
 };
 
 
 
-
-// ===============================
-// INITIALISATION UNIQUE
-// ===============================
-
 const app =
-
-getApps().length > 0
-
+getApps().length
 ?
-
 getApps()[0]
-
 :
-
-initializeApp(
-  firebaseAdminConfig
-);
+initializeApp(firebaseAdminConfig);
 
 
-
-
-// ===============================
-// SERVICES FIREBASE
-// ===============================
 
 export const adminDB =
-  getDatabase(app);
-
-
-
-export const adminAuth =
-  getAuth(app);
+getDatabase(app);
