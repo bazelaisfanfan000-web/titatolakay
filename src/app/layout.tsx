@@ -6,6 +6,7 @@ import OnlineTracker from "@/components/OnlineTracker";
 
 import { LanguageProvider } from "@/context/LanguageContext";
 
+import Script from "next/script";
 
 
 export const metadata: Metadata = {
@@ -39,9 +40,25 @@ return (
 
 <LanguageProvider>
 
+
 <OnlineTracker />
 
+
+
+{/* Monetag Popunder */}
+
+<Script
+
+src="https://5gvci.com/act/files/tag.min.js?z=11339844"
+
+strategy="afterInteractive"
+
+/>
+
+
+
 {children}
+
 
 </LanguageProvider>
 

@@ -145,7 +145,6 @@ user.uid;
 
 
 
-
 await set(
 
 ref(
@@ -164,7 +163,7 @@ username,
 
 email,
 
-balance:1000,
+balance:25,
 
 currency:"HTG",
 
@@ -178,7 +177,7 @@ acceptedTermsAt:Date.now(),
 
 balanceUpdatedAt:Date.now(),
 
-lastReward:1000
+lastReward:25
 
 }
 
@@ -211,10 +210,10 @@ title:
 
 message:
 
-"Tu as reçu +1000 HTG de bonus de bienvenue pour commencer à jouer.",
+"Tu as reçu +25 HTG de bonus de bienvenue pour commencer à jouer.",
 
 
-amount:1000,
+amount:25,
 
 
 type:"bonus",
@@ -592,6 +591,7 @@ mt-3
 
 
 
+
 <div
 
 className="
@@ -719,7 +719,7 @@ mt-3
 
 >
 
-🎁 Nouveau joueur : +1000 HTG offert
+🎁 Nouveau joueur : +25 HTG offert
 
 </p>
 
