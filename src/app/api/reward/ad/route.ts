@@ -9,9 +9,13 @@ export const dynamic = "force-dynamic";
 
 
 import {
-  adminDB,
-  adminAuth
+  adminDB
 } from "@/lib/firebaseAdmin";
+
+
+import {
+  adminAuth
+} from "@/lib/firebaseAuthAdmin";
 
 
 import {
@@ -20,10 +24,11 @@ import {
 
 
 
+const REWARD_AMOUNT = 5;
 
-// ===============================
-// ADMIN ADD REWARD
-// ===============================
+const DAILY_LIMIT = 3;
+
+
 
 export async function POST(
   request: Request
@@ -36,25 +41,9 @@ const body =
 await request.json();
 
 
-
 const token =
 body?.token;
 
-
-const uid =
-body?.uid;
-
-
-const amount =
-Number(body?.amount);
-
-
-
-
-
-// ===============================
-// VERIFICATION DONNEES
-// ===============================
 
 
 if(!token){
@@ -73,68 +62,8 @@ status:400
 
 
 
-if(!uid){
-
-return NextResponse.json(
-{
-success:false,
-error:"UID utilisateur manquant"
-},
-{
-status:400
-}
-);
-
-}
-
-
-
-if(!amount || amount <= 0){
-
-return NextResponse.json(
-{
-success:false,
-error:"Montant invalide"
-},
-{
-status:400
-}
-);
-
-}
-
-
-
-
-
 // ===============================
-// VERIFICATION FIREBASE
-// ===============================
-
-
-if(!adminAuth){
-
-throw new Error(
-"Firebase Auth non disponible"
-);
-
-}
-
-
-if(!adminDB){
-
-throw new Error(
-"Firebase Database non disponible"
-);
-
-}
-
-
-
-
-
-// ===============================
-// VERIFICATION TOKEN ADMIN
+// AUTH FIREBASE
 // ===============================
 
 
@@ -144,66 +73,80 @@ token
 );
 
 
-
-const adminUid =
+const uid =
 decoded.uid;
 
 
 
 
-
 // ===============================
-// VERIFICATION ROLE ADMIN
+// LIMITE PUB JOUR
 // ===============================
 
 
-const adminSnap =
-await adminDB
-.ref(
-`admins/${adminUid}`
-)
-.get();
+const today =
+new Date()
+.toISOString()
+.split("T")[0];
 
 
 
+const rewardRef =
+adminDB.ref(
+`adRewards/${uid}/${today}`
+);
 
 
-if(!adminSnap.exists()){
 
+const snap =
+await rewardRef.get();
+
+
+
+let count =
+snap.exists()
+?
+Number(snap.val())
+:
+0;
+
+
+
+if(count >= DAILY_LIMIT){
 
 return NextResponse.json(
 {
 success:false,
-error:"Accès administrateur refusé"
+error:"Limite pub atteinte"
 },
 {
-status:403
+status:429
 }
 );
 
-
 }
-
-
-
 
 
 
 
 // ===============================
-// AJOUT SOLDE
+// AJOUT +5 HTG
 // ===============================
 
 
 const result =
 await addBalance(
-
 uid,
+REWARD_AMOUNT,
+"ad_reward"
+);
 
-amount,
 
-"admin_reward"
 
+
+
+await rewardRef.set(
+count + 1
 );
 
 
@@ -211,27 +154,21 @@ amount,
 
 
 
-
-return NextResponse.json(
-{
+return NextResponse.json({
 
 success:true,
 
-message:"Récompense ajoutée",
+message:"+5 HTG ajouté",
 
-reward:amount,
+reward:REWARD_AMOUNT,
 
-oldBalance:
-result.oldBalance,
+balance:
+result.newBalance,
 
-newBalance:
-result.newBalance
+ads:
+count + 1
 
-}
-);
-
-
-
+});
 
 
 
@@ -240,7 +177,7 @@ catch(error:any){
 
 
 console.error(
-"[ADMIN REWARD ERROR]",
+"[AD REWARD ERROR]",
 error
 );
 
@@ -248,13 +185,10 @@ error
 
 return NextResponse.json(
 {
-
 success:false,
-
 error:
 error?.message ||
 "Erreur serveur"
-
 },
 {
 status:500
