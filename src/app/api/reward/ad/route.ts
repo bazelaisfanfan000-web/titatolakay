@@ -3,6 +3,11 @@ import {
 } from "next/server";
 
 
+export const runtime = "nodejs";
+
+export const dynamic = "force-dynamic";
+
+
 import {
   adminAuth,
   adminDB
@@ -13,9 +18,6 @@ import {
   addBalance
 } from "@/lib/firebaseEconomyAdmin";
 
-
-
-export const runtime = "nodejs";
 
 
 const REWARD_AMOUNT = 5;
@@ -34,17 +36,17 @@ export async function POST(
     console.log("[AD REWARD] START");
 
 
-    // ===============================
-    // BODY
-    // ===============================
 
-    const body = await request.json();
+    const body =
+      await request.json();
 
 
-    const token = body?.token;
+    const token =
+      body?.token;
 
 
-    if (!token) {
+
+    if(!token){
 
       return NextResponse.json(
         {
@@ -60,21 +62,10 @@ export async function POST(
 
 
 
-    // ===============================
-    // AUTH FIREBASE
-    // ===============================
-
-    if (!adminAuth) {
-
-      throw new Error(
-        "Firebase Auth non disponible"
-      );
-
-    }
-
-
     const decoded =
-      await adminAuth.verifyIdToken(token);
+      await adminAuth.verifyIdToken(
+        token
+      );
 
 
 
@@ -84,15 +75,11 @@ export async function POST(
 
 
     console.log(
-      "[AD REWARD] USER:",
+      "[AD REWARD] USER",
       uid
     );
 
 
-
-    // ===============================
-    // DATE JOUR
-    // ===============================
 
     const today =
       new Date()
@@ -113,7 +100,7 @@ export async function POST(
 
 
 
-    let count =
+    const count =
       rewardSnap.exists()
       ?
       Number(rewardSnap.val())
@@ -122,13 +109,7 @@ export async function POST(
 
 
 
-    // ===============================
-    // LIMITE PUB
-    // ===============================
-
-    if (
-      count >= DAILY_LIMIT
-    ) {
+    if(count >= DAILY_LIMIT){
 
       return NextResponse.json(
         {
@@ -144,11 +125,6 @@ export async function POST(
 
 
 
-    // ===============================
-    // AJOUT WALLET
-    // ===============================
-
-
     const result =
       await addBalance(
         uid,
@@ -158,32 +134,10 @@ export async function POST(
 
 
 
-    if (!result) {
-
-      throw new Error(
-        "Récompense non ajoutée"
-      );
-
-    }
-
-
-
-
-    // ===============================
-    // SAUVEGARDE COMPTEUR
-    // ===============================
-
-
     await rewardRef.set(
       count + 1
     );
 
-
-
-
-    // ===============================
-    // REPONSE
-    // ===============================
 
 
     return NextResponse.json(
@@ -191,26 +145,19 @@ export async function POST(
         success:true,
         message:"+5 HTG ajouté",
         reward:REWARD_AMOUNT,
-        balance:
-          result.newBalance,
-        ads:
-          count + 1
+        balance:result.newBalance,
+        ads:count + 1
       }
     );
 
 
-
-
-  }
-
-  catch(error:any) {
+  } catch(error:any){
 
 
     console.error(
       "[AD REWARD ERROR]",
       error
     );
-
 
 
     return NextResponse.json(
