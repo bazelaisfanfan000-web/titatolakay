@@ -15,6 +15,11 @@ export const metadata: Metadata = {
 
   description: "Jeu multijoueur TI TA TO",
 
+  icons: {
+    icon: "/titato-logo.svg",
+    apple: "/titato-logo.svg",
+  },
+
 };
 
 

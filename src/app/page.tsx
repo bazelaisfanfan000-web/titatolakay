@@ -4,6 +4,8 @@ import {
   useRouter
 } from "next/navigation";
 
+import Image from "next/image";
+
 import {
   motion
 } from "framer-motion";
@@ -20,7 +22,6 @@ import {
 } from "react";
 
 
-
 export default function Home(){
 
 
@@ -28,11 +29,20 @@ const router = useRouter();
 
 const [countdown, setCountdown] = useState(10);
 
+
 useEffect(() => {
+
   if (countdown > 0) {
-    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+
+    const timer = setTimeout(
+      () => setCountdown(countdown - 1),
+      1000
+    );
+
     return () => clearTimeout(timer);
+
   }
+
 }, [countdown]);
 
 
@@ -60,10 +70,7 @@ px-3
 >
 
 
-{/* Lumières */}
-
 <div
-
 className="
 absolute
 w-40
@@ -74,12 +81,10 @@ blur-3xl
 top-10
 left-5
 "
-
 />
 
 
 <div
-
 className="
 absolute
 w-40
@@ -90,9 +95,7 @@ blur-3xl
 bottom-10
 right-5
 "
-
 />
-
 
 
 
@@ -123,6 +126,7 @@ text-center
 >
 
 
+
 {/* LOGO */}
 
 <motion.div
@@ -147,8 +151,8 @@ mb-5
 
 className="
 mx-auto
-w-16
-h-16
+w-24
+h-24
 rounded-2xl
 bg-white/10
 backdrop-blur-xl
@@ -158,27 +162,29 @@ shadow-xl
 flex
 items-center
 justify-center
+overflow-hidden
 "
 
 >
 
-<span
 
-className="
-text-2xl
-font-black
-"
+<Image
 
->
+src="/titato-logo.svg"
 
-⭕
-<span className="text-blue-400">
-X
-</span>
+alt="TiTaTo Logo"
 
-</span>
+width={90}
+
+height={90}
+
+priority
+
+/>
+
 
 </div>
+
 
 
 
@@ -223,10 +229,6 @@ Joue des parties et gagne de l'argent 💰
 
 
 
-
-
-
-{/* CARTE */}
 
 
 <motion.div
@@ -286,8 +288,11 @@ mb-4
 
 Crée ton compte et rejoins la communauté.
 
-</p><motion.button
+</p>
 
+
+
+<motion.button
 
 whileHover={{
 scale:1.05,
@@ -299,9 +304,7 @@ scale:.95,
 y:2
 }}
 
-
 onClick={()=>router.push("/register")}
-
 
 className="
 w-full
@@ -327,10 +330,7 @@ mb-3
 
 
 
-
-
 <motion.button
-
 
 whileHover={{
 scale:1.05,
@@ -342,9 +342,7 @@ scale:.95,
 y:2
 }}
 
-
 onClick={()=>router.push("/login")}
-
 
 className="
 w-full
@@ -374,12 +372,6 @@ shadow-[0_5px_0_rgba(255,255,255,0.15)]
 
 
 
-
-
-{/* FEATURES */}
-
-
-
 <div
 
 className="
@@ -392,31 +384,11 @@ mt-4
 >
 
 
-<Card
+<Card icon={<Zap size={14}/>} text="Rapide"/>
 
-icon={<Zap size={14}/>}
+<Card icon={<Trophy size={14}/>} text="Défis"/>
 
-text="Rapide"
-
-/>
-
-
-<Card
-
-icon={<Trophy size={14}/>}
-
-text="Défis"
-
-/>
-
-
-<Card
-
-icon={<Gamepad2 size={14}/>}
-
-text="Jeu"
-
-/>
+<Card icon={<Gamepad2 size={14}/>} text="Jeu"/>
 
 
 </div>
@@ -424,15 +396,7 @@ text="Jeu"
 
 
 
-
-
-
-{/* MESSAGE COMMUNAUTE */}
-
-
-
 <motion.div
-
 
 animate={{
 opacity:[0.5,1,0.5]
@@ -443,7 +407,6 @@ duration:3,
 repeat:Infinity
 }}
 
-
 className="
 mt-5
 text-[10px]
@@ -453,32 +416,15 @@ font-bold
 
 >
 
-
 <p>
-
 🎮 Joue avec tes amis en temps réel + gagne 💰
-
 </p>
 
-
-<p
-
-className="
-mt-1
-text-gray-400
-"
-
->
-
+<p className="mt-1 text-gray-400">
 💬 Chatter pendant la partie
-
 </p>
-
 
 </motion.div>
-
-
-
 
 
 
@@ -498,8 +444,8 @@ mt-3
 
 
 
-<motion.p
 
+<motion.p
 
 animate={{
 opacity:[0.5,1,0.5]
@@ -510,15 +456,22 @@ duration:3,
 repeat:Infinity
 }}
 
-
 className="
 text-[9px]
 text-yellow-300
 mt-8
 font-bold
-">
+"
 
-{countdown > 0 ? "Prochaine mise à jour dans " + countdown + "s" : "Mise à jour disponible !"}
+>
+
+{
+countdown > 0
+?
+"Prochaine mise à jour dans " + countdown + "s"
+:
+"Mise à jour disponible !"
+}
 
 </motion.p>
 
@@ -534,9 +487,6 @@ font-bold
 );
 
 }
-
-
-
 
 
 
@@ -558,15 +508,12 @@ text:string;
 
 return(
 
-
 <motion.div
-
 
 whileHover={{
 scale:1.08,
 y:-4
 }}
-
 
 className="
 bg-white/10
@@ -583,18 +530,11 @@ items-center
 >
 
 
-<div
-
-className="
-text-blue-400
-"
-
->
+<div className="text-blue-400">
 
 {icon}
 
 </div>
-
 
 
 <p
@@ -611,12 +551,8 @@ text-gray-300
 </p>
 
 
-
 </motion.div>
-
 
 );
 
-
 }
-
