@@ -28,107 +28,302 @@ export default function RewardAdButton(){
       return;
     }
 
+
     try{
+
       setLoading(true);
-      
-      window.open(DIRECT_LINK, "_blank");
+
+
+      window.open(
+        DIRECT_LINK,
+        "_blank"
+      );
+
 
       let time = 15;
+
       setSeconds(time);
 
+
+
       const timer = setInterval(async()=>{
+
+
         time--;
+
         setSeconds(time);
 
+
+
         if(time <= 0){
+
           clearInterval(timer);
+
           await claimReward(user);
+
         }
-      }, 1000);
+
+
+      },1000);
+
+
 
     }
-    catch(error: any){
-      console.error("[AD BUTTON] START ERROR:", error);
-      alert(error.message || "Erreur ouverture pub");
+
+    catch(error:any){
+
+      console.error(
+        "[AD BUTTON] START ERROR:",
+        error
+      );
+
+
+      alert(
+        error.message ||
+        "Erreur ouverture pub"
+      );
+
+
       setLoading(false);
+
     }
 
   }
 
 
-  async function claimReward(user: any){
+
+
+
+  async function claimReward(user:any){
+
 
     try{
-      const token = await user.getIdToken(true);
 
-      console.log("[AD BUTTON] Fetching /api/reward/ad...");
-      
-      const response = await fetch("/api/reward/ad", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          token
-        })
-      });
 
-      console.log("[AD BUTTON] Response status:", response.status);
-      console.log("[AD BUTTON] Response headers:", Object.fromEntries(response.headers.entries()));
+      const token =
+        await user.getIdToken(true);
 
-      // Read response as text first to debug
-      const responseText = await response.text();
-      console.log("[AD BUTTON] Response text:", responseText);
 
-      // Check if response is JSON
-      const contentType = response.headers.get("content-type");
-      console.log("[AD BUTTON] Content-Type:", contentType);
 
-      if(!contentType || !contentType.includes("application/json")){
-        console.error("[AD BUTTON] Non-JSON response received");
-        throw new Error(`Serveur erreur: réponse non-JSON (${response.status}) - ${responseText.substring(0, 200)}`);
+      console.log(
+        "[AD BUTTON] Fetching /api/reward/ad..."
+      );
+
+
+
+
+      const response =
+        await fetch(
+          "/api/reward/ad",
+          {
+
+            method:"POST",
+
+
+            headers:{
+
+              "Content-Type":
+              "application/json"
+
+            },
+
+
+            body:JSON.stringify({
+
+              token,
+
+              uid:user.uid
+
+            })
+
+          }
+        );
+
+
+
+
+
+      console.log(
+        "[AD BUTTON] Status:",
+        response.status
+      );
+
+
+
+
+
+      const responseText =
+        await response.text();
+
+
+
+
+      console.log(
+        "[AD BUTTON] Response:",
+        responseText
+      );
+
+
+
+
+
+      const contentType =
+        response.headers.get(
+          "content-type"
+        );
+
+
+
+
+
+      if(
+        !contentType ||
+        !contentType.includes(
+          "application/json"
+        )
+      ){
+
+        throw new Error(
+          "Réponse serveur invalide"
+        );
+
       }
 
-      // Parse JSON
+
+
+
+
       let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error("[AD BUTTON] JSON parse error:", parseError);
-        throw new Error("Erreur parsing JSON serveur");
+
+
+      try{
+
+
+        data =
+          JSON.parse(
+            responseText
+          );
+
+
       }
 
-      console.log("[AD BUTTON] API RESPONSE:", data);
+      catch(error){
+
+
+        console.error(
+          "JSON ERROR",
+          error
+        );
+
+
+        throw new Error(
+          "Erreur lecture serveur"
+        );
+
+      }
+
+
+
+
+
+      console.log(
+        "[AD BUTTON] API:",
+        data
+      );
+
+
+
+
 
       if(!response.ok){
-        throw new Error(data.error || "API erreur");
+
+
+        throw new Error(
+          data.error ||
+          "Erreur API"
+        );
+
       }
+
+
+
+
 
       if(data.success){
-        alert("🎉 +5 HTG ajouté");
+
+
+        alert(
+          "🎉 +5 HTG ajouté"
+        );
+
+
         window.location.reload();
-      }
-      else{
-        throw new Error(data.error || "Récompense refusée");
+
+
       }
 
+      else{
+
+
+        throw new Error(
+          data.error ||
+          "Récompense refusée"
+        );
+
+      }
+
+
+
+
     }
-    catch(error: any){
-      console.error("[AD BUTTON] CLAIM ERROR:", error);
-      alert("Erreur récompense: " + error.message);
+
+
+    catch(error:any){
+
+
+      console.error(
+        "[AD BUTTON] CLAIM ERROR:",
+        error
+      );
+
+
+
+      alert(
+        "Erreur récompense: " +
+        error.message
+      );
+
+
     }
+
+
     finally{
+
+
       setLoading(false);
+
       setSeconds(0);
+
+
     }
+
 
   }
+
+
+
+
+
 
 
   return(
+
     <button
+
       onClick={watchAd}
+
       disabled={loading}
+
       className="
         px-3
         py-2
@@ -142,13 +337,27 @@ export default function RewardAdButton(){
         transition
         disabled:opacity-50
       "
+
     >
+
       {
+
         loading
-        ? `⏳ Pub ${seconds}s`
-        : "🎬 Pub +5 HTG"
+
+        ?
+
+        `⏳ Pub ${seconds}s`
+
+        :
+
+        "🎬 Pub +5 HTG"
+
       }
+
+
     </button>
+
   );
+
 
 }
