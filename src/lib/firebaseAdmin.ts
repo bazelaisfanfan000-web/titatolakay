@@ -4,13 +4,16 @@ import {
   initializeApp
 } from "firebase-admin/app";
 
+
 import {
   getDatabase
 } from "firebase-admin/database";
 
+
 import {
   getAuth
 } from "firebase-admin/auth";
+
 
 
 // ===============================
@@ -18,6 +21,7 @@ import {
 // ===============================
 
 const firebaseAdminConfig = {
+
 
   credential: cert({
 
@@ -34,10 +38,14 @@ const firebaseAdminConfig = {
   }),
 
 
+
   databaseURL:
-    process.env.FIREBASE_DATABASE_URL
+    process.env.FIREBASE_DATABASE_URL ||
+    "https://domino-fad16-default-rtdb.firebaseio.com"
+
 
 };
+
 
 
 
@@ -58,6 +66,7 @@ getApps()[0]
 initializeApp(
   firebaseAdminConfig
 );
+
 
 
 

@@ -20,30 +20,40 @@ import {
 
 
 
-const REWARD_AMOUNT = 5;
 
-const DAILY_LIMIT = 3;
-
-
+// ===============================
+// ADMIN ADD REWARD
+// ===============================
 
 export async function POST(
   request: Request
-) {
+){
 
-  try {
-
-
-    console.log("[AD REWARD] START");
-
+  try{
 
 
     const body =
       await request.json();
 
 
+
     const token =
       body?.token;
 
+
+    const uid =
+      body?.uid;
+
+
+    const amount =
+      Number(body?.amount);
+
+
+
+
+    // ===============================
+    // VERIFICATION DONNEES
+    // ===============================
 
 
     if(!token){
@@ -62,62 +72,15 @@ export async function POST(
 
 
 
-    const decoded =
-      await adminAuth.verifyIdToken(
-        token
-      );
-
-
-
-    const uid =
-      decoded.uid;
-
-
-
-    console.log(
-      "[AD REWARD] USER",
-      uid
-    );
-
-
-
-    const today =
-      new Date()
-      .toISOString()
-      .split("T")[0];
-
-
-
-    const rewardRef =
-      adminDB.ref(
-        `adRewards/${uid}/${today}`
-      );
-
-
-
-    const rewardSnap =
-      await rewardRef.get();
-
-
-
-    const count =
-      rewardSnap.exists()
-      ?
-      Number(rewardSnap.val())
-      :
-      0;
-
-
-
-    if(count >= DAILY_LIMIT){
+    if(!uid){
 
       return NextResponse.json(
         {
           success:false,
-          error:"Limite pub atteinte"
+          error:"UID utilisateur manquant"
         },
         {
-          status:429
+          status:400
         }
       );
 
@@ -125,51 +88,145 @@ export async function POST(
 
 
 
-    const result =
-      await addBalance(
-        uid,
-        REWARD_AMOUNT,
-        "ad_reward"
+    if(!amount || amount <= 0){
+
+      return NextResponse.json(
+        {
+          success:false,
+          error:"Montant invalide"
+        },
+        {
+          status:400
+        }
+      );
+
+    }
+
+
+
+
+    // ===============================
+    // VERIFICATION TOKEN ADMIN
+    // ===============================
+
+
+    const decoded =
+      await adminAuth.verifyIdToken(
+        token
       );
 
 
 
-    await rewardRef.set(
-      count + 1
-    );
+    const adminUid =
+      decoded.uid;
+
+
+
+
+    // ===============================
+    // VERIFICATION ROLE ADMIN
+    // ===============================
+
+
+    const adminSnap =
+      await adminDB
+        .ref(
+          `admins/${adminUid}`
+        )
+        .get();
+
+
+
+
+    if(!adminSnap.exists()){
+
+
+      return NextResponse.json(
+        {
+          success:false,
+          error:"Accès administrateur refusé"
+        },
+        {
+          status:403
+        }
+      );
+
+
+    }
+
+
+
+
+    // ===============================
+    // AJOUT ARGENT
+    // ===============================
+
+
+    const result =
+      await addBalance(
+
+        uid,
+
+        amount,
+
+        "admin_reward"
+
+      );
+
+
 
 
 
     return NextResponse.json(
       {
+
         success:true,
-        message:"+5 HTG ajouté",
-        reward:REWARD_AMOUNT,
-        balance:result.newBalance,
-        ads:count + 1
+
+        message:"Récompense ajoutée",
+
+        reward:amount,
+
+        oldBalance:
+          result.oldBalance,
+
+        newBalance:
+          result.newBalance
+
       }
     );
 
 
-  } catch(error:any){
+
+
+  }
+  catch(error:any){
 
 
     console.error(
-      "[AD REWARD ERROR]",
+      "[ADMIN REWARD ERROR]",
       error
     );
 
 
+
     return NextResponse.json(
+
       {
+
         success:false,
+
         error:
           error?.message ||
           "Erreur serveur"
+
       },
+
       {
+
         status:500
+
       }
+
     );
 
 
