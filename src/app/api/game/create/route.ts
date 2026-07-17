@@ -1,13 +1,9 @@
-import {
-  NextResponse
-} from "next/server";
-
+import { NextResponse } from "next/server";
 
 import {
   adminDB,
   adminAuth
 } from "@/lib/firebaseAdmin";
-
 
 import {
   checkUserBalance,
@@ -15,65 +11,42 @@ import {
 } from "@/lib/firebaseEconomyAdmin";
 
 
-
-
-
 export async function POST(
-request: Request
-){
+  request: Request
+) {
+
+try {
 
 
-try{
-
-
-const body =
-await request.json();
-
+const body = await request.json();
 
 
 const {
-
 name,
-
 bet,
-
 mode,
-
 gameType
-
 } = body;
 
 
 
-
-
-const amount =
-Number(bet);
+const amount = Number(bet);
 
 
 
-
-
-if(
-!amount ||
-amount <= 0
-){
-
+if(!amount || amount <= 0){
 
 return NextResponse.json(
-
 {
+success:false,
 error:"Mise invalide"
 },
-
 {
 status:400
 }
-
 );
 
 }
-
 
 
 
@@ -86,25 +59,19 @@ request.headers.get(
 
 
 
-
-
 if(!authHeader){
 
-
 return NextResponse.json(
-
 {
-error:"Utilisateur non connecté"
+success:false,
+error:"Token manquant"
 },
-
 {
 status:401
 }
-
 );
 
 }
-
 
 
 
@@ -117,12 +84,58 @@ authHeader.replace(
 
 
 
+if(!token){
+
+return NextResponse.json(
+{
+success:false,
+error:"Token vide"
+},
+{
+status:401
+}
+);
+
+}
 
 
-const decoded =
+
+
+
+let decoded;
+
+
+try {
+
+
+decoded =
 await adminAuth.verifyIdToken(
 token
 );
+
+
+}
+catch(err:any){
+
+
+console.error(
+"FIREBASE AUTH ERROR",
+err
+);
+
+
+return NextResponse.json(
+{
+success:false,
+error:"Token Firebase invalide"
+},
+{
+status:401
+}
+);
+
+
+}
 
 
 
@@ -133,22 +146,16 @@ decoded.uid;
 
 
 
-
-
 console.log(
-"👤 CREATE ROOM UID:",
-uid
+"CREATE ROOM",
+{
+uid,
+amount
+}
 );
 
 
 
-
-
-
-
-// =============================
-// VERIFICATION SOLDE
-// =============================
 
 
 const balance =
@@ -158,32 +165,17 @@ uid
 
 
 
-console.log(
-"💰 CREATE ROOM BALANCE:",
-balance
-);
-
-
-
-
-
-
-if(
-balance < amount
-){
-
+if(balance < amount){
 
 return NextResponse.json(
-
 {
+success:false,
 error:
 `Solde insuffisant (${balance} HTG)`
 },
-
 {
 status:400
 }
-
 );
 
 }
@@ -192,73 +184,33 @@ status:400
 
 
 
-
-
-
-// =============================
-// DEBIT
-// =============================
-
-
-const debit =
 await deductBet(
-
 uid,
-
 amount,
-
 "create-room"
-
 );
 
 
 
 
 
-console.log(
-  "BET DEBIT",
-  debit
-);
-
-
-
-
-
-
-
-// =============================
-// CREATION SALLE
-// =============================
 
 
 const maxPlayers =
-
 mode === "2v2"
-
 ?
-
 4
-
 :
-
 2;
 
 
 
 
 
-
-
-const roomRef =
-adminDB.ref(
-"rooms"
-);
-
-
-
 const newRoomRef =
-roomRef.push();
-
+adminDB
+.ref("rooms")
+.push();
 
 
 
@@ -267,13 +219,10 @@ newRoomRef.key;
 
 
 
-
-
 if(!roomId){
 
-
 throw new Error(
-"Impossible de créer la salle"
+"Room ID impossible"
 );
 
 }
@@ -283,11 +232,8 @@ throw new Error(
 
 
 const playerName =
-
 decoded.name ||
-
 decoded.email ||
-
 "Joueur";
 
 
@@ -295,76 +241,46 @@ decoded.email ||
 
 
 
-
-const roomData = {
-
+await newRoomRef.set({
 
 id:roomId,
 
 
 name:
-
 name?.trim()
-
 ?
-
 name.trim()
-
 :
-
 "Partie TiTaTo",
-
-
 
 
 bet:amount,
 
 
-
 mode:
-
 mode || "1v1",
 
 
-
-
 gameType:
-
 gameType || "titato",
-
-
 
 
 creatorId:uid,
 
 
-
-
 status:"waiting",
-
-
 
 
 playersCount:1,
 
 
-
-
 maxPlayers,
-
-
 
 
 pot:amount,
 
 
-
-
 createdAt:Date.now(),
-
-
-
-
 
 
 players:{
@@ -397,54 +313,14 @@ joinedAt:Date.now()
 }
 
 
-
-
-};
-
+});
 
 
 
 
 
 
-
-await newRoomRef.set(
-roomData
-);
-
-
-
-
-
-
-console.log(
-"✅ ROOM CREATED",
-{
-
-roomId,
-
-uid,
-
-amount,
-
-before:balance,
-
-after:
-balance - amount
-
-}
-
-);
-
-
-
-
-
-
-
-return NextResponse.json(
-
-{
+return NextResponse.json({
 
 success:true,
 
@@ -452,10 +328,7 @@ roomId,
 
 status:"waiting"
 
-}
-
-);
-
+});
 
 
 
@@ -465,34 +338,23 @@ catch(error:any){
 
 
 console.error(
-
-"❌ CREATE ROOM ERROR",
-
+"CREATE ROOM CRASH:",
 error
-
 );
-
-
 
 
 
 return NextResponse.json(
-
 {
-
+success:false,
 error:
-error.message ||
-
-"Erreur serveur"
-
+error?.message ||
+"Erreur serveur création partie"
 },
-
 {
 status:500
 }
-
 );
-
 
 
 }

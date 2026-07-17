@@ -3,6 +3,22 @@ import {
 } from "@/lib/firebaseAdmin";
 
 
+// ===============================
+// VERIFICATION DATABASE
+// ===============================
+
+function checkDatabase(){
+
+  if(!adminDB){
+
+    throw new Error(
+      "Firebase Database non initialisée"
+    );
+
+  }
+
+}
+
 
 
 // ===============================
@@ -13,34 +29,37 @@ export async function checkUserBalance(
   uid:string
 ){
 
-const balanceRef =
-adminDB.ref(
-`users/${uid}/balance`
-);
+  checkDatabase();
 
 
-const snapshot =
-await balanceRef.get();
+  const balanceRef =
+    adminDB.ref(
+      `users/${uid}/balance`
+    );
+
+
+  const snapshot =
+    await balanceRef.get();
 
 
 
-if(!snapshot.exists()){
+  if(!snapshot.exists()){
 
-  console.log("CREATE BALANCE", { uid });
+    console.log(
+      "[ECONOMY] NO BALANCE",
+      uid
+    );
 
-  return 0;
+    return 0;
+
+  }
+
+
+  return Number(
+    snapshot.val() || 0
+  );
 
 }
-
-
-
-return Number(
-snapshot.val() || 0
-);
-
-
-}
-
 
 
 
@@ -51,274 +70,251 @@ snapshot.val() || 0
 
 export async function deductBet(
 
-uid:string,
+  uid:string,
 
-amount:number,
+  amount:number,
 
-reason:string="game"
+  reason:string="game"
 
 ){
 
+  checkDatabase();
 
 
-if(amount <= 0){
 
-throw new Error(
-"Montant invalide"
-);
+  if(amount <= 0){
+
+    throw new Error(
+      "Montant invalide"
+    );
+
+  }
+
+
+
+  const balanceRef =
+    adminDB.ref(
+      `users/${uid}/balance`
+    );
+
+
+
+  let oldBalance = 0;
+
+  let newBalance = 0;
+
+  let success = false;
+
+
+
+  await balanceRef.transaction(
+
+    (current:any)=>{
+
+
+      oldBalance =
+        Number(
+          current ?? 0
+        );
+
+
+      if(oldBalance < amount){
+
+        return current;
+
+      }
+
+
+
+      newBalance =
+        oldBalance - amount;
+
+
+      success = true;
+
+
+      return newBalance;
+
+
+    }
+
+  );
+
+
+
+  if(!success){
+
+    throw new Error(
+      "Solde insuffisant"
+    );
+
+  }
+
+
+
+  await adminDB
+    .ref(
+      `transactions/${uid}`
+    )
+    .push({
+
+      type:"bet",
+
+      reason,
+
+      amount:-amount,
+
+      oldBalance,
+
+      newBalance,
+
+      status:"completed",
+
+      createdAt:Date.now()
+
+    });
+
+
+
+  return {
+
+    oldBalance,
+
+    newBalance
+
+  };
+
 
 }
 
 
 
-const balanceRef =
-adminDB.ref(
-`users/${uid}/balance`
-);
+
+// ===============================
+// AJOUTER UN SOLDE
+// ===============================
+
+export async function addBalance(
+
+  uid:string,
+
+  amount:number,
+
+  type:string="reward",
+
+  gameId?:string
+
+){
+
+  checkDatabase();
 
 
 
-let oldBalance = 0;
+  if(amount <= 0){
 
-let newBalance = 0;
+    throw new Error(
+      "Montant invalide"
+    );
 
-let success = false;
-
-
-
-
-await balanceRef.transaction(
-
-(current)=>{
-
-
-oldBalance =
-Number(current ?? 0);
+  }
 
 
 
-console.log(
-    "BET DEBIT",
+  const balanceRef =
+    adminDB.ref(
+      `users/${uid}/balance`
+    );
+
+
+
+  let oldBalance = 0;
+
+  let newBalance = 0;
+
+
+
+  await balanceRef.transaction(
+
+    (current:any)=>{
+
+
+      oldBalance =
+        Number(
+          current ?? 0
+        );
+
+
+      newBalance =
+        oldBalance + amount;
+
+
+
+      return newBalance;
+
+
+    }
+
+  );
+
+
+
+
+  await adminDB
+    .ref(
+      `transactions/${uid}`
+    )
+    .push({
+
+      type,
+
+      amount,
+
+      gameId:gameId || null,
+
+      oldBalance,
+
+      newBalance,
+
+      status:"completed",
+
+      createdAt:Date.now()
+
+    });
+
+
+
+  await adminDB
+    .ref(
+      `users/${uid}`
+    )
+    .update({
+
+      balanceUpdatedAt:
+        Date.now()
+
+    });
+
+
+
+  console.log(
+    "[ECONOMY] ADD BALANCE",
     {
       uid,
-      current,
+      amount,
       oldBalance,
-      amount
+      newBalance,
+      type
     }
   );
 
 
 
-if(oldBalance < amount){
+  return {
 
-return current;
+    oldBalance,
 
-}
+    newBalance
 
-
-
-newBalance =
-oldBalance - amount;
-
-
-success = true;
-
-
-
-return newBalance;
-
-
-}
-
-);
-
-
-
-
-
-if(!success){
-
-throw new Error(
-"Solde insuffisant"
-);
-
-}
-
-
-
-
-await adminDB
-.ref(
-`transactions/${uid}`
-)
-.push({
-
-  type: "bet",
-  amount: -amount,
-  oldBalance,
-  newBalance,
-  gameId: null,
-  status: "completed",
-  createdAt: Date.now()
-});
-
-console.log("BET DEBIT", { uid, oldBalance, newBalance });
-
-
-
-
-
-await adminDB
-.ref(
-`users/${uid}`
-)
-.update({
-
-balanceUpdatedAt:
-Date.now()
-
-});
-
-
-
-
-
-return {
-
-oldBalance,
-
-newBalance
-
-};
-
-
-}
-
-
-
-
-
-
-
-
-// ===============================
-// AJOUTER UN SOLDE (GAIN)
-// ===============================
-
-export async function addBalance(
-
-uid:string,
-
-amount:number,
-
-type:string="reward",
-
-gameId?:string
-
-){
-
-
-
-if(amount <= 0){
-
-throw new Error(
-"Montant invalide"
-);
-
-}
-
-
-
-
-const balanceRef =
-adminDB.ref(
-`users/${uid}/balance`
-);
-
-
-
-let oldBalance = 0;
-
-let newBalance = 0;
-
-
-
-
-await balanceRef.transaction(
-
-(current)=>{
-
-
-oldBalance =
-Number(current ?? 0);
-
-
-
-newBalance =
-oldBalance + amount;
-
-
-
-return newBalance;
-
-
-}
-
-);
-
-
-
-
-
-
-await adminDB
-.ref(
-`transactions/${uid}`
-)
-.push({
-
-  type,
-  amount,
-  gameId: gameId || null,
-  oldBalance,
-  newBalance,
-  status: "completed",
-  createdAt: Date.now()
-
-});
-
-if(oldBalance === 0){
-  console.log("CREATE BALANCE", { uid, oldBalance, newBalance });
-}
-
-
-
-
-
-
-await adminDB
-.ref(
-`users/${uid}`
-)
-.update({
-
-balanceUpdatedAt:
-Date.now()
-
-});
-
-
-
-
-
-
-return {
-
-oldBalance,
-
-newBalance
-
-};
-
+  };
 
 }

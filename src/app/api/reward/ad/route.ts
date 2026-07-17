@@ -1,14 +1,21 @@
-import { NextResponse } from "next/server";
+import {
+  NextResponse
+} from "next/server";
+
 
 import {
   adminAuth,
   adminDB
 } from "@/lib/firebaseAdmin";
 
+
 import {
   addBalance
 } from "@/lib/firebaseEconomyAdmin";
 
+
+
+export const runtime = "nodejs";
 
 
 const REWARD_AMOUNT = 5;
@@ -18,208 +25,207 @@ const DAILY_LIMIT = 3;
 
 
 export async function POST(
-request:Request
-){
+  request: Request
+) {
 
+  try {
 
-try{
 
+    console.log("[AD REWARD] START");
 
-const {
-token
-}
-=
-await request.json();
 
+    // ===============================
+    // BODY
+    // ===============================
 
+    const body = await request.json();
 
-if(!token){
 
+    const token = body?.token;
 
-return NextResponse.json(
-{
-error:"Token manquant"
-},
-{
-status:400
-}
-);
 
+    if (!token) {
 
-}
+      return NextResponse.json(
+        {
+          success:false,
+          error:"Token manquant"
+        },
+        {
+          status:400
+        }
+      );
 
+    }
 
 
 
+    // ===============================
+    // AUTH FIREBASE
+    // ===============================
 
+    if (!adminAuth) {
 
-// Vérification Firebase
+      throw new Error(
+        "Firebase Auth non disponible"
+      );
 
-const decoded =
+    }
 
-await adminAuth.verifyIdToken(token);
 
+    const decoded =
+      await adminAuth.verifyIdToken(token);
 
 
-const uid =
 
-decoded.uid;
+    const uid =
+      decoded.uid;
 
 
 
+    console.log(
+      "[AD REWARD] USER:",
+      uid
+    );
 
 
 
+    // ===============================
+    // DATE JOUR
+    // ===============================
 
-// Date du jour
+    const today =
+      new Date()
+      .toISOString()
+      .split("T")[0];
 
-const today =
 
-new Date()
-.toISOString()
-.split("T")[0];
 
+    const rewardRef =
+      adminDB.ref(
+        `adRewards/${uid}/${today}`
+      );
 
 
 
+    const rewardSnap =
+      await rewardRef.get();
 
 
 
-// Vérification limite pub
+    let count =
+      rewardSnap.exists()
+      ?
+      Number(rewardSnap.val())
+      :
+      0;
 
-const rewardRef =
 
-adminDB.ref(
-`adRewards/${uid}/${today}`
-);
 
+    // ===============================
+    // LIMITE PUB
+    // ===============================
 
+    if (
+      count >= DAILY_LIMIT
+    ) {
 
+      return NextResponse.json(
+        {
+          success:false,
+          error:"Limite pub atteinte"
+        },
+        {
+          status:429
+        }
+      );
 
-const rewardSnap =
+    }
 
-await rewardRef.get();
 
 
+    // ===============================
+    // AJOUT WALLET
+    // ===============================
 
 
-let count =
+    const result =
+      await addBalance(
+        uid,
+        REWARD_AMOUNT,
+        "ad_reward"
+      );
 
-rewardSnap.exists()
 
-?
 
-Number(
-rewardSnap.val()
-)
+    if (!result) {
 
-:
+      throw new Error(
+        "Récompense non ajoutée"
+      );
 
-0;
+    }
 
 
 
 
+    // ===============================
+    // SAUVEGARDE COMPTEUR
+    // ===============================
 
 
+    await rewardRef.set(
+      count + 1
+    );
 
-if(count >= DAILY_LIMIT){
 
 
 
-return NextResponse.json(
-{
+    // ===============================
+    // REPONSE
+    // ===============================
 
-error:
-"Limite pub atteinte"
 
-},
-{
-status:429
-}
-);
+    return NextResponse.json(
+      {
+        success:true,
+        message:"+5 HTG ajouté",
+        reward:REWARD_AMOUNT,
+        balance:
+          result.newBalance,
+        ads:
+          count + 1
+      }
+    );
 
 
-}
 
 
+  }
 
+  catch(error:any) {
 
 
+    console.error(
+      "[AD REWARD ERROR]",
+      error
+    );
 
 
 
-// Ajouter +5 HTG
+    return NextResponse.json(
+      {
+        success:false,
+        error:
+          error?.message ||
+          "Erreur serveur"
+      },
+      {
+        status:500
+      }
+    );
 
 
-const result =
-
-await addBalance(
-
-uid,
-
-REWARD_AMOUNT,
-
-"ad_reward"
-
-);
-
-
-
-
-
-
-
-// Sauvegarde compteur
-
-await rewardRef.set(
-
-count + 1
-
-);
-
-
-
-
-
-
-
-return NextResponse.json({
-
-success:true,
-
-message:"+5 HTG ajouté",
-
-balance:
-result.newBalance
-
-});
-
-
-
-
-}
-catch(error){
-
-
-console.error(
-"AD REWARD ERROR",
-error
-);
-
-
-
-return NextResponse.json(
-{
-error:"Erreur serveur"
-},
-{
-status:500
-}
-);
-
-
-}
-
+  }
 
 }

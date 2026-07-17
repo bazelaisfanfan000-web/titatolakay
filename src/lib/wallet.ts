@@ -575,7 +575,7 @@ const list:any[]=[];
 
 
 
-snap.forEach((child)=>{
+snap.forEach((child: any)=>{
 
 
 list.push(child.val());

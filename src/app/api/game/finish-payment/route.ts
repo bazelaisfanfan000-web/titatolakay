@@ -148,7 +148,7 @@ adminDB.ref(
 
 const lock =
 await paymentRef.transaction(
-(current)=>{
+(current: any)=>{
 
 
 if(
@@ -330,7 +330,7 @@ let newBalance = 0;
 
 
 await balanceRef.transaction(
-(current)=>{
+(current: any)=>{
 
 
 oldBalance =
