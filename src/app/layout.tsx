@@ -39,28 +39,19 @@ return (
 <head>
 
 
-{/* Google AdSense */}
+{/* Monetag Multitag */}
 
 <Script
 
-id="google-adsense"
+id="monetag-multitag"
+
+src="https://quge5.com/88/tag.min.js"
+
+data-zone="260585"
 
 async
 
-strategy="afterInteractive"
-
-src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5894815902617573"
-
-crossOrigin="anonymous"
-
-/>
-
-
-<meta
-
-name="google-adsense-account"
-
-content="ca-pub-5894815902617573"
+data-cfasync="false"
 
 />
 
