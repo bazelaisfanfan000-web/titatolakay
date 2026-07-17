@@ -1,9 +1,21 @@
-import { NextResponse } from "next/server";
+import {
+  NextResponse
+} from "next/server";
+
+
+export const runtime = "nodejs";
+
+export const dynamic = "force-dynamic";
+
 
 import {
-  adminDB,
-  adminAuth
+  adminDB
 } from "@/lib/firebaseAdmin";
+
+
+import {
+  adminAuth
+} from "@/lib/firebaseAuthAdmin";
 
 
 const COMMISSION_RATE = 0.10;

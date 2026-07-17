@@ -3,10 +3,19 @@ import {
 } from "next/server";
 
 
+export const runtime = "nodejs";
+
+export const dynamic = "force-dynamic";
+
+
 import {
-  adminDB,
-  adminAuth
+  adminDB
 } from "@/lib/firebaseAdmin";
+
+
+import {
+  adminAuth
+} from "@/lib/firebaseAuthAdmin";;
 
 
 
