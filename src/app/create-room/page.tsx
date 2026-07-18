@@ -56,6 +56,10 @@ const [error,setError] =
 useState("");
 
 
+const [showAd,setShowAd] =
+useState(false);
+
+
 
 
 
@@ -242,6 +246,13 @@ catch(err:any){
 setError(
 err.message
 );
+
+
+if(err.message === "Solde insuffisant"){
+
+setShowAd(true);
+
+}
 
 
 }
@@ -583,6 +594,103 @@ font-bold
 
 
 }
+
+
+
+{
+showAd && (
+
+<div className="
+fixed
+inset-0
+bg-black/70
+flex
+items-center
+justify-center
+z-50
+p-4
+">
+
+<div className="
+bg-white/10
+rounded-3xl
+p-6
+text-center
+w-full
+max-w-sm
+">
+
+<h2 className="text-white font-black text-xl">
+💰 Solde insuffisant
+</h2>
+
+
+<p className="text-gray-300 text-sm mt-2">
+Regarde une publicité pour recevoir un bonus
+</p>
+
+
+<button
+
+onClick={()=>setShowAd(false)}
+
+className="
+mt-4
+bg-white/10
+px-6
+py-3
+rounded-2xl
+font-bold
+mr-2
+"
+
+>
+
+Fermer
+
+</button>
+
+
+<button
+
+onClick={async()=>{
+
+const user = auth.currentUser;
+
+if(!user)return;
+
+
+window.open(
+"https://omg10.com/4/11336319",
+"_blank"
+);
+
+
+setShowAd(false);
+
+}}
+
+className="
+mt-4
+bg-blue-500
+px-6
+py-3
+rounded-2xl
+font-bold
+"
+
+>
+
+🎬 Regarder une pub
+
+</button>
+
+
+</div>
+
+</div>
+
+)}
 
 
 

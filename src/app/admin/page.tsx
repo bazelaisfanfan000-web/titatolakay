@@ -1,223 +1,630 @@
 "use client";
 
-import { useState } from "react";
 
-import Users from "@/components/admin/Users";
-import Games from "@/components/admin/Games";
-import Economy from "@/components/admin/Economy";
-import Rewards from "@/components/admin/Rewards";
-import Banned from "@/components/admin/Banned";
-import Settings from "@/components/admin/Settings";
+import {
+  useEffect,
+  useState
+} from "react";
 
 
-export default function AdminDashboard() {
+import {
+  ref,
+  onValue
+} from "firebase/database";
 
 
-  const [page, setPage] = useState("economy");
+import {
+  database
+} from "@/lib/firebase";
 
 
-  const menu = [
-    {
-      id: "economy",
-      name: "💰 Économie plateforme"
-    },
-    {
-      id: "users",
-      name: "👥 Gestion utilisateurs"
-    },
-    {
-      id: "games",
-      name: "🎮 Gestion des parties"
-    },
-    {
-      id: "rewards",
-      name: "🎁 Récompenses"
-    },
-    {
-      id: "banned",
-      name: "🚫 Utilisateurs bannis"
-    },
-    {
-      id: "settings",
-      name: "⚙️ Paramètres admin"
-    }
-  ];
+import {
+  motion
+} from "framer-motion";
 
 
+import {
+  Users,
+  Gamepad2,
+  Wallet,
+  Trophy,
+  Activity
+} from "lucide-react";
 
-  function renderPage() {
 
-    switch(page) {
 
-      case "users":
-        return <Users />;
 
-      case "games":
-        return <Games />;
 
-      case "rewards":
-        return <Rewards />;
+export default function AdminDashboard(){
 
-      case "banned":
-        return <Banned />;
 
-      case "settings":
-        return <Settings />;
 
-      default:
-        return <Economy />;
+const [users,setUsers] =
+useState(0);
 
-    }
 
-  }
+const [games,setGames] =
+useState(0);
 
 
+const [money,setMoney] =
+useState(0);
 
-  return (
 
-    <main className="min-h-screen bg-black text-white p-5">
+const [champion,setChampion] =
+useState("Aucun");
 
 
-      <div className="flex gap-5">
 
 
+useEffect(()=>{
 
-        <aside className="
-          hidden
-          md:block
-          w-72
-          bg-white/5
-          border
-          border-white/10
-          rounded-3xl
-          p-5
-        ">
 
 
-          <h1 className="
-            text-2xl
-            font-black
-            text-blue-500
-            mb-8
-          ">
-            👑 DOMINOS HAÏTI
-          </h1>
+// USERS
 
+const usersRef =
+ref(
+database,
+"users"
+);
 
 
-          <div className="space-y-3">
 
+const unsubUsers =
+onValue(
+usersRef,
+(snapshot)=>{
 
-            {menu.map((item)=>(
 
-              <button
+const data =
+snapshot.val() || {};
 
-                key={item.id}
 
-                onClick={() => setPage(item.id)}
+setUsers(
+Object.keys(data).length
+);
 
-                className={
-                  page === item.id
-                  ?
-                  "w-full text-left px-4 py-3 rounded-xl font-bold bg-blue-600"
-                  :
-                  "w-full text-left px-4 py-3 rounded-xl font-bold bg-white/10 hover:bg-white/20"
-                }
 
-              >
+}
+);
 
-                {item.name}
 
-              </button>
 
 
-            ))}
 
 
-          </div>
 
+// GAMES
 
-        </aside>
+const gamesRef =
+ref(
+database,
+"rooms"
+);
 
 
 
+const unsubGames =
+onValue(
+gamesRef,
+(snapshot)=>{
 
 
-        <div className="
-          md:hidden
-          fixed
-          top-3
-          left-3
-          right-3
-          z-50
-        ">
+const data =
+snapshot.val() || {};
 
 
-          <select
 
-            value={page}
+setGames(
+Object.keys(data).length
+);
 
-            onChange={(e)=>setPage(e.target.value)}
 
-            className="
-              w-full
-              bg-black
-              border
-              border-white/20
-              rounded-xl
-              p-3
-              text-white
-            "
+}
+);
 
-          >
 
-            {
-              menu.map((item)=>(
 
-                <option
-                  key={item.id}
-                  value={item.id}
-                >
-                  {item.name}
-                </option>
 
-              ))
-            }
 
 
-          </select>
 
+// MONEY
 
-        </div>
+const moneyRef =
+ref(
+database,
+"users"
+);
 
 
 
+const unsubMoney =
+onValue(
+moneyRef,
+(snapshot)=>{
 
 
-        <section className="
-          flex-1
-          min-h-screen
-          bg-white/5
-          border
-          border-white/10
-          rounded-3xl
-          p-6
-        ">
+const data =
+snapshot.val() || {};
 
 
-          {renderPage()}
+let total = 0;
 
 
-        </section>
 
+Object.values(data)
+.forEach((user:any)=>{
 
 
-      </div>
+total +=
+Number(user.balance || 0);
 
 
-    </main>
+});
 
-  );
+
+
+setMoney(total);
+
+
+}
+);
+
+
+
+
+
+
+
+// CHAMPION
+
+
+const championRef =
+ref(
+database,
+"champions"
+);
+
+
+
+const unsubChampion =
+onValue(
+championRef,
+(snapshot)=>{
+
+
+const data =
+snapshot.val() || {};
+
+
+
+const list =
+Object.values(data);
+
+
+
+if(list.length){
+
+const last:any =
+list[list.length-1];
+
+
+setChampion(
+last.username || "Aucun"
+);
+
+
+}
+
+
+}
+);
+
+
+
+
+
+
+
+return()=>{
+
+unsubUsers();
+
+unsubGames();
+
+unsubMoney();
+
+unsubChampion();
+
+};
+
+
+
+},[]);
+
+
+
+
+
+
+
+
+
+const cards=[
+
+
+{
+title:"Joueurs",
+value:users,
+icon:Users
+},
+
+
+{
+title:"Parties",
+value:games,
+icon:Gamepad2
+},
+
+
+{
+title:"Argent joueurs",
+value:`${money} HTG`,
+icon:Wallet
+},
+
+
+{
+title:"Champion",
+value:champion,
+icon:Trophy
+}
+
+
+];
+
+
+
+
+
+
+
+return(
+
+
+<div>
+
+
+<h1
+
+className="
+
+text-2xl
+
+font-black
+
+mb-2
+
+"
+
+>
+
+🏆 Dashboard Admin
+
+</h1>
+
+
+<p
+
+className="
+
+text-gray-400
+
+text-sm
+
+mb-8
+
+"
+
+>
+
+Vue générale de Ti Ta To
+
+</p>
+
+
+
+
+
+
+
+<div
+
+className="
+
+grid
+
+grid-cols-1
+
+sm:grid-cols-2
+
+xl:grid-cols-4
+
+gap-5
+
+"
+
+>
+
+
+{
+
+cards.map((card,index)=>{
+
+
+const Icon =
+card.icon;
+
+
+
+return(
+
+
+<motion.div
+
+
+key={card.title}
+
+
+initial={{
+
+opacity:0,
+
+y:20
+
+}}
+
+
+animate={{
+
+opacity:1,
+
+y:0
+
+}}
+
+
+
+transition={{
+
+delay:index*0.1
+
+}}
+
+
+
+
+className="
+
+bg-white/10
+
+border
+
+border-white/20
+
+backdrop-blur-xl
+
+rounded-3xl
+
+p-5
+
+"
+
+>
+
+
+
+<div
+
+className="
+
+flex
+
+justify-between
+
+items-center
+
+"
+
+>
+
+
+<div>
+
+
+<p
+
+className="
+
+text-gray-400
+
+text-xs
+
+"
+
+>
+
+{card.title}
+
+</p>
+
+
+
+<h2
+
+className="
+
+text-xl
+
+font-black
+
+mt-2
+
+"
+
+>
+
+{card.value}
+
+</h2>
+
+
+</div>
+
+
+
+<Icon
+
+size={35}
+
+className="text-cyan-300"
+
+/>
+
+
+</div>
+
+
+
+</motion.div>
+
+
+)
+
+
+})
+
+}
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<motion.div
+
+
+initial={{
+opacity:0
+}}
+
+animate={{
+opacity:1
+}}
+
+
+
+className="
+
+mt-8
+
+bg-white/5
+
+border
+
+border-white/10
+
+rounded-3xl
+
+p-5
+
+"
+
+>
+
+
+<div
+
+className="
+
+flex
+
+items-center
+
+gap-3
+
+"
+
+>
+
+<Activity
+
+className="text-green-400"
+
+/>
+
+
+<div>
+
+
+<h2
+
+className="
+
+font-bold
+
+"
+
+>
+
+Système actif
+
+</h2>
+
+
+<p
+
+className="
+
+text-xs
+
+text-gray-400
+
+"
+
+>
+
+Firebase connecté - Mise à jour en temps réel
+
+</p>
+
+
+</div>
+
+
+</div>
+
+
+</motion.div>
+
+
+
+
+
+
+
+</div>
+
+
+);
 
 
 }

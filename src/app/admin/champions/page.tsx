@@ -9,7 +9,8 @@ import {
 
 import {
   ref,
-  onValue
+  onValue,
+  update
 } from "firebase/database";
 
 
@@ -24,31 +25,32 @@ import {
 
 
 import {
-  Gamepad2,
   Trophy,
-  Coins,
-  Users
+  CheckCircle,
+  Clock
 } from "lucide-react";
 
 
 
 
 
-export default function AdminGamesPage(){
+export default function AdminChampionsPage(){
 
 
-const [games,setGames] =
+const [champions,setChampions] =
 useState<any[]>([]);
+
+
 
 
 
 useEffect(()=>{
 
 
-const gamesRef =
+const championsRef =
 ref(
 database,
-"rooms"
+"champions"
 );
 
 
@@ -56,7 +58,7 @@ database,
 const unsubscribe =
 
 onValue(
-gamesRef,
+championsRef,
 (snapshot)=>{
 
 
@@ -70,39 +72,35 @@ const list =
 Object.entries(data)
 
 .map(
-([id,game]:any)=>({
+([month,champion]:any)=>({
 
 
-id,
+month,
 
 
-bet:
-Number(game.bet || 0),
-
-
-status:
-game.game?.status || game.status || "waiting",
-
-
-winner:
-game.game?.winner || null,
-
-
-players:
-Object.values(
-game.players || {}
-)
+...champion
 
 
 })
+
+)
+
+.sort(
+(a,b)=>
+
+b.createdAt -
+
+a.createdAt
+
 );
 
 
 
-setGames(list);
+setChampions(list);
 
 
 }
+
 );
 
 
@@ -112,6 +110,40 @@ return ()=>unsubscribe();
 
 
 },[]);
+
+
+
+
+
+
+
+async function markPaid(
+month:string
+){
+
+
+
+await update(
+
+ref(
+database,
+`champions/${month}`
+),
+
+{
+
+paid:true,
+
+paidAt:
+Date.now()
+
+}
+
+);
+
+
+
+}
 
 
 
@@ -142,9 +174,10 @@ mb-2
 
 >
 
-🎮 Gestion des parties
+🏆 Champions Ti Ta To
 
 </h1>
+
 
 
 <p
@@ -161,9 +194,10 @@ mb-6
 
 >
 
-Surveillance des matchs Ti Ta To
+Historique des gagnants mensuels
 
 </p>
+
 
 
 
@@ -177,7 +211,7 @@ className="
 
 grid
 
-gap-4
+gap-5
 
 "
 
@@ -186,15 +220,15 @@ gap-4
 
 {
 
-games.map(
-(game,index)=>(
+champions.map(
+(champion,index)=>(
 
 
 
 <motion.div
 
 
-key={game.id}
+key={champion.month}
 
 
 initial={{
@@ -206,11 +240,6 @@ y:20
 animate={{
 opacity:1,
 y:0
-}}
-
-
-transition={{
-delay:index*0.03
 }}
 
 
@@ -236,6 +265,7 @@ backdrop-blur-xl
 
 
 
+
 <div
 
 className="
@@ -251,40 +281,6 @@ items-center
 >
 
 
-<div
-
-className="
-
-flex
-
-items-center
-
-gap-3
-
-"
-
->
-
-
-<div
-
-className="
-
-bg-blue-500/20
-
-p-3
-
-rounded-2xl
-
-"
-
->
-
-<Gamepad2/>
-
-</div>
-
-
 
 <div>
 
@@ -295,13 +291,16 @@ className="
 
 font-black
 
+text-lg
+
 "
 
 >
 
-Partie #{game.id.slice(0,8)}
+🥇 {champion.username}
 
 </h2>
+
 
 
 <p
@@ -316,14 +315,11 @@ text-gray-400
 
 >
 
-Statut : {game.status}
+Mois : {champion.month}
 
 </p>
 
 
-</div>
-
-
 
 </div>
 
@@ -331,44 +327,11 @@ Statut : {game.status}
 
 
 
-
-
-<div
-
-className="
-
-text-right
-
-"
-
->
-
-
-<Coins
+<Trophy
 
 className="text-yellow-400"
 
 />
-
-
-<p
-
-className="
-
-font-bold
-
-text-yellow-300
-
-"
-
->
-
-{game.bet} HTG
-
-</p>
-
-
-</div>
 
 
 
@@ -414,46 +377,17 @@ p-3
 >
 
 
-<Users size={18}/>
-
-
-<p
-
-className="
-
-text-xs
-
-text-gray-400
-
-"
-
->
-
-Joueurs
-
+<p className="text-xs text-gray-400">
+Points
 </p>
 
 
-<p
-
-className="
-
-font-bold
-
-"
-
->
-
-{
-game.players.length
-}
-
+<p className="font-black">
+{champion.points || 0}
 </p>
 
 
 </div>
-
-
 
 
 
@@ -475,49 +409,17 @@ p-3
 >
 
 
-<Trophy size={18}/>
-
-
-<p
-
-className="
-
-text-xs
-
-text-gray-400
-
-"
-
->
-
-Gagnant
-
+<p className="text-xs text-gray-400">
+Récompense
 </p>
 
 
-<p
-
-className="
-
-font-bold
-
-"
-
->
-
-{
-
-game.winner ||
-
-"En attente"
-
-}
-
+<p className="font-black text-yellow-300">
+1000 HTG
 </p>
 
 
 </div>
-
 
 
 </div>
@@ -534,34 +436,85 @@ game.winner ||
 
 className="
 
-mt-4
-
-bg-cyan-500/10
-
-rounded-2xl
-
-p-3
+mt-5
 
 "
 
 >
 
 
-<p className="text-xs text-gray-400">
-Pot estimé
-</p>
-
-
-<p className="font-black text-cyan-300">
 
 {
-game.bet *
-game.players.length
+
+champion.paid
+
+?
+
+<div
+
+className="
+
+flex
+
+items-center
+
+gap-2
+
+text-green-300
+
+font-bold
+
+"
+
+>
+
+<CheckCircle size={20}/>
+
+Payé
+
+</div>
+
+
+:
+
+<button
+
+
+onClick={()=>markPaid(champion.month)}
+
+
+
+className="
+
+w-full
+
+bg-yellow-500/20
+
+border
+
+border-yellow-400/30
+
+rounded-2xl
+
+py-3
+
+font-bold
+
+text-yellow-300
+
+"
+
+>
+
+<Clock size={18} className="inline mr-2"/>
+
+Marquer payé
+
+</button>
+
+
 }
 
-HTG
-
-</p>
 
 
 </div>
@@ -586,6 +539,10 @@ HTG
 
 
 </div>
+
+
+
+
 
 
 

@@ -18,25 +18,43 @@ import {
 } from "@/lib/firebase";
 
 
+import {
+  motion
+} from "framer-motion";
 
 
-export default function Economy(){
+import {
+  Wallet,
+  Gamepad2,
+  Trophy,
+  TrendingUp
+} from "lucide-react";
 
 
 
-const [stats,setStats] = useState({
 
-balance:0,
 
-bets:0,
+export default function AdminEconomyPage(){
 
-commission:0,
 
-wins:0,
+const [balance,setBalance] =
+useState(0);
 
-transactions:0
 
-});
+const [games,setGames] =
+useState(0);
+
+
+const [rewards,setRewards] =
+useState(0);
+
+
+const [commission,setCommission] =
+useState(0);
+
+
+const [transactions,setTransactions] =
+useState<any[]>([]);
 
 
 
@@ -45,68 +63,26 @@ transactions:0
 useEffect(()=>{
 
 
+
+
+
+// ==========================
+// TOTAL SOLDES JOUEURS
+// ==========================
+
+
 const usersRef =
-ref(database,"users");
-
-
-const transactionsRef =
-ref(database,"transactions");
-
-
+ref(
+database,
+"users"
+);
 
 
 
-const stopUsers =
+const unsubUsers =
+
 onValue(
 usersRef,
-(snapshot)=>{
-
-
-const users =
-snapshot.val() || {};
-
-
-
-let total = 0;
-
-
-
-Object.values(users)
-.forEach((user:any)=>{
-
-
-total += Number(
-user.balance || 0
-);
-
-
-});
-
-
-
-setStats(prev=>({
-
-...prev,
-
-balance:total
-
-}));
-
-
-
-}
-
-);
-
-
-
-
-
-
-
-const stopTransactions =
-onValue(
-transactionsRef,
 (snapshot)=>{
 
 
@@ -115,38 +91,97 @@ snapshot.val() || {};
 
 
 
-let bets=0;
-
-let wins=0;
-
-let count=0;
-
+let total = 0;
 
 
 
 Object.values(data)
-.forEach((tx:any)=>{
+.forEach((user:any)=>{
 
 
-count++;
-
-
-
-if(tx.type==="Bet"){
-
-bets += Math.abs(
-Number(tx.amount || 0)
+total +=
+Number(
+user.balance || 0
 );
+
+
+});
+
+
+
+setBalance(total);
+
 
 }
-
-
-
-if(tx.type==="WIN"){
-
-wins += Number(
-tx.amount || 0
 );
+
+
+
+
+
+
+
+
+
+// ==========================
+// PARTIES + ECONOMIE
+// ==========================
+
+
+const roomsRef =
+ref(
+database,
+"rooms"
+);
+
+
+
+const unsubRooms =
+
+onValue(
+roomsRef,
+(snapshot)=>{
+
+
+const data =
+snapshot.val() || {};
+
+
+
+let totalGames = 0;
+
+let totalReward = 0;
+
+let totalCommission = 0;
+
+
+
+Object.values(data)
+.forEach((room:any)=>{
+
+
+
+if(
+room.game?.status === "finished"
+){
+
+
+totalGames++;
+
+
+totalReward +=
+Number(
+room.game?.reward || 0
+);
+
+
+
+totalCommission +=
+Number(
+room.game?.commission || 0
+);
+
+
 
 }
 
@@ -156,21 +191,80 @@ tx.amount || 0
 
 
 
-setStats(prev=>({
 
-...prev,
 
-bets,
+setGames(totalGames);
 
-wins,
+setRewards(totalReward);
 
-transactions:count,
+setCommission(totalCommission);
 
-commission:
-Math.floor(bets * 0.10)
 
-}));
 
+}
+);
+
+
+
+
+
+
+
+
+
+// ==========================
+// TRANSACTIONS JEU
+// ==========================
+
+
+const transactionRef =
+ref(
+database,
+"transactions"
+);
+
+
+
+const unsubTransactions =
+
+onValue(
+transactionRef,
+(snapshot)=>{
+
+
+const data =
+snapshot.val() || {};
+
+
+
+let list:any[]=[];
+
+
+
+Object.entries(data)
+.forEach(
+([uid,userTransactions]:any)=>{
+
+
+Object.entries(
+userTransactions || {}
+)
+.forEach(
+([id,t]:any)=>{
+
+
+list.push({
+
+id,
+
+...t
+
+});
+
+
+}
+
+);
 
 
 }
@@ -180,12 +274,45 @@ Math.floor(bets * 0.10)
 
 
 
+setTransactions(
+
+list
+
+.sort(
+(a,b)=>
+
+Number(b.createdAt || 0)
+
+-
+
+Number(a.createdAt || 0)
+
+)
+
+.slice(0,20)
+
+);
+
+
+
+}
+);
+
+
+
+
+
+
+
+
 
 return()=>{
 
-stopUsers();
+unsubUsers();
 
-stopTransactions();
+unsubRooms();
+
+unsubTransactions();
 
 };
 
@@ -198,48 +325,37 @@ stopTransactions();
 
 
 
+
+
 const cards=[
 
 
 {
-title:"Argent joueurs",
-value:`${Math.floor(stats.balance)} HTG`,
-icon:"💰",
-color:"text-green-400"
+title:"Soldes joueurs",
+value:`${balance} HTG`,
+icon:Wallet
 },
 
 
 {
-title:"Volume des mises",
-value:`${stats.bets} HTG`,
-icon:"🎮",
-color:"text-blue-400"
-},
-
-
-{
-title:"Commission",
-value:`${stats.commission} HTG`,
-icon:"🏦",
-color:"text-yellow-400"
+title:"Parties terminées",
+value:games,
+icon:Gamepad2
 },
 
 
 {
 title:"Gains distribués",
-value:`${stats.wins} HTG`,
-icon:"🏆",
-color:"text-purple-400"
+value:`${rewards} HTG`,
+icon:Trophy
 },
 
 
 {
-title:"Transactions",
-value:stats.transactions,
-icon:"📄",
-color:"text-white"
+title:"Commission Ti Ta To",
+value:`${commission} HTG`,
+icon:TrendingUp
 }
-
 
 
 ];
@@ -249,30 +365,50 @@ color:"text-white"
 
 
 
+
+
+
 return(
 
 
-<div className="text-white">
+<div>
 
 
 
-<h1 className="
-text-3xl
+<h1
+
+className="
+
+text-2xl
+
 font-black
-">
 
-💰 Économie plateforme
+mb-2
+
+"
+
+>
+
+💰 Économie Ti Ta To
 
 </h1>
 
 
+<p
 
-<p className="
+className="
+
 text-gray-400
-mt-2
-">
 
-Contrôle financier DOMINOS HAÏTI
+text-sm
+
+mb-6
+
+"
+
+>
+
+Suivi de l'économie du jeu
 
 </p>
 
@@ -282,108 +418,132 @@ Contrôle financier DOMINOS HAÏTI
 
 
 
-<div className="
-grid
-md:grid-cols-2
-xl:grid-cols-3
-gap-5
-mt-8
-">
-
-
-{
-
-cards.map((card)=>(
 
 
 <div
 
-key={card.title}
-
 className="
 
-bg-[#111827]
+grid
 
-border
+grid-cols-1
 
-border-white/10
+sm:grid-cols-2
 
-rounded-3xl
+xl:grid-cols-4
 
-p-6
-
-shadow-xl
+gap-5
 
 "
 
 >
 
 
-<div className="
-flex
-justify-between
-items-center
-">
+{
+
+cards.map(
+(card,index)=>{
 
 
-<div className="
-text-4xl
-">
-
-{card.icon}
-
-</div>
-
-
-<div className="
-w-3
-h-3
-rounded-full
-bg-green-400
-">
-
-</div>
-
-
-</div>
+const Icon =
+card.icon;
 
 
 
+return(
 
-<p className="
+
+<motion.div
+
+
+key={card.title}
+
+
+initial={{
+opacity:0,
+y:20
+}}
+
+
+animate={{
+opacity:1,
+y:0
+}}
+
+
+transition={{
+delay:index*0.1
+}}
+
+
+
+className="
+
+bg-white/10
+
+border
+
+border-white/20
+
+rounded-3xl
+
+p-5
+
+backdrop-blur-xl
+
+"
+
+>
+
+
+<Icon size={32}/>
+
+
+<p
+
+className="
+
 text-gray-400
-mt-5
-">
+
+text-xs
+
+mt-3
+
+"
+
+>
 
 {card.title}
 
 </p>
 
 
+<h2
 
-<h2 className={`
+className="
 
-text-3xl
+text-xl
 
 font-black
 
-mt-2
+"
 
-${card.color}
-
-`}>
+>
 
 {card.value}
 
 </h2>
 
 
-
-</div>
-
+</motion.div>
 
 
-))
+)
+
+
+}
+
+)
 
 
 }
@@ -399,29 +559,31 @@ ${card.color}
 
 
 
-<div className="
 
-mt-10
+<div
 
-bg-[#111827]
+className="
 
-border
+mt-8
 
-border-white/10
+"
 
-rounded-3xl
-
-p-6
-
-">
+>
 
 
-<h2 className="
-text-xl
+<h2
+
+className="
+
 font-black
-">
 
-📊 Résumé financier
+mb-4
+
+"
+
+>
+
+📜 Dernières transactions
 
 </h2>
 
@@ -429,116 +591,94 @@ font-black
 
 
 
-<div className="
-mt-6
-space-y-4
-">
+<div
+
+className="
+
+grid
+
+gap-3
+
+"
+
+>
 
 
-<div className="
-flex
-justify-between
-bg-black/30
+{
+
+transactions.map(
+(t)=>(
+
+
+
+<div
+
+key={t.id}
+
+className="
+
+bg-white/10
+
+border
+
+border-white/10
+
+rounded-2xl
+
 p-4
-rounded-xl
-">
 
-<span>
-💵 Argent circulation
-</span>
-
-
-<b>
-{Math.floor(stats.balance)} HTG
-</b>
-
-
-</div>
-
-
-
-
-
-
-<div className="
 flex
+
 justify-between
-bg-black/30
-p-4
-rounded-xl
-">
 
+"
 
-<span>
-🎲 Volume jeu
-</span>
-
-
-<b>
-{stats.bets} HTG
-</b>
-
-
-</div>
+>
 
 
 
+<div>
+
+<p className="font-bold">
+
+{t.type || "GAIN"}
+
+</p>
 
 
+<p className="text-xs text-gray-400">
 
+{t.gameId || "Partie"}
 
-<div className="
-flex
-justify-between
-bg-black/30
-p-4
-rounded-xl
-">
-
-
-<span>
-🏦 Revenus plateforme
-</span>
-
-
-<b className="
-text-green-400
-">
-
-{stats.commission} HTG
-
-</b>
-
+</p>
 
 </div>
 
 
 
 
+<div>
 
+<p className="font-black text-cyan-300">
 
+{t.amount || 0} HTG
 
-<div className="
-flex
-justify-between
-bg-black/30
-p-4
-rounded-xl
-">
+</p>
 
+</div>
 
-<span>
-🏆 Gains joueurs
-</span>
-
-
-<b>
-{stats.wins} HTG
-</b>
 
 
 </div>
 
+
+)
+
+)
+
+
+
+}
 
 
 
@@ -546,8 +686,8 @@ rounded-xl
 
 
 
-
 </div>
+
 
 
 
