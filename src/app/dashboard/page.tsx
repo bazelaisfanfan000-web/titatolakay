@@ -38,8 +38,7 @@ import RewardAdButton from "@/components/RewardAdButton";
 export default function Dashboard(){
 
 
-const router =
-useRouter();
+const router = useRouter();
 
 
 
@@ -62,7 +61,6 @@ const [
  notificationCount,
  setNotificationCount
 ]=useState(0);
-
 
 
 
@@ -100,8 +98,6 @@ Math.round(
 
 
 
-
-
 useEffect(()=>{
 
 
@@ -126,17 +122,13 @@ return;
 
 
 
-const userRef =
-
-ref(
+const userRef = ref(
 
 database,
 
 `users/${user.uid}`
 
 );
-
-
 
 
 
@@ -149,8 +141,7 @@ userRef,
 (snapshot)=>{
 
 
-const data =
-snapshot.val();
+const data = snapshot.val();
 
 
 
@@ -185,17 +176,14 @@ games:Number(data.gamesPlayed || 0)
 
 
 
-const notifRef =
 
-ref(
+const notifRef = ref(
 
 database,
 
 `notifications/${user.uid}`
 
 );
-
-
 
 
 
@@ -208,13 +196,11 @@ notifRef,
 (snapshot)=>{
 
 
-const data =
-snapshot.val();
+const data = snapshot.val();
 
 
 
 let unreadNotifications = 0;
-
 
 
 
@@ -225,13 +211,13 @@ unreadNotifications =
 
 Object.values(data)
 
-.filter(
+.filter((item:any)=>{
 
-(item:any)=>
 
-item.read === false
+return item && item.read !== true;
 
-)
+
+})
 
 .length;
 
@@ -240,16 +226,15 @@ item.read === false
 
 
 
-const friendRequestRef =
 
-ref(
+
+const friendRequestRef = ref(
 
 database,
 
 "friendRequests"
 
 );
-
 
 
 
@@ -261,8 +246,7 @@ friendRequestRef,
 (friendSnapshot)=>{
 
 
-const requests =
-friendSnapshot.val();
+const requests = friendSnapshot.val();
 
 
 
@@ -277,13 +261,13 @@ friendRequestsCount =
 
 Object.values(requests)
 
-.filter(
+.filter((item:any)=>
 
-(item:any)=>
 
 item.to === user.uid &&
 
 item.status === "pending"
+
 
 )
 
@@ -304,15 +288,19 @@ friendRequestsCount
 );
 
 
+
 }
+
+
 
 );
 
 
+
 }
 
-);
 
+);
 
 
 
@@ -361,7 +349,6 @@ justify-center
 
 
 
-
 <motion.div
 
 animate={{
@@ -392,7 +379,6 @@ left-[-40px]
 "
 
 />
-
 
 
 
@@ -434,6 +420,7 @@ right-[-40px]
 
 
 
+
 <section
 
 className="
@@ -445,7 +432,6 @@ pt-16
 "
 
 >
-
 
 
 
@@ -485,7 +471,6 @@ items-center
 
 
 
-
 <motion.h1
 
 animate={{
@@ -517,7 +502,6 @@ text-transparent
 ⭕ TI TA TO
 
 </motion.h1>
-
 
 
 
@@ -575,10 +559,7 @@ text-xs
 
 
 
-
 <div className="mt-4">
-
-
 
 
 
@@ -612,7 +593,6 @@ mt-1
 {username}
 
 </h2>
-
 
 
 
@@ -702,9 +682,7 @@ Parties
 
 
 </div>
-
-
-
+</div>
 
 
 
@@ -765,7 +743,6 @@ onClick={()=>router.push("/join-room")}
 
 
 
-
 <div
 
 className="
@@ -776,7 +753,6 @@ items-center
 "
 
 >
-
 
 
 
@@ -866,19 +842,14 @@ text-2xl
 <RewardAdButton />
 
 
-</div></div>
-
-
-
 </div>
 
 
 </div>
 
 
-</section>
 
-
+</div></section>
 
 
 
@@ -941,6 +912,7 @@ onClick={()=>router.push("/wallet")}
 
 
 
+
 <div
 
 onClick={()=>router.push("/notifications")}
@@ -961,7 +933,8 @@ cursor-pointer
 
 {
 
-notificationCount>0 &&
+notificationCount > 0 &&
+
 
 <span
 
@@ -979,9 +952,10 @@ font-bold
 
 >
 
+
 {
 
-notificationCount>9
+notificationCount > 9
 
 ?
 
@@ -993,13 +967,18 @@ notificationCount
 
 }
 
+
 </span>
+
 
 }
 
 
 
+
+
 <br/>
+
 
 Notification
 
@@ -1032,6 +1011,7 @@ onClick={()=>router.push("/settings")}
 
 
 
+
 </main>
 
 
@@ -1050,6 +1030,7 @@ onClick={()=>router.push("/settings")}
 
 function ActionButton({
 
+
 children,
 
 onClick,
@@ -1057,6 +1038,7 @@ onClick,
 variant="blue",
 
 big=false
+
 
 
 }:{
@@ -1069,14 +1051,15 @@ variant?:"blue"|"glass";
 
 big?:boolean;
 
-}){
 
+}){
 
 
 return(
 
 
 <motion.button
+
 
 whileHover={{
 
@@ -1086,17 +1069,20 @@ y:-3
 
 }}
 
+
 whileTap={{
 
 scale:.95
 
 }}
 
+
 onClick={onClick}
 
 
 
 className={
+
 
 variant==="blue"
 
@@ -1153,9 +1139,12 @@ shadow-[0_6px_0_rgba(255,255,255,0.15)]
 
 }
 
+
 >
 
+
 {children}
+
 
 </motion.button>
 
@@ -1175,11 +1164,13 @@ shadow-[0_6px_0_rgba(255,255,255,0.15)]
 
 function NavItem({
 
+
 icon,
 
 text,
 
 onClick
+
 
 
 }:{
@@ -1190,8 +1181,8 @@ text:string;
 
 onClick:()=>void;
 
-}){
 
+}){
 
 
 return(

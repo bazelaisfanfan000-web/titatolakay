@@ -29,32 +29,15 @@ import BackButton from "@/components/BackButton";
 
 
 
-
-
 export default function LeaderboardPage(){
 
 
-
-const [
-
-players,
-
-setPlayers
-
-]=useState<any[]>([]);
+const [players,setPlayers] =
+useState<any[]>([]);
 
 
-
-const [
-
-loading,
-
-setLoading
-
-]=useState(true);
-
-
-
+const [loading,setLoading] =
+useState(true);
 
 
 
@@ -64,18 +47,11 @@ setLoading
 useEffect(()=>{
 
 
-
 const usersRef =
-
 ref(
-
 database,
-
 "users"
-
 );
-
-
 
 
 
@@ -85,19 +61,13 @@ const unsubscribe =
 
 onValue(
 
-
 usersRef,
-
 
 (snapshot)=>{
 
 
-
 const data =
-
 snapshot.val() || {};
-
-
 
 
 
@@ -107,26 +77,41 @@ const list =
 
 Object.entries(data)
 
-.map(([uid,user]:any)=>({
+.map(([uid,user]:any)=>(
 
+{
 
 uid,
 
-...user
+username:
+user.username || "Joueur",
 
 
-}))
+wins:
+user.stats?.wins || 0,
+
+
+loses:
+user.stats?.loses || 0,
+
+
+games:
+user.stats?.games || 0
+
+
+}
+
+))
+
 
 
 .filter(
 
 (player:any)=>
 
-player.wins !== undefined
+player.games > 0
 
 );
-
-
 
 
 
@@ -139,14 +124,13 @@ list.sort(
 
 (a:any,b:any)=>
 
-Number(b.wins || 0)
+Number(b.wins)
 
 -
 
-Number(a.wins || 0)
+Number(a.wins)
 
 );
-
 
 
 
@@ -168,7 +152,6 @@ setLoading(false);
 }
 
 
-
 );
 
 
@@ -176,8 +159,7 @@ setLoading(false);
 
 
 
-
-return()=>unsubscribe();
+return ()=>unsubscribe();
 
 
 
@@ -192,7 +174,6 @@ return()=>unsubscribe();
 
 
 return(
-
 
 
 <main
@@ -223,8 +204,6 @@ py-10
 "
 
 >
-
-
 
 
 
@@ -281,8 +260,6 @@ left-[-60px]
 
 
 
-
-
 <motion.div
 
 
@@ -293,7 +270,6 @@ x:[0,-40,0],
 y:[0,-20,0]
 
 }}
-
 
 
 transition={{
@@ -336,9 +312,6 @@ right-[-60px]
 
 
 
-
-
-
 <div
 
 
@@ -358,12 +331,7 @@ mx-auto
 
 
 
-
-
-
 <BackButton />
-
-
 
 
 
@@ -381,7 +349,6 @@ y:[0,-5,0]
 }}
 
 
-
 transition={{
 
 duration:3,
@@ -389,7 +356,6 @@ duration:3,
 repeat:Infinity
 
 }}
-
 
 
 className="
@@ -421,9 +387,6 @@ text-transparent
 
 
 </motion.h1>
-
-
-
 
 
 
@@ -462,7 +425,7 @@ Les meilleurs joueurs par victoires 🎮
 
 {
 
-loading && (
+loading &&
 
 
 <p
@@ -479,16 +442,13 @@ mt-10
 
 >
 
-
 Chargement...
-
 
 </p>
 
 
-)
-
 }
+
 
 
 
@@ -598,7 +558,6 @@ justify-between
 
 
 
-
 <div
 
 className="
@@ -612,7 +571,6 @@ gap-3
 "
 
 >
-
 
 
 
@@ -651,7 +609,6 @@ font-black
 
 {
 
-
 index===0
 
 ?
@@ -678,9 +635,7 @@ index===2
 
 `#${index+1}`
 
-
 }
-
 
 
 </div>
@@ -695,21 +650,62 @@ index===2
 <div>
 
 
-<h2 className="font-bold text-sm">
+<h2
 
+className="
 
-{player.username || "Joueur"}
+font-bold
 
+text-sm
+
+"
+
+>
+
+{player.username}
 
 </h2>
 
 
 
 
-<p className="text-xs text-gray-400 mt-1">
+<p
+
+className="
+
+text-xs
+
+text-gray-400
+
+mt-1
+
+"
+
+>
 
 
-🎮 {player.games || 0} parties
+🎮 {player.games} parties
+
+
+</p>
+
+
+
+
+<p
+
+className="
+
+text-xs
+
+text-gray-400
+
+"
+
+>
+
+
+❌ {player.loses} défaites
 
 
 </p>
@@ -723,6 +719,7 @@ index===2
 
 
 
+
 </div>
 
 
@@ -733,30 +730,58 @@ index===2
 
 
 
-<div className="text-right">
+
+<div
+
+className="
+
+text-right
+
+"
+
+>
 
 
-<p className="text-yellow-400 font-black">
 
+<p
 
-🏆 {player.wins || 0}
+className="
 
+text-yellow-400
+
+font-black
+
+"
+
+>
+
+🏆 {player.wins}
 
 </p>
 
 
 
-<p className="text-[10px] text-gray-400">
+<p
 
+className="
+
+text-[10px]
+
+text-gray-400
+
+"
+
+>
 
 victoires
 
-
 </p>
 
 
 
 </div>
+
+
 
 
 
@@ -776,6 +801,7 @@ victoires
 
 
 </div>
+
 
 
 
@@ -820,7 +846,6 @@ mt-8
 
 "
 
-
 >
 
 
@@ -828,8 +853,6 @@ mt-8
 
 
 </motion.p>
-
-
 
 
 
@@ -845,7 +868,6 @@ mt-8
 
 
 );
-
 
 
 }

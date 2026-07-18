@@ -1,45 +1,122 @@
 import {
-  ref,
-  push,
-  set,
+  collection,
+  addDoc,
   serverTimestamp
-} from "firebase/database";
+} from "firebase/firestore";
+
 
 import {
-  database
-} from "@/lib/firebase";
+  db
+} from "./firebase";
 
 
 
 export async function sendNotification(
-  receiverId:string,
-  data:any
+
+  userId:string,
+
+  data:{
+    title:string;
+
+    message:string;
+
+    type:string;
+
+    amount?:number;
+
+    from?:string;
+
+    text?:string;
+
+    friendId?:string;
+
+    link?:string;
+  }
+
 ){
 
 
-const notificationRef =
-push(
-  ref(
-    database,
-    `notifications/${receiverId}`
-  )
-);
+  try{
+
+
+    await addDoc(
+
+      collection(
+        db,
+        "notifications",
+        userId,
+        "items"
+      ),
+
+      {
+
+
+        title:data.title,
+
+
+        message:data.message,
+
+
+        type:data.type,
 
 
 
-await set(
-  notificationRef,
-  {
+        amount:
+        data.amount || 0,
 
-    ...data,
 
-    createdAt:
-    serverTimestamp(),
 
-    read:false
+        // message ami
+
+        from:
+        data.from || "",
+
+
+
+        text:
+        data.text || "",
+
+
+
+        friendId:
+        data.friendId || "",
+
+
+
+        // redirection
+
+        link:
+        data.link || "",
+
+
+
+        read:false,
+
+
+
+        createdAt:
+        serverTimestamp()
+
+
+      }
+
+    );
+
+
+
+  }catch(error){
+
+
+    console.error(
+      "Erreur création notification:",
+      error
+    );
+
+
+    throw error;
+
 
   }
-);
 
 
 }

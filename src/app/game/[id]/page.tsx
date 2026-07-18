@@ -6,12 +6,10 @@ import {
   useRef
 } from "react";
 
-
 import {
   useParams,
   useRouter
 } from "next/navigation";
-
 
 import {
   ref,
@@ -19,51 +17,38 @@ import {
   remove
 } from "firebase/database";
 
-
 import {
   database,
   auth
 } from "@/lib/firebase";
 
-
 import {
   playGameMove
 } from "@/lib/firebaseGame";
-
 
 import {
   addPlayerWin,
   addPlayerLose
 } from "@/lib/playerStats";
 
-
 import {
   sendFriendRequest,
   checkFriendStatus
 } from "@/lib/friends";
 
-
 import TiTaToBoard from "@/components/TiTaToBoard";
-
 import GameTimer from "@/components/GameTimer";
-
 import WinnerModal from "@/components/WinnerModal";
-
 import GameChat from "@/components/GameChat";
-
 
 
 
 export default function GamePage(){
 
 
-const params =
-useParams();
+const params = useParams();
 
-
-const router =
-useRouter();
-
+const router = useRouter();
 
 
 const id =
@@ -114,10 +99,20 @@ useState<number>(0);
 
 const [friendStatus,setFriendStatus] =
 useState<
-"none" |
-"pending" |
+"none"|
+"pending"|
 "friend"
 >("none");
+
+
+
+// MESSAGE UI
+
+const [friendMessage,setFriendMessage] =
+useState("");
+
+const [gameMessage,setGameMessage] =
+useState("");
 
 
 
@@ -127,10 +122,10 @@ useRef(false);
 
 
 
-
 // ==========================
 // FIREBASE ROOM
 // ==========================
+
 
 useEffect(()=>{
 
@@ -195,7 +190,6 @@ length:10
 
 
 
-
 if(data.game?.turn){
 
 setTurn(
@@ -221,7 +215,6 @@ data.game?.turnStartedAt || 0
 
 
 
-
 const user =
 auth.currentUser;
 
@@ -239,7 +232,6 @@ data.players[user.uid].symbol
 }
 
 
-
 }
 
 );
@@ -249,14 +241,7 @@ data.players[user.uid].symbol
 return ()=>unsubscribe();
 
 
-
-},[id]);
-
-
-
-
-
-// ==========================
+},[id]);// ==========================
 // VERIFIER AMI
 // ==========================
 
@@ -304,8 +289,8 @@ setFriendStatus(status as any);
 });
 
 
-
 },[room]);
+
 
 
 
@@ -364,38 +349,80 @@ async function pay(){
 try{
 
 
-    // Appel API serveur pour paiement (utilise Firebase Admin côté serveur)
-    const user = auth.currentUser;
+const user =
+auth.currentUser;
 
-    if(!user){
-      throw new Error("Utilisateur non connecté");
-    }
 
-    const token = await user.getIdToken();
 
-    const res = await fetch(
-      "/api/game/finish-payment",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ gameId: id })
-      }
-    );
+if(!user){
 
-    const result = await res.json();
+throw new Error(
+"Utilisateur non connecté"
+);
 
-    if(!res.ok || !result.success){
-      throw new Error(result?.error || "Erreur paiement");
-    }
+}
 
-    paymentDone.current = true;
 
-    await addPlayerWin(
-      result.winnerUid
-    );
+
+const token =
+await user.getIdToken();
+
+
+
+const res =
+await fetch(
+
+"/api/game/finish-payment",
+
+{
+
+method:"POST",
+
+headers:{
+
+"Content-Type":
+"application/json",
+
+"authorization":
+`Bearer ${token}`
+
+},
+
+body:JSON.stringify({
+
+gameId:id
+
+})
+
+}
+
+);
+
+
+
+const result =
+await res.json();
+
+
+
+if(
+!res.ok ||
+!result.success
+){
+
+throw new Error(
+result?.error ||
+"Erreur paiement"
+);
+
+}
+
+
+
+await addPlayerWin(
+result.winnerUid
+);
+
 
 
 
@@ -421,7 +448,6 @@ addPlayerLose(uid);
 
 
 
-// SUPPRESSION AUTOMATIQUE DE LA PARTIE
 
 setTimeout(async()=>{
 
@@ -439,15 +465,13 @@ database,
 );
 
 
-console.log(
-"✅ Partie supprimée"
-);
-
-
-
 },5000);
-  }
-  catch(error){
+
+
+
+}
+
+catch(error){
 
 console.log(
 "PAYMENT ERROR",
@@ -470,7 +494,15 @@ pay();
 },[
 room,
 id
-]);// ==========================
+]);
+
+
+
+
+
+
+
+// ==========================
 // JOUER UN COUP
 // ==========================
 
@@ -484,8 +516,10 @@ col:number
 ){
 
 
+
 if(!mySymbol)
 return;
+
 
 
 
@@ -494,15 +528,27 @@ turn !== mySymbol
 ){
 
 
-alert(
-"Ce n'est pas ton tour"
+setGameMessage(
+"⏳ Ce n'est pas ton tour"
 );
+
+
+
+setTimeout(()=>{
+
+
+setGameMessage("");
+
+},2500);
+
 
 
 return;
 
 
 }
+
+
 
 
 
@@ -524,20 +570,32 @@ mySymbol
 
 
 }
+
 catch(error:any){
 
 
-alert(
-error.message
+setGameMessage(
+
+"❌ " + error.message
+
 );
 
 
-}
+
+setTimeout(()=>{
+
+
+setGameMessage("");
+
+},2500);
 
 
 
 }
 
+
+
+}
 
 
 
@@ -570,16 +628,24 @@ return;
 
 
 
+
 const opponentId =
+
 Object.keys(room.players)
+
 .find(
+
 uid=>uid!==user.uid
+
 );
+
 
 
 
 if(!opponentId)
 return;
+
+
 
 
 
@@ -593,21 +659,38 @@ opponentId
 
 
 
+
+
 setFriendStatus(
+
 "pending"
+
 );
 
 
 
-alert(
+
+
+setFriendMessage(
+
 "📩 Demande d'ami envoyée"
+
 );
+
+
+
+
+
+setTimeout(()=>{
+
+
+setFriendMessage("");
+
+},3000);
 
 
 
 }
-
-
 
 
 
@@ -658,24 +741,30 @@ auth.currentUser;
 
 
 
-const reward =
+const bet =
+Number(room.bet || 0);
 
+
+
+
+const pot =
+Number(room.pot || 0);
+
+
+
+
+const commission =
 Math.floor(
-
-Number(room.pot || 0)
-
-*
-
-0.9
-
+pot * 0.1
 );
 
 
 
 
-
-
-return(
+const reward =
+Math.floor(
+pot * 0.9
+);return(
 
 
 <main
@@ -694,6 +783,7 @@ items-center
 "
 
 >
+
 
 
 <h1
@@ -730,7 +820,9 @@ mb-4
 
 >
 
+
 💰 POT
+
 
 <br/>
 
@@ -745,7 +837,7 @@ text-xl
 
 >
 
-{room.pot} HTG
+{pot} HTG
 
 </span>
 
@@ -765,6 +857,7 @@ mb-4
 "
 
 >
+
 
 Votre symbole :
 
@@ -807,6 +900,7 @@ winner={winner}
 playMove={handleMove}
 
 />
+
 
 
 
@@ -875,10 +969,22 @@ mySymbol={mySymbol}
 reward={reward}
 
 
+bet={bet}
+
+
+pot={pot}
+
+
+commission={commission}
+
+
 friendStatus={friendStatus}
 
 
+
 onAddFriend={handleAddFriend}
+
+
 
 
 
@@ -886,17 +992,99 @@ onClose={()=>{
 
 
 router.push(
+
 "/dashboard"
+
 );
 
 
 }}
 
 
+
 />
 
 
 }
+
+
+
+
+
+
+
+
+{/* MESSAGE DEMANDE AMI */}
+
+{
+
+friendMessage &&
+
+
+<div
+
+className="
+fixed
+bottom-24
+left-1/2
+-translate-x-1/2
+bg-blue-600
+text-white
+px-5
+py-3
+rounded-2xl
+shadow-xl
+font-bold
+z-50
+"
+
+>
+
+{friendMessage}
+
+</div>
+
+}
+
+
+
+
+
+
+
+{/* MESSAGE JEU */}
+
+{
+
+gameMessage &&
+
+
+<div
+
+className="
+fixed
+bottom-24
+left-1/2
+-translate-x-1/2
+bg-red-600
+text-white
+px-5
+py-3
+rounded-2xl
+shadow-xl
+font-bold
+z-50
+"
+
+>
+
+{gameMessage}
+
+</div>
+
+}
+
+
 
 
 

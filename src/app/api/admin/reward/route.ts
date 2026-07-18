@@ -12,6 +12,10 @@ import {
   checkAdmin
 } from "@/lib/checkAdmin";
 
+import {
+  sendNotification
+} from "@/lib/notifications";
+
 
 
 
@@ -56,8 +60,9 @@ status:400
 );
 
 
-}
 
+
+}
 
 
 
@@ -65,10 +70,7 @@ status:400
 // Vérifier que c'est un admin
 
 await checkAdmin(
-adminUid
-);
-
-
+adminUid);
 
 
 
@@ -95,6 +97,11 @@ const updates:any = {};
 
 
 
+const notificationPromises:any[] = [];
+
+
+
+
 Object.entries(users)
 
 .forEach(
@@ -115,6 +122,7 @@ updates[
 `users/${uid}/balance`
 
 ]
+
 =
 
 Math.floor(
@@ -124,56 +132,23 @@ oldBalance + Number(amount)
 
 
 
-
-
-const notificationId =
-
-Date.now()
-+
-Math.random();
-
-
-
-
-
-
-updates[
-
-`notifications/${uid}/${notificationId}`
-
-]
-=
-
-
+notificationPromises.push(
+sendNotification(
+uid,
 {
-
-
-title:"🎁 Récompense Domino Lakay",
-
-
-message:
-
-message ||
-
-`Vous avez reçu ${amount} HTG`,
-
-
-read:false,
-
-createdAt:Date.now()
-
-
-
-};
-
-
-
-
+title:"📢 Message Titato",
+message:message || "Bienvenue dans la nouvelle version",
+type:"system",
+amount:Number(amount)
 }
-
+)
 );
 
 
+
+
+
+});
 
 
 
@@ -185,6 +160,11 @@ await adminDB
 .update(
 updates
 );
+
+
+
+
+await Promise.all(notificationPromises);
 
 
 
@@ -204,6 +184,7 @@ total:
 Object.keys(users).length
 *
 Number(amount)
+
 
 
 
@@ -234,7 +215,9 @@ status:500
 }
 
 
+
 );
+
 
 
 

@@ -1,31 +1,114 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import {
+ useRouter,
+ usePathname
+} from "next/navigation";
+
+import {
+ useEffect,
+ useState
+} from "react";
+
+
+import {
+ collection,
+ query,
+ where,
+ onSnapshot
+} from "firebase/firestore";
+
+
+import {
+ auth,
+ db
+} from "@/lib/firebase";
+
+import {
+ onAuthStateChanged
+} from "firebase/auth";
+
 
 
 export default function BottomNav(){
 
 
 const router = useRouter();
+
 const pathname = usePathname();
 
 
-const [count,setCount] = useState(3);
-
-
+const [count,setCount]=useState(0);
 
 
 
 useEffect(()=>{
 
-const saved = localStorage.getItem("notifications_count");
 
-if(saved){
+let unsubscribeNotif:any;
 
-setCount(Number(saved));
+
+
+const unsubscribeAuth =
+onAuthStateChanged(
+auth,
+(user)=>{
+
+
+if(!user)
+return;
+
+
+
+const notifQuery =
+query(
+
+collection(
+db,
+"notifications",
+user.uid,
+"items"
+),
+
+where(
+"read",
+"==",
+false
+)
+
+);
+
+
+
+unsubscribeNotif =
+onSnapshot(
+notifQuery,
+(snapshot)=>{
+
+
+setCount(
+snapshot.size
+);
+
 
 }
+
+);
+
+
+});
+
+
+
+return ()=>{
+
+unsubscribeAuth();
+
+if(unsubscribeNotif)
+unsubscribeNotif();
+
+};
+
 
 },[]);
 
@@ -35,17 +118,13 @@ setCount(Number(saved));
 
 function openNotifications(){
 
-localStorage.setItem(
-"notifications_count",
-"0"
+
+router.push(
+"/notifications"
 );
 
-setCount(0);
-
-router.push("/notifications");
 
 }
-
 
 
 
@@ -76,13 +155,8 @@ items-center
 ">
 
 
-
-
-
 <button
-
 onClick={()=>router.push("/")}
-
 className="
 text-white
 flex
@@ -90,13 +164,10 @@ flex-col
 items-center
 text-[9px]
 "
-
 >
 
 <span className="text-sm">
-
 🏠
-
 </span>
 
 Accueil
@@ -106,14 +177,8 @@ Accueil
 
 
 
-
-
-
-
 <button
-
 onClick={()=>router.push("/wallet")}
-
 className="
 text-white
 flex
@@ -121,21 +186,15 @@ flex-col
 items-center
 text-[9px]
 "
-
 >
 
 <span className="text-sm">
-
 💼
-
 </span>
 
 Portefeuille
 
 </button>
-
-
-
 
 
 
@@ -159,19 +218,13 @@ text-[9px]
 
 <div className="relative">
 
-
 <span className="text-sm">
-
 🔔
-
 </span>
 
 
 
-
-{
-
-count > 0 && (
+{count > 0 && (
 
 <span className="
 absolute
@@ -193,9 +246,7 @@ justify-center
 
 </span>
 
-)
-
-}
+)}
 
 
 
@@ -206,9 +257,6 @@ Notification
 
 
 </button>
-
-
-
 
 
 
@@ -228,28 +276,20 @@ text-[9px]
 
 >
 
-
 <span className="text-sm">
-
 ⚙️
-
 </span>
 
-
 Paramètre
-
 
 </button>
 
 
 
 
-
 </div>
 
-
 </nav>
-
 
 );
 

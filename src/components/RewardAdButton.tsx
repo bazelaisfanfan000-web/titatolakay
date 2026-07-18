@@ -8,6 +8,10 @@ import {
   auth
 } from "@/lib/firebase";
 
+import {
+  sendNotification
+} from "@/lib/notifications";
+
 
 const DIRECT_LINK =
 "https://omg10.com/4/11336319";
@@ -15,23 +19,40 @@ const DIRECT_LINK =
 
 export default function RewardAdButton(){
 
-  const [loading, setLoading] = useState(false);
-  const [seconds, setSeconds] = useState(0);
+  const [loading,setLoading] = useState(false);
+
+  const [seconds,setSeconds] = useState(0);
+
+  const [message,setMessage] = useState("");
+
 
 
   async function watchAd(){
 
     const user = auth.currentUser;
 
+
     if(!user){
-      alert("Utilisateur non connecté");
+
+      setMessage(
+        "❌ Utilisateur non connecté"
+      );
+
+      setTimeout(()=>{
+        setMessage("");
+      },3000);
+
       return;
+
     }
+
 
 
     try{
 
+
       setLoading(true);
+
 
 
       window.open(
@@ -40,9 +61,12 @@ export default function RewardAdButton(){
       );
 
 
+
       let time = 15;
 
+
       setSeconds(time);
+
 
 
 
@@ -51,15 +75,19 @@ export default function RewardAdButton(){
 
         time--;
 
+
         setSeconds(time);
 
 
 
         if(time <= 0){
 
+
           clearInterval(timer);
 
+
           await claimReward(user);
+
 
         }
 
@@ -70,7 +98,9 @@ export default function RewardAdButton(){
 
     }
 
+
     catch(error:any){
+
 
       console.error(
         "[AD BUTTON] START ERROR:",
@@ -78,17 +108,27 @@ export default function RewardAdButton(){
       );
 
 
-      alert(
-        error.message ||
-        "Erreur ouverture pub"
+      setMessage(
+        "❌ Erreur ouverture pub"
       );
+
+
+      setTimeout(()=>{
+
+        setMessage("");
+
+      },3000);
+
 
 
       setLoading(false);
 
+
     }
 
+
   }
+
 
 
 
@@ -101,51 +141,39 @@ export default function RewardAdButton(){
 
 
       const token =
-        await user.getIdToken(true);
-
-
-
-      console.log(
-        "[AD BUTTON] Fetching /api/reward/ad..."
-      );
+      await user.getIdToken(true);
 
 
 
 
       const response =
-        await fetch(
-          "/api/reward/ad",
-          {
+      await fetch(
 
-            method:"POST",
+        "/api/reward/ad",
 
+        {
 
-            headers:{
-
-              "Content-Type":
-              "application/json"
-
-            },
+          method:"POST",
 
 
-            body:JSON.stringify({
+          headers:{
 
-              token,
+            "Content-Type":
+            "application/json"
 
-              uid:user.uid
-
-            })
-
-          }
-        );
+          },
 
 
+          body:JSON.stringify({
 
+            token,
 
+            uid:user.uid
 
-      console.log(
-        "[AD BUTTON] Status:",
-        response.status
+          })
+
+        }
+
       );
 
 
@@ -153,24 +181,15 @@ export default function RewardAdButton(){
 
 
       const responseText =
-        await response.text();
-
-
-
-
-      console.log(
-        "[AD BUTTON] Response:",
-        responseText
-      );
-
+      await response.text();
 
 
 
 
       const contentType =
-        response.headers.get(
-          "content-type"
-        );
+      response.headers.get(
+        "content-type"
+      );
 
 
 
@@ -193,42 +212,9 @@ export default function RewardAdButton(){
 
 
 
-      let data;
-
-
-      try{
-
-
-        data =
-          JSON.parse(
-            responseText
-          );
-
-
-      }
-
-      catch(error){
-
-
-        console.error(
-          "JSON ERROR",
-          error
-        );
-
-
-        throw new Error(
-          "Erreur lecture serveur"
-        );
-
-      }
-
-
-
-
-
-      console.log(
-        "[AD BUTTON] API:",
-        data
+      const data =
+      JSON.parse(
+        responseText
       );
 
 
@@ -239,9 +225,13 @@ export default function RewardAdButton(){
 
 
         throw new Error(
+
           data.error ||
+
           "Erreur API"
+
         );
+
 
       }
 
@@ -252,26 +242,49 @@ export default function RewardAdButton(){
       if(data.success){
 
 
-        alert(
-          "🎉 +5 HTG ajouté"
+        setMessage(
+          "🎉 +5 HTG ajouté à ton portefeuille"
         );
 
 
-        window.location.reload();
+
+        setTimeout(()=>{
+
+
+          setMessage("");
+
+
+        },3000);
+
+
+        await sendNotification(
+          user.uid,
+          {
+            title:"🎬 Récompense publicité",
+            message:"Tu as regardé une publicité et reçu 5 HTG",
+            type:"ad_reward",
+            amount:5
+          }
+        );
+
 
 
       }
+
 
       else{
 
 
         throw new Error(
+
           data.error ||
+
           "Récompense refusée"
+
         );
 
-      }
 
+      }
 
 
 
@@ -288,13 +301,26 @@ export default function RewardAdButton(){
 
 
 
-      alert(
-        "Erreur récompense: " +
+      setMessage(
+
+        "❌ Erreur récompense: " +
+
         error.message
+
       );
 
 
+
+      setTimeout(()=>{
+
+        setMessage("");
+
+      },3000);
+
+
+
     }
+
 
 
     finally{
@@ -315,8 +341,10 @@ export default function RewardAdButton(){
 
 
 
-
   return(
+
+    <>
+
 
     <button
 
@@ -356,6 +384,46 @@ export default function RewardAdButton(){
 
 
     </button>
+
+
+
+
+
+    {
+
+      message &&
+
+
+      <div
+
+      className="
+      fixed
+      bottom-6
+      left-1/2
+      -translate-x-1/2
+      bg-green-600
+      text-white
+      px-6
+      py-3
+      rounded-2xl
+      font-black
+      shadow-xl
+      z-50
+      animate-bounce
+      "
+
+      >
+
+      {message}
+
+
+      </div>
+
+
+    }
+
+
+    </>
 
   );
 

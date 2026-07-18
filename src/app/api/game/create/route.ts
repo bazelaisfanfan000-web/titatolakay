@@ -19,6 +19,10 @@ import {
   deductBet
 } from "@/lib/firebaseEconomyAdmin";
 
+import {
+  sendNotification
+} from "@/lib/notifications";
+
 
 
 
@@ -43,7 +47,9 @@ bet,
 
 mode,
 
-gameType
+gameType,
+
+friendId
 
 } = body;
 
@@ -442,6 +448,21 @@ roomId,
 status:"waiting"
 
 });
+
+
+
+if(friendId){
+
+await sendNotification(
+friendId,
+{
+title:"🎮 Invitation partie",
+message:"Un joueur t'invite à rejoindre une partie",
+type:"game"
+}
+);
+
+}
 
 
 

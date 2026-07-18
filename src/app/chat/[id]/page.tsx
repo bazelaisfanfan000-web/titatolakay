@@ -53,13 +53,11 @@ export default function ChatPage(){
 
 const router = useRouter();
 
-
 const params = useParams();
 
 
 const friendId =
 params.id as string;
-
 
 
 
@@ -75,8 +73,6 @@ useState("");
 
 const [messages,setMessages] =
 useState<any[]>([]);
-
-
 
 
 
@@ -117,33 +113,23 @@ return ()=>unsubscribe();
 
 
 
-
 const chatId =
-
 
 userId && friendId
 
-
 ?
-
 
 userId < friendId
 
-
 ?
-
 
 `${userId}_${friendId}`
 
-
 :
-
 
 `${friendId}_${userId}`
 
-
 :
-
 
 "";
 
@@ -175,7 +161,6 @@ database,
 
 ),
 
-
 orderByChild(
 
 "timestamp"
@@ -188,13 +173,11 @@ orderByChild(
 
 
 
-
 const unsubscribe =
 
 onValue(
 
 messagesRef,
-
 
 (snapshot)=>{
 
@@ -206,14 +189,11 @@ snapshot.val();
 
 if(!data){
 
-
 setMessages([]);
 
 return;
 
-
 }
-
 
 
 
@@ -230,14 +210,12 @@ Object.entries(data)
 
 id,
 
-
 ...value
 
 
 })
 
 );
-
 
 
 
@@ -248,9 +226,7 @@ setMessages(list);
 
 
 
-
 list.forEach(async(msg)=>{
-
 
 
 if(
@@ -262,7 +238,6 @@ msg.senderId === friendId
 msg.read !== true
 
 ){
-
 
 
 await update(
@@ -277,22 +252,17 @@ database,
 
 {
 
-
 read:true
-
 
 }
 
 );
 
 
-
 }
 
 
-
 });
-
 
 
 
@@ -309,6 +279,14 @@ return ()=>unsubscribe();
 
 
 },[chatId,friendId]);
+
+
+
+
+
+
+
+
 async function sendMessage(){
 
 
@@ -321,6 +299,13 @@ return;
 if(!chatId)
 
 return;
+
+
+
+
+
+const text = message;
+
 
 
 
@@ -353,7 +338,7 @@ messageRef,
 senderId:userId,
 
 
-text:message,
+text,
 
 
 timestamp:serverTimestamp(),
@@ -370,26 +355,31 @@ read:false
 
 
 
-await sendNotification(
 
+
+// Notification ami
+
+await sendNotification(
 
 friendId,
 
-
 {
 
+title:"💬 Nouveau message",
+
+message:"Tu as reçu un nouveau message",
 
 type:"message",
 
-
 from:userId,
 
+text:text,
 
-text:message
+friendId:userId,
 
+link:`/chat/${userId}`
 
 }
-
 
 );
 
@@ -410,26 +400,30 @@ setMessage("");
 
 
 
+
 async function inviteToGame(){
+
 
 
 await sendNotification(
 
-
 friendId,
-
 
 {
 
+title:"🎮 Invitation de partie",
+
+message:"Un ami t'invite à jouer",
 
 type:"game_invite",
 
+from:userId,
 
-from:userId
+friendId:userId,
 
+link:`/chat/${userId}`
 
 }
-
 
 );
 
@@ -442,8 +436,8 @@ alert(
 );
 
 
-
 }
+
 
 
 
@@ -471,9 +465,6 @@ flex-col
 
 
 
-
-
-
 <header
 
 className="
@@ -485,7 +476,6 @@ backdrop-blur-xl
 "
 
 >
-
 
 
 
@@ -503,10 +493,6 @@ py-2
 rounded-xl
 mb-4
 font-bold
-shadow-[0_4px_0_rgba(0,0,0,.5)]
-active:translate-y-1
-active:shadow-none
-transition
 "
 
 >
@@ -519,18 +505,11 @@ transition
 
 
 
-
-
 <h1
 
 className="
 text-2xl
 font-black
-bg-gradient-to-r
-from-cyan-300
-to-blue-500
-bg-clip-text
-text-transparent
 "
 
 >
@@ -538,28 +517,6 @@ text-transparent
 💬 Discussion
 
 </h1>
-
-
-
-
-
-
-
-<p
-
-className="
-text-green-400
-mt-2
-font-bold
-"
-
->
-
-🟢 En ligne
-
-</p>
-
-
 
 
 
@@ -576,16 +533,7 @@ w-full
 py-4
 rounded-2xl
 font-black
-bg-gradient-to-b
-from-green-300
-via-green-500
-to-green-800
-border
-border-green-300/50
-shadow-[0_7px_0_#166534]
-active:translate-y-[5px]
-active:shadow-[0_2px_0_#166534]
-transition-all
+bg-green-600
 "
 
 >
@@ -597,8 +545,6 @@ transition-all
 
 
 </header>
-
-
 
 
 
@@ -621,7 +567,6 @@ space-y-3
 {
 
 messages.map((msg)=>(
-
 
 
 <motion.div
@@ -649,25 +594,17 @@ py-3
 
 rounded-2xl
 
-font-medium
-
-shadow-[0_5px_10px_rgba(0,0,0,.4)]
-
 ${
 
 msg.senderId === userId
 
-
 ?
 
-
-"ml-auto bg-gradient-to-b from-blue-400 to-blue-700 border border-blue-300/40"
-
+"ml-auto bg-blue-600"
 
 :
 
-
-"bg-white/10 border border-white/20 backdrop-blur-xl"
+"bg-white/10"
 
 }
 
@@ -683,17 +620,13 @@ msg.senderId === userId
 </motion.div>
 
 
-
 ))
-
-
 
 }
 
 
+
 </section>
-
-
 
 
 
@@ -709,12 +642,9 @@ border-t
 border-white/10
 flex
 gap-2
-bg-black/20
 "
 
 >
-
-
 
 
 
@@ -723,46 +653,31 @@ bg-black/20
 value={message}
 
 onChange={(e)=>
-
 setMessage(e.target.value)
-
 }
 
 onKeyDown={(e)=>{
 
-
 if(e.key==="Enter"){
-
 
 sendMessage();
 
-
 }
-
 
 }}
 
-
 placeholder="Écrire un message..."
-
 
 className="
 flex-1
 bg-white/10
-border
-border-white/20
-rounded-2xl
+rounded-xl
 px-4
 py-3
 outline-none
-shadow-inner
 "
 
-
 />
-
-
-
 
 
 
@@ -772,21 +687,11 @@ shadow-inner
 
 onClick={sendMessage}
 
-
 className="
-bg-gradient-to-b
-from-cyan-300
-via-blue-500
-to-blue-800
+bg-blue-600
 px-5
-rounded-2xl
-font-black
-border
-border-cyan-300/40
-shadow-[0_6px_0_#123a8a]
-active:translate-y-[4px]
-active:shadow-[0_2px_0_#123a8a]
-transition-all
+rounded-xl
+font-bold
 "
 
 >
@@ -797,13 +702,7 @@ transition-all
 
 
 
-
-
-
-
-
 </footer>
-
 
 
 

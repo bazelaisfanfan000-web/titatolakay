@@ -13,6 +13,10 @@ import {
   adminAuth
 } from "@/lib/firebaseAdmin";
 
+import {
+  sendNotification
+} from "@/lib/notifications";
+
 
 const COMMISSION_RATE = 0.10;
 
@@ -382,6 +386,18 @@ createdAt:Date.now()
 
 
 
+await sendNotification(
+winnerUid,
+{
+title:"🏆 Victoire !",
+message:`Tu as gagné ${reward} HTG dans ta partie`,
+type:"win",
+amount:reward
+}
+);
+
+
+
 
 
 
@@ -505,6 +521,17 @@ Math.round(
 )
 
 });
+
+
+
+await sendNotification(
+loserUid,
+{
+title:"😢 Partie terminée",
+message:"Tu as perdu cette partie",
+type:"lose"
+}
+);
 
 
 }
