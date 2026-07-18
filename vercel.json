@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/monthly-champion",
+      "schedule": "0 0 1 * *"
+    }
+  ]
+}

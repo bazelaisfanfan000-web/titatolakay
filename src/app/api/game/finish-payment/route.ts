@@ -13,9 +13,16 @@ import {
   adminAuth
 } from "@/lib/firebaseAdmin";
 
+
 import {
   sendNotification
 } from "@/lib/notifications";
+
+
+import {
+  addMonthlyPoints
+} from "@/lib/monthlyChampion";
+
 
 
 const COMMISSION_RATE = 0.10;
@@ -26,7 +33,9 @@ export async function POST(
   request: Request
 ) {
 
+
 try {
+
 
 
 const {
@@ -35,7 +44,10 @@ const {
 
 
 
+
+
 if(!gameId){
+
 
 return NextResponse.json(
 {
@@ -46,7 +58,10 @@ status:400
 }
 );
 
+
 }
+
+
 
 
 
@@ -58,7 +73,9 @@ request.headers.get(
 
 
 
+
 if(!authHeader){
+
 
 return NextResponse.json(
 {
@@ -69,7 +86,10 @@ status:401
 }
 );
 
+
 }
+
+
 
 
 
@@ -81,12 +101,22 @@ authHeader.replace(
 
 
 
+
+
 await adminAuth.verifyIdToken(
 token
 );
 
 
 
+
+
+
+
+
+// ===============================
+// CHARGER LA PARTIE
+// ===============================
 
 
 const roomRef =
@@ -101,7 +131,9 @@ await roomRef.get();
 
 
 
+
 if(!roomSnap.exists()){
+
 
 return NextResponse.json(
 {
@@ -112,7 +144,10 @@ status:404
 }
 );
 
+
 }
+
+
 
 
 
@@ -124,9 +159,12 @@ roomSnap.val();
 
 
 
+
+
 if(
 room.game?.status !== "finished"
 ){
+
 
 return NextResponse.json(
 {
@@ -137,7 +175,10 @@ status:400
 }
 );
 
+
 }
+
+
 
 
 
@@ -156,6 +197,8 @@ adminDB.ref(
 
 
 
+
+
 const lock =
 await paymentRef.transaction(
 (current:any)=>{
@@ -166,12 +209,16 @@ current === "completed" ||
 current === "processing"
 ){
 
+
 return;
+
 
 }
 
 
+
 return "processing";
+
 
 
 }
@@ -179,11 +226,15 @@ return "processing";
 
 
 
+
+
+
 if(!lock.committed){
+
+
 
 return NextResponse.json(
 {
-success:false,
 error:"Paiement déjà traité"
 },
 {
@@ -191,14 +242,8 @@ status:409
 }
 );
 
-}
 
-
-
-
-
-
-// ===============================
+}// ===============================
 // TROUVER GAGNANT
 // ===============================
 
@@ -241,6 +286,7 @@ if(!winnerUid){
 await paymentRef.set(null);
 
 
+
 return NextResponse.json(
 {
 error:"Gagnant introuvable"
@@ -250,6 +296,7 @@ status:400
 }
 );
 
+
 }
 
 
@@ -257,8 +304,11 @@ status:400
 
 
 
+
+
+
 // ===============================
-// CALCUL
+// CALCUL DU GAIN
 // ===============================
 
 
@@ -292,10 +342,13 @@ pot - commission;
 
 
 
+
 if(reward <= 0){
 
 
+
 await paymentRef.set(null);
+
 
 
 return NextResponse.json(
@@ -307,7 +360,11 @@ status:400
 }
 );
 
+
 }
+
+
+
 
 
 
@@ -349,6 +406,7 @@ oldBalance + reward;
 return newBalance;
 
 
+
 }
 );
 
@@ -357,8 +415,11 @@ return newBalance;
 
 
 
+
+
+
 // ===============================
-// TRANSACTION
+// TRANSACTION HISTORIQUE
 // ===============================
 
 
@@ -386,15 +447,7 @@ createdAt:Date.now()
 
 
 
-await sendNotification(
-winnerUid,
-{
-title:"🏆 Victoire !",
-message:`Tu as gagné ${reward} HTG dans ta partie`,
-type:"win",
-amount:reward
-}
-);
+
 
 
 
@@ -425,12 +478,12 @@ winnerSnap.val() || {};
 
 
 const wins =
-Number(winnerData.wins || 0)+1;
+Number(winnerData.wins || 0) + 1;
 
 
 
 const winnerGames =
-Number(winnerData.gamesPlayed || 0)+1;
+Number(winnerData.gamesPlayed || 0) + 1;
 
 
 
@@ -454,6 +507,37 @@ Math.round(
 
 
 // ===============================
+// CHAMPION DU MOIS
+// ===============================
+
+
+await addMonthlyPoints(
+winnerUid,
+10
+);
+
+
+
+
+
+
+
+
+await sendNotification(
+winnerUid,
+{
+
+title:"🏆 Victoire !",
+
+message:
+`Tu as gagné ${reward} HTG`,
+
+type:"win",
+
+amount:reward
+
+}
+);// ===============================
 // STATS PERDANT
 // ===============================
 
@@ -481,7 +565,11 @@ loserUid = uid;
 
 
 
+
+
+
 if(loserUid){
+
 
 
 const loserRef =
@@ -501,8 +589,9 @@ loserSnap.val() || {};
 
 
 
+
 const loserGames =
-Number(loserData.gamesPlayed || 0)+1;
+Number(loserData.gamesPlayed || 0) + 1;
 
 
 
@@ -511,30 +600,51 @@ Number(loserData.wins || 0);
 
 
 
+const loses =
+Number(loserData.loses || 0) + 1;
+
+
+
+
+
+
 await loserRef.update({
+
+loses,
 
 gamesPlayed:loserGames,
 
 winRate:
 Math.round(
-(loserWins / loserGames)*100
+(loserWins / loserGames) * 100
 )
 
 });
 
 
 
+
+
+
+
 await sendNotification(
 loserUid,
 {
+
 title:"😢 Partie terminée",
+
 message:"Tu as perdu cette partie",
+
 type:"lose"
+
 }
 );
 
 
+
 }
+
+
 
 
 
@@ -552,22 +662,29 @@ await roomRef.update({
 "game/paymentStatus":
 "completed",
 
+
 "game/winnerUid":
 winnerUid,
+
 
 "game/reward":
 reward,
 
+
 "game/commission":
 commission,
+
 
 "game/pot":
 pot,
 
+
 "game/paidAt":
 Date.now()
 
+
 });
+
 
 
 
@@ -594,8 +711,12 @@ newBalance
 
 
 
+
+
+
 }
 catch(error:any){
+
 
 
 console.error(
@@ -605,11 +726,15 @@ error
 
 
 
+
+
 return NextResponse.json(
 {
+
 error:
 error?.message ||
 "Erreur serveur"
+
 },
 {
 status:500
@@ -617,7 +742,9 @@ status:500
 );
 
 
+
 }
+
 
 
 }

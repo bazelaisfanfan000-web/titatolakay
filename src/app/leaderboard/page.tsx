@@ -43,7 +43,6 @@ useState(true);
 
 
 
-
 useEffect(()=>{
 
 
@@ -52,7 +51,6 @@ ref(
 database,
 "users"
 );
-
 
 
 
@@ -88,16 +86,15 @@ user.username || "Joueur",
 
 
 wins:
-user.stats?.wins || 0,
+Number(user.wins || 0),
 
 
 loses:
-user.stats?.loses || 0,
+Number(user.loses || 0),
 
 
 games:
-user.stats?.games || 0
-
+Number(user.gamesPlayed || 0)
 
 }
 
@@ -105,11 +102,14 @@ user.stats?.games || 0
 
 
 
+
+
 .filter(
 
 (player:any)=>
 
-player.games > 0
+player.games > 0 ||
+player.wins > 0
 
 );
 
@@ -124,14 +124,11 @@ list.sort(
 
 (a:any,b:any)=>
 
-Number(b.wins)
+(b.wins - a.wins) ||
 
--
-
-Number(a.wins)
+(b.games - a.games)
 
 );
-
 
 
 
@@ -142,7 +139,6 @@ setPlayers(
 sorted.slice(0,50)
 
 );
-
 
 
 setLoading(false);
@@ -158,14 +154,11 @@ setLoading(false);
 
 
 
-
 return ()=>unsubscribe();
 
 
 
 },[]);
-
-
 
 
 
@@ -207,9 +200,6 @@ py-10
 
 
 
-
-
-
 <motion.div
 
 
@@ -229,7 +219,6 @@ duration:6,
 repeat:Infinity
 
 }}
-
 
 
 className="
@@ -259,7 +248,6 @@ left-[-60px]
 
 
 
-
 <motion.div
 
 
@@ -279,7 +267,6 @@ duration:7,
 repeat:Infinity
 
 }}
-
 
 
 className="
@@ -328,7 +315,6 @@ mx-auto
 "
 
 >
-
 
 
 <BackButton />
@@ -393,6 +379,7 @@ text-transparent
 
 
 
+
 <p
 
 className="
@@ -422,11 +409,9 @@ Les meilleurs joueurs par victoires 🎮
 
 
 
-
 {
 
 loading &&
-
 
 <p
 
@@ -446,9 +431,7 @@ Chargement...
 
 </p>
 
-
 }
-
 
 
 
@@ -557,7 +540,6 @@ justify-between
 
 
 
-
 <div
 
 className="
@@ -571,6 +553,7 @@ gap-3
 "
 
 >
+
 
 
 
@@ -647,6 +630,7 @@ index===2
 
 
 
+
 <div>
 
 
@@ -665,6 +649,7 @@ text-sm
 {player.username}
 
 </h2>
+
 
 
 
@@ -688,6 +673,7 @@ mt-1
 
 
 </p>
+
 
 
 
@@ -721,7 +707,6 @@ text-gray-400
 
 
 </div>
-
 
 
 
@@ -800,9 +785,9 @@ victoires
 
 
 
+
+
 </div>
-
-
 
 
 
