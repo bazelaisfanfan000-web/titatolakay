@@ -177,28 +177,6 @@ Accueil
 
 
 
-<button
-onClick={()=>router.push("/wallet")}
-className="
-text-white
-flex
-flex-col
-items-center
-text-[9px]
-"
->
-
-<span className="text-sm">
-💼
-</span>
-
-Portefeuille
-
-</button>
-
-
-
-
 
 <button
 
