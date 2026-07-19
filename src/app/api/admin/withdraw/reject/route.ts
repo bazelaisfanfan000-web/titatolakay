@@ -1,11 +1,11 @@
 import {
-NextResponse
+  NextResponse
 } from "next/server";
 
 
 import {
-adminDB,
-adminAuth
+  adminDB,
+  adminAuth
 } from "@/lib/firebaseAdmin";
 
 
@@ -13,7 +13,7 @@ export const runtime="nodejs";
 
 
 export async function POST(
-request:Request
+  request:Request
 ){
 
 try{
@@ -27,12 +27,27 @@ withdrawId
 
 
 
+if(!token || !uid || !withdrawId){
+
+return NextResponse.json(
+{
+error:"Données manquantes"
+},
+{
+status:400
+}
+);
+
+}
+
+
+
 const decoded =
 await adminAuth.verifyIdToken(token);
 
 
 
-const admin =
+const adminSnap =
 await adminDB
 .ref(
 `admins/${decoded.uid}`
@@ -41,11 +56,11 @@ await adminDB
 
 
 
-if(!admin.exists()){
+if(!adminSnap.exists()){
 
 return NextResponse.json(
 {
-error:"Non autorisé"
+error:"Accès refusé"
 },
 {
 status:403
@@ -84,13 +99,12 @@ status:404
 
 
 
-
 const withdraw =
 snap.val();
 
 
 
-if(withdraw.status!=="pending"){
+if(withdraw.status !== "pending"){
 
 return NextResponse.json(
 {
@@ -106,16 +120,32 @@ status:400
 
 
 
+// remboursement wallet
+
+await adminDB
+.ref(
+`users/${uid}/balance`
+)
+.transaction(
+(current)=>{
+
+return Number(current || 0)
++
+Number(withdraw.amount);
+
+}
+);
+
+
+
+
+// changer statut
+
 await withdrawRef.update({
 
-status:"approved",
+status:"rejected",
 
-approvedAt:Date.now(),
-
-provider:"tranzak",
-
-note:
-"En attente paiement"
+rejectedAt:Date.now()
 
 });
 
@@ -129,7 +159,7 @@ await adminDB
 )
 .push({
 
-type:"withdraw_approved",
+type:"withdraw_rejected_refund",
 
 amount:withdraw.amount,
 
@@ -142,15 +172,15 @@ createdAt:Date.now()
 
 
 
-
 return NextResponse.json({
 
 success:true,
 
 message:
-"Retrait accepté"
+"Retrait refusé et remboursé"
 
 });
+
 
 
 

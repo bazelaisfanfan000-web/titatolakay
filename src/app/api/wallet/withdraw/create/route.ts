@@ -8,6 +8,7 @@ import {
 } from "@/lib/firebaseAdmin";
 
 
+
 export const runtime = "nodejs";
 
 
@@ -27,11 +28,7 @@ export async function POST(
 
 
 
-    if(
-      !uid ||
-      !amount ||
-      !phone
-    ){
+    if(!uid || !amount || !phone){
 
       return NextResponse.json(
         {
@@ -46,16 +43,17 @@ export async function POST(
 
 
 
-    const value =
-      Number(amount);
+
+    const withdrawAmount =
+    Number(amount);
 
 
 
-    if(value < 50){
+    if(withdrawAmount < 100){
 
       return NextResponse.json(
         {
-          error:"Minimum retrait 50 HTG"
+          error:"Minimum retrait 100 HTG"
         },
         {
           status:400
@@ -69,43 +67,47 @@ export async function POST(
 
 
     const balanceRef =
-      adminDB.ref(
-        `users/${uid}/balance`
-      );
+    adminDB.ref(
+      `users/${uid}/balance`
+    );
 
 
 
-    const result =
-      await balanceRef.transaction(
-        (balance:any)=>{
-
-
-          const current =
-            Number(balance || 0);
+    let success = false;
 
 
 
-          if(current < value){
-
-            return;
-
-          }
+    await balanceRef.transaction(
+      (current)=>{
 
 
+        const balance =
+        Number(current || 0);
 
-          return current - value;
 
+
+        if(balance < withdrawAmount){
+
+          return;
 
         }
-      );
+
+
+
+        success = true;
+
+
+        return balance - withdrawAmount;
+
+
+      }
+    );
 
 
 
 
 
-    if(
-      !result.committed
-    ){
+    if(!success){
 
       return NextResponse.json(
         {
@@ -122,31 +124,43 @@ export async function POST(
 
 
 
-    const withdrawId =
-      `WITHDRAW-${Date.now()}`;
-
-
-
-
-
-    await adminDB
+    const withdrawRef =
+    adminDB
     .ref(
-      `withdrawals/${uid}/${withdrawId}`
+      `withdrawals/${uid}`
     )
-    .set({
+    .push();
+
+
+
+
+    await withdrawRef.set({
 
       id:
-      withdrawId,
+      withdrawRef.key,
 
-      amount:value,
+
+      uid,
+
+
+      amount:
+      withdrawAmount,
+
 
       phone,
+
 
       status:
       "pending",
 
+
+      provider:
+      "tranzak",
+
+
       createdAt:
       Date.now()
+
 
     });
 
@@ -154,22 +168,33 @@ export async function POST(
 
 
 
+
+
     await adminDB
     .ref(
-      `transactions/${uid}/${withdrawId}`
+      `transactions/${uid}`
     )
-    .set({
+    .push({
 
       type:
-      "withdraw",
+      "withdraw_request",
 
-      amount:value,
+
+      amount:
+      withdrawAmount,
+
+
+      withdrawId:
+      withdrawRef.key,
+
 
       status:
       "pending",
 
+
       createdAt:
       Date.now()
+
 
     });
 
@@ -183,12 +208,16 @@ export async function POST(
 
       success:true,
 
-      withdrawId,
 
       message:
-      "Demande de retrait envoyée"
+      "Demande de retrait créée",
+
+
+      withdrawId:
+      withdrawRef.key
 
     });
+
 
 
 
@@ -211,6 +240,5 @@ export async function POST(
 
 
   }
-
 
 }

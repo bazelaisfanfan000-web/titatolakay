@@ -1,23 +1,12 @@
-import {
-  cert,
-  getApps,
-  initializeApp
-} from "firebase-admin/app";
+import admin from "firebase-admin";
 
 
-import {
-  getDatabase
-} from "firebase-admin/database";
+if(!admin.apps.length){
 
+admin.initializeApp({
 
-import {
-  getAuth
-} from "firebase-admin/auth";
-
-
-const firebaseAdminConfig = {
-
-credential: cert({
+credential:
+admin.credential.cert({
 
 projectId:
 process.env.FIREBASE_PROJECT_ID,
@@ -26,33 +15,21 @@ clientEmail:
 process.env.FIREBASE_CLIENT_EMAIL,
 
 privateKey:
-process.env.FIREBASE_PRIVATE_KEY
-?.replace(/\\n/g,"\n")
+process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g,"\n"),
 
 }),
 
-
 databaseURL:
-process.env.FIREBASE_DATABASE_URL ||
-"https://domino-fad16-default-rtdb.firebaseio.com"
+process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
 
-};
+});
 
-
-
-const app =
-getApps().length
-?
-getApps()[0]
-:
-initializeApp(firebaseAdminConfig);
-
+}
 
 
 export const adminDB =
-getDatabase(app);
-
+admin.database();
 
 
 export const adminAuth =
-getAuth(app);
+admin.auth();

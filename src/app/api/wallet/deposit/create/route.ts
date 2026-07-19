@@ -1,14 +1,13 @@
-import {
-  NextResponse
-} from "next/server";
-
+import { NextResponse } from "next/server";
 
 import {
+  adminAuth,
   adminDB
 } from "@/lib/firebaseAdmin";
 
-
-export const runtime = "nodejs";
+import {
+  randomUUID
+} from "crypto";
 
 
 
@@ -16,28 +15,31 @@ export async function POST(
   request: Request
 ) {
 
-
   try {
 
 
+    const body =
+    await request.json();
+
+
+
     const {
-      uid,
-      amount
-    } = await request.json();
+      token,
+      amount,
+      phone
+    } = body;
 
 
 
-    if(
-      !uid ||
-      !amount
-    ){
+    if(!token){
 
       return NextResponse.json(
         {
-          error:"Données manquantes"
+          success:false,
+          message:"Utilisateur non connecté"
         },
         {
-          status:400
+          status:401
         }
       );
 
@@ -45,18 +47,23 @@ export async function POST(
 
 
 
-    const value =
-      Number(amount);
+    // Vérifier utilisateur Firebase
+
+    const decoded =
+    await adminAuth.verifyIdToken(token);
+
+
+    const uid =
+    decoded.uid;
 
 
 
-    if(
-      value < 10
-    ){
+    if(!amount || amount <= 0){
 
       return NextResponse.json(
         {
-          error:"Minimum 10 HTG"
+          success:false,
+          message:"Montant invalide"
         },
         {
           status:400
@@ -64,98 +71,25 @@ export async function POST(
       );
 
     }
-
-
 
 
 
     const reference =
-      `DEPOT-${uid}-${Date.now()}`;
+    "TITATO_" + randomUUID();
 
 
 
-
-
-    const response =
-      await fetch(
-        `${process.env.TCHOTCHOM_BASE_URL}/payments`,
-        {
-
-          method:"POST",
-
-          headers:{
-
-
-            "Content-Type":
-            "application/json",
-
-
-            "Authorization":
-            "Basic " +
-            Buffer
-            .from(
-              `${process.env.TCHOTCHOM_API_KEY}:${process.env.TCHOTCHOM_SECRET_KEY}`
-            )
-            .toString("base64")
-
-          },
-
-
-          body:JSON.stringify({
-
-            amount:value,
-
-            currency:"HTG",
-
-            description:
-            "Recharge Wallet TiTaTo",
-
-
-            reference,
-
-
-            metadata:{
-
-              uid
-
-            },
-
-
-            callback_url:
-            `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook/tchotchom`
-
-          })
-
-        }
-
-      );
+    const apiKey =
+    process.env.TRANZAK_API_KEY;
 
 
 
-
-
-    const data =
-      await response.json();
-
-
-
-
-
-    if(
-      !response.ok
-    ){
-
-      console.error(
-        "Tchotchom error",
-        data
-      );
-
+    if(!apiKey){
 
       return NextResponse.json(
         {
-          error:
-          "Erreur création paiement",
-          details:data
+          success:false,
+          message:"Clé Tranzak manquante"
         },
         {
           status:500
@@ -166,28 +100,108 @@ export async function POST(
 
 
 
+    // Création paiement Tranzak
+
+    const response =
+    await fetch(
+      "https://tranzak.com/api/gateway/v1/payments",
+      {
+
+        method:"POST",
+
+        headers:{
+
+          "Content-Type":
+          "application/json",
+
+          "X-API-Key":
+          apiKey
+
+        },
 
 
-    // Sauvegarde transaction en attente
+        body:JSON.stringify({
+
+          amount:Number(amount),
+
+          currency:"HTG",
+
+          payment_method:"moncash",
+
+          customer_phone:
+          phone || "",
+
+
+          description:
+          "Recharge Wallet TiTaTo",
+
+
+          reference,
+
+
+          metadata:{
+
+            uid,
+
+            type:"deposit"
+
+          }
+
+        })
+
+      }
+    );
+
+
+
+    const data =
+    await response.json();
+
+
+
+    if(!response.ok){
+
+      console.log(
+        "Tranzak error",
+        data
+      );
+
+
+      return NextResponse.json(
+        {
+          success:false,
+          message:
+          data.message ||
+          "Erreur création paiement"
+        },
+        {
+          status:500
+        }
+      );
+
+    }
+
+
+
+    // Sauvegarde transaction Firebase
 
     await adminDB
     .ref(
-      `transactions/${uid}/${reference}`
+      `transactions/${reference}`
     )
     .set({
 
-      type:
-      "deposit",
+      uid,
 
-      status:
-      "pending",
+      amount:Number(amount),
 
-      amount:value,
+      provider:"tranzak",
 
-      method:
-      "tchotchom",
+      status:"processing",
 
-      reference,
+      transaction_id:
+      data.transaction_id,
+
 
       createdAt:
       Date.now()
@@ -196,30 +210,39 @@ export async function POST(
 
 
 
-
-
     return NextResponse.json({
 
       success:true,
 
-      payment:data,
+      payment_url:
+      data.payment_url,
 
-      reference
+
+      transaction_id:
+      data.transaction_id
 
     });
 
 
 
-  }
-  catch(error:any){
+  } catch(error:any){
 
 
-    console.error(error);
+    console.error(
+      "Deposit error",
+      error
+    );
 
 
     return NextResponse.json(
       {
-        error:error.message
+
+        success:false,
+
+        message:
+        error.message ||
+        "Erreur serveur"
+
       },
       {
         status:500
@@ -228,6 +251,5 @@ export async function POST(
 
 
   }
-
 
 }

@@ -21,7 +21,7 @@ import {
 
 import {
  auth,
- db
+ firestore
 } from "@/lib/firebase";
 
 import {
@@ -64,7 +64,7 @@ const notifQuery =
 query(
 
 collection(
-db,
+firestore,
 "notifications",
 user.uid,
 "items"

@@ -5,12 +5,17 @@ import {
   useState
 } from "react";
 
+import Link from "next/link";
+
 import {
-  useRouter
+  usePathname
 } from "next/navigation";
 
 import {
-  ArrowLeft,
+  Home,
+  Gamepad2,
+  Wallet,
+  User,
   Bell
 } from "lucide-react";
 
@@ -21,544 +26,374 @@ import {
 import {
   collection,
   query,
-  orderBy,
-  onSnapshot,
-  doc,
-  updateDoc
+  where,
+  onSnapshot
 } from "firebase/firestore";
 
 import {
   auth,
-  db
+  firestore
 } from "@/lib/firebase";
 
 
 
-export default function NotificationsPage(){
+export default function BottomNav(){
 
 
-const router = useRouter();
+  const pathname =
+  usePathname();
 
 
-const [userId,setUserId] =
-useState<string>("");
+  const [userId,setUserId] =
+  useState<string>("");
 
 
-const [notifications,setNotifications] =
-useState<any[]>([]);
+  const [count,setCount] =
+  useState(0);
 
 
 
 
 
+  useEffect(()=>{
 
-useEffect(()=>{
 
+    const unsubAuth =
 
-const unsubscribeAuth =
+    onAuthStateChanged(
+      auth,
+      (user)=>{
 
-onAuthStateChanged(
-auth,
-(user)=>{
 
+        if(!user){
 
-if(!user)
-return;
+          setUserId("");
 
+          return;
 
-setUserId(user.uid);
+        }
 
 
+        setUserId(
+          user.uid
+        );
 
 
-const notificationsRef =
 
-collection(
-db,
-"notifications",
-user.uid,
-"items"
-);
+      }
 
+    );
 
 
-const q =
 
-query(
+    return ()=>unsubAuth();
 
-notificationsRef,
 
-orderBy(
-"createdAt",
-"desc"
-)
 
-);
+  },[]);
 
 
 
 
-const unsubscribe =
 
-onSnapshot(
-q,
-(snapshot)=>{
 
 
-const list =
+  useEffect(()=>{
 
-snapshot.docs.map(
-(item)=>({
 
-id:item.id,
+    if(!userId)
+    return;
 
-...item.data()
 
-})
 
-);
+    const notificationsRef =
 
+    collection(
 
+      firestore,
 
-setNotifications(list);
+      "notifications",
 
+      userId,
 
+      "items"
 
-}
+    );
 
-);
 
 
+    const q =
 
-return ()=>unsubscribe();
+    query(
 
+      notificationsRef,
 
-}
+      where(
+        "read",
+        "==",
+        false
+      )
 
+    );
 
-);
 
 
+    const unsub =
 
-return ()=>unsubscribeAuth();
+    onSnapshot(
 
+      q,
 
+      (snapshot)=>{
 
-},[]);
 
+        setCount(
+          snapshot.size
+        );
 
 
+      }
 
+    );
 
 
 
+    return ()=>unsub();
 
-async function openNotification(
-notification:any
-){
 
 
+  },[userId]);
 
-if(!userId)
-return;
 
 
 
 
-// mettre lu
 
-await updateDoc(
 
-doc(
+  const links = [
 
-db,
+    {
 
-"notifications",
+      name:"Accueil",
 
-userId,
+      href:"/dashboard",
 
-"items",
+      icon:Home
 
-notification.id
+    },
 
-),
 
-{
+    {
 
-read:true
+      name:"Jeu",
 
-}
+      href:"/create-room",
 
-);
+      icon:Gamepad2
 
+    },
 
 
+    {
 
+      name:"Wallet",
 
+      href:"/wallet",
 
-// MESSAGE AMI
+      icon:Wallet
 
-if(
+    },
 
-notification.type === "message"
 
-&&
+    {
 
-notification.friendId
+      name:"Profil",
 
-){
+      href:"/settings",
 
+      icon:User
 
-router.push(
+    },
 
-`/chat/${notification.friendId}`
 
-);
+    {
 
+      name:"Alertes",
 
-return;
+      href:"/notifications",
 
+      icon:Bell
 
-}
+    }
 
 
+  ];
 
 
 
 
-// autres notifications
 
-if(notification.link){
 
 
-router.push(
-notification.link
-);
 
 
-}
+  return (
 
+    <nav
 
+      className="
+      fixed
+      bottom-0
+      left-0
+      right-0
+      z-50
+      bg-black/80
+      backdrop-blur-xl
+      border-t
+      border-white/10
+      "
 
-}
+    >
 
 
+      <div
 
+        className="
+        max-w-md
+        mx-auto
+        flex
+        justify-around
+        py-3
+        "
 
+      >
 
 
 
+        {
 
-return (
+          links.map((item)=>{
 
-<main
 
-className="
-min-h-screen
-bg-gradient-to-br
-from-[#020617]
-via-[#07152f]
-to-black
-text-white
-px-4
-pb-24
-pt-5
-"
+            const Icon =
+            item.icon;
 
->
 
+            const active =
+            pathname === item.href;
 
 
-<div
 
-className="
-max-w-md
-mx-auto
-"
+            return (
 
->
 
+              <Link
 
+                key={item.href}
 
-<div
+                href={item.href}
 
-className="
-flex
-items-center
-gap-3
-mb-6
-"
+                className={`
+                relative
+                flex
+                flex-col
+                items-center
+                gap-1
+                text-xs
+                transition
 
->
+                ${
+                  active
+                  ?
+                  "text-blue-400"
+                  :
+                  "text-gray-400"
+                }
 
+                `}
 
+              >
 
-<button
 
-onClick={()=>router.back()}
+                <div className="relative">
 
-className="
-w-11
-h-11
-rounded-full
-bg-white/10
-flex
-items-center
-justify-center
-"
 
->
+                  <Icon
 
-<ArrowLeft/>
+                    size={22}
 
-</button>
+                  />
 
 
 
+                  {
 
+                    item.href === "/notifications"
 
-<h1
+                    &&
 
-className="
-text-xl
-font-black
-"
+                    count > 0
 
->
+                    &&
 
-🔔 Notifications
 
-</h1>
+                    <span
 
+                      className="
+                      absolute
+                      -top-2
+                      -right-3
+                      bg-red-500
+                      text-white
+                      text-[10px]
+                      w-5
+                      h-5
+                      rounded-full
+                      flex
+                      items-center
+                      justify-center
+                      font-bold
+                      "
 
+                    >
 
-</div>
+                      {count}
 
+                    </span>
 
 
+                  }
 
 
+                </div>
 
 
-{
 
-notifications.length === 0 &&
+                <span>
 
-<div
+                  {item.name}
 
-className="
-mt-20
-text-center
-text-gray-400
-"
+                </span>
 
->
 
-<Bell
-size={45}
-className="mx-auto mb-3"
-/>
 
+              </Link>
 
-<p>
 
-Aucune notification
+            );
 
-</p>
 
+          })
 
-</div>
+        }
 
 
-}
 
+      </div>
 
 
+    </nav>
 
-
-
-
-<div
-
-className="
-space-y-3
-"
-
->
-
-
-
-{
-
-notifications.map((n)=>(
-
-
-
-<button
-
-
-key={n.id}
-
-
-onClick={()=>openNotification(n)}
-
-
-
-className={`
-
-w-full
-text-left
-rounded-3xl
-p-4
-border
-transition
-
-${
-
-n.read
-
-?
-
-"bg-white/10 border-white/10"
-
-:
-
-"bg-blue-500/20 border-blue-400"
-
-}
-
-`}
-
-
-
->
-
-
-
-
-<div
-
-className="
-flex
-justify-between
-items-start
-gap-3
-"
-
->
-
-
-<h2
-
-className="
-font-black
-"
-
->
-
-{n.title}
-
-</h2>
-
-
-
-{
-
-!n.read &&
-
-<span
-
-className="
-bg-red-500
-text-[10px]
-px-2
-py-1
-rounded-full
-font-bold
-"
-
->
-
-Nouveau
-
-</span>
-
-
-}
-
-
-
-</div>
-
-
-
-
-
-<p
-
-className="
-text-sm
-text-gray-300
-mt-2
-"
-
->
-
-{n.message}
-
-</p>
-
-
-
-
-
-{
-
-n.amount > 0 &&
-
-<p
-
-className="
-text-green-400
-font-bold
-mt-2
-"
-
->
-
-+{n.amount} HTG
-
-</p>
-
-
-}
-
-
-
-
-</button>
-
-
-
-))
-
-
-}
-
-
-
-</div>
-
-
-
-
-
-</div>
-
-
-</main>
-
-);
-
+  );
 
 }

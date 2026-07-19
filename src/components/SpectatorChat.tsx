@@ -12,7 +12,7 @@ onSnapshot,
 serverTimestamp
 } from "firebase/firestore";
 
-import { db, auth } from "@/lib/firebase";
+import { firestore, auth } from "@/lib/firebase";
 
 
 
@@ -52,7 +52,7 @@ useEffect(()=>{
 
 const q=query(
 
-collection(db,"spectatorChats"),
+collection(firestore,"spectatorChats"),
 
 where(
 "roomId",
@@ -124,7 +124,7 @@ if(!message.trim()) return;
 
 await addDoc(
 
-collection(db,"spectatorChats"),
+collection(firestore,"spectatorChats"),
 
 {
 

@@ -6,7 +6,7 @@ import {
 
 
 import {
-  db
+  firestore
 } from "./firebase";
 
 
@@ -42,7 +42,7 @@ export async function sendNotification(
     await addDoc(
 
       collection(
-        db,
+        firestore,
         "notifications",
         userId,
         "items"
