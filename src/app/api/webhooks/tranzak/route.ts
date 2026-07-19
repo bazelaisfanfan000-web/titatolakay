@@ -1,5 +1,5 @@
 import {
-  NextResponse
+NextResponse
 } from "next/server";
 
 
@@ -7,7 +7,7 @@ import crypto from "crypto";
 
 
 import {
-  adminDB
+adminDB
 } from "@/lib/firebaseAdmin";
 
 
@@ -16,48 +16,72 @@ export const runtime="nodejs";
 
 
 
+
 function verifySignature(
-  payload:string,
-  signature:string
+payload:string,
+signature:string
 ){
 
-  const secret =
-  process.env.TRANZAK_WEBHOOK_SECRET;
+
+const secret =
+process.env.TRANZAK_WEBHOOK_SECRET;
 
 
 
-  if(!secret){
-    return false;
-  }
+if(!secret){
 
-
-
-  const expected =
-  crypto
-  .createHmac(
-    "sha256",
-    secret
-  )
-  .update(payload)
-  .digest("hex");
-
-
-
-  return crypto.timingSafeEqual(
-    Buffer.from(expected),
-    Buffer.from(signature)
-  );
+return false;
 
 }
 
 
 
 
-export async function POST(
-  request:Request
+const expected =
+crypto
+.createHmac(
+"sha256",
+secret
+)
+.update(payload)
+.digest("hex");
+
+
+
+
+if(
+expected.length !== signature.length
 ){
 
+return false;
+
+}
+
+
+
+
+return crypto.timingSafeEqual(
+
+Buffer.from(expected),
+
+Buffer.from(signature)
+
+);
+
+
+}
+
+
+
+
+
+export async function POST(
+request:Request
+){
+
+
 try{
+
 
 
 const rawBody =
@@ -65,11 +89,11 @@ await request.text();
 
 
 
+
 const signature =
 request.headers.get(
 "x-tranzak-signature"
 );
-
 
 
 
@@ -86,7 +110,6 @@ status:401
 );
 
 }
-
 
 
 
@@ -113,7 +136,6 @@ status:401
 
 
 
-
 const data =
 JSON.parse(rawBody);
 
@@ -121,21 +143,10 @@ JSON.parse(rawBody);
 
 
 
-if(
-data.event !== "payment.completed"
-){
-
-return NextResponse.json({
-
-success:true,
-
-message:
-"Event ignoré"
-
-});
-
-}
-
+console.log(
+"TRANSAK EVENT",
+data
+);
 
 
 
@@ -143,128 +154,19 @@ message:
 
 
 const transactionId =
-data.transaction_id;
-
-
-
-
-
-const transactionSnap =
-await adminDB
-.ref("transactions")
-.orderByChild(
-"transactionId"
-)
-.equalTo(
-transactionId
-)
-.get();
+data.transaction_id ||
+data.orderId;
 
 
 
 
 
 
-if(!transactionSnap.exists()){
-
+if(!transactionId){
 
 return NextResponse.json(
 {
-error:"Transaction inconnue"
-},
-{
-status:404
-}
-);
-
-}
-
-
-
-
-
-
-
-let uid="";
-let amount=0;
-let alreadyPaid=false;
-
-
-
-
-
-transactionSnap.forEach(
-(userSnap)=>{
-
-
-userSnap.forEach(
-(txSnap)=>{
-
-
-const tx =
-txSnap.val();
-
-
-
-if(
-tx.type==="deposit_pending"
-){
-
-uid =
-userSnap.key!;
-
-
-amount =
-Number(tx.amount);
-
-
-
-if(tx.status==="completed"){
-
-alreadyPaid=true;
-
-}
-
-
-}
-
-
-
-});
-
-
-});
-
-
-
-
-
-
-
-if(alreadyPaid){
-
-return NextResponse.json({
-
-success:true,
-
-message:
-"Déjà traité"
-
-});
-
-}
-
-
-
-
-
-
-
-if(!uid || !amount){
-
-return NextResponse.json(
-{
-error:"Données invalides"
+error:"Transaction id manquant"
 },
 {
 status:400
@@ -278,13 +180,85 @@ status:400
 
 
 
-// ajouter argent wallet
+
+const snapshot =
+await adminDB
+.ref(
+`transactions/${transactionId}`
+)
+.get();
+
+
+
+
+
+if(!snapshot.exists()){
+
+
+return NextResponse.json(
+
+{
+error:"Transaction inconnue"
+},
+
+{
+status:404
+}
+
+);
+
+
+}
+
+
+
+
+const tx =
+snapshot.val();
+
+
+
+
+
+if(
+tx.status==="completed"
+){
+
+return NextResponse.json({
+
+success:true,
+
+message:"Déjà traité"
+
+});
+
+}
+
+
+
+
+
+const uid =
+tx.uid;
+
+
+const amount =
+Number(tx.amount);
+
+
+
+
+
+
+
+// Ajouter au wallet
 
 await adminDB
 .ref(
 `users/${uid}/balance`
 )
 .transaction(
+
 (current)=>{
 
 return Number(current || 0)
@@ -300,63 +274,21 @@ amount;
 
 
 
-// modifier transaction
+
+// Marquer paiement terminé
 
 await adminDB
 .ref(
-`transactions/${uid}`
+`transactions/${transactionId}`
 )
-.push({
+.update({
 
-type:
-"deposit_completed",
+status:"completed",
 
-amount,
-
-transactionId,
-
-createdAt:
+completedAt:
 Date.now()
 
 });
-
-
-
-
-
-
-
-await adminDB
-.ref(
-`transactions/${uid}`
-)
-.orderByChild(
-"transactionId"
-)
-.equalTo(
-transactionId
-)
-.get()
-.then(
-async(snapshot)=>{
-
-snapshot.forEach(
-(item)=>{
-
-
-item.ref.update({
-
-status:
-"completed"
-
-});
-
-
-});
-
-
-}
-);
 
 
 
@@ -378,23 +310,28 @@ success:true
 catch(error:any){
 
 
+
 console.error(
-"Tranzak webhook error",
+"TRANSAK WEBHOOK ERROR",
 error
 );
 
 
 
 return NextResponse.json(
+
 {
 error:error.message
 },
+
 {
 status:500
 }
+
 );
 
 
 }
+
 
 }

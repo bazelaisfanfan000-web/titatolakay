@@ -1,12 +1,13 @@
 "use client";
 
+
 import {
-  useState
+useState
 } from "react";
 
 
 import {
-  auth
+auth
 } from "@/lib/firebase";
 
 
@@ -14,274 +15,201 @@ import {
 export default function TranzakDepositButton(){
 
 
-  const [amount,setAmount] =
-  useState(500);
+const [loading,setLoading]
+=
+useState(false);
 
 
-  const [phone,setPhone] =
-  useState("");
 
 
 
-  const [loading,setLoading] =
-  useState(false);
+async function deposit(){
 
 
+try{
 
 
-  async function deposit(){
+setLoading(true);
 
 
-    try{
 
+const user =
+auth.currentUser;
 
-      setLoading(true);
 
 
+if(!user){
 
-      const user =
-      auth.currentUser;
 
+alert(
+"Connecte-toi d'abord"
+);
 
+return;
 
-      if(!user){
 
-        alert(
-          "Connecte-toi d'abord"
-        );
+}
 
-        return;
 
-      }
 
 
+const token =
+await user.getIdToken();
 
 
 
-      const response =
-      await fetch(
-        "/api/wallet/deposit/create",
-        {
 
-          method:"POST",
 
-          headers:{
-            "Content-Type":
-            "application/json"
-          },
+const res =
+await fetch(
 
+"/api/wallet/deposit/create",
 
-          body:JSON.stringify({
+{
 
-            uid:user.uid,
+method:"POST",
 
-            amount:Number(amount),
 
-            phone,
+headers:{
 
-            name:
-            user.displayName || "TiTaTo User",
 
-            email:
-            user.email || ""
+"Content-Type":
+"application/json",
 
-          })
 
-        }
-      );
+Authorization:
+`Bearer ${token}`
 
 
+},
 
 
+body:JSON.stringify({
 
+amount:100
 
-      const data =
-      await response.json();
+})
 
 
+}
 
+);
 
 
 
-      if(!response.ok){
 
-        alert(
-          data.error ||
-          "Erreur création paiement"
-        );
 
-        return;
 
-      }
+const data =
+await res.json();
 
 
 
 
 
+if(!res.ok){
 
-      if(data.payment_url){
 
+console.log(data);
 
-        window.location.href =
-        data.payment_url;
 
+alert(
+data.error ||
+"Erreur création paiement"
+);
 
-      }
 
+return;
 
 
-    }
-    catch(error){
+}
 
 
-      console.error(
-        error
-      );
 
 
-      alert(
-        "Erreur serveur"
-      );
 
+if(data.paymentUrl){
 
-    }
-    finally{
 
+window.location.href =
+data.paymentUrl;
 
-      setLoading(false);
 
+}
 
-    }
 
 
-  }
+}
+catch(error){
 
 
+console.log(error);
 
 
+alert(
+"Erreur serveur"
+);
 
 
+}
+finally{
 
-  return (
 
-    <div
-      className="
-      bg-zinc-900
-      border
-      border-zinc-800
-      rounded-3xl
-      p-5
-      space-y-4
-      "
-    >
+setLoading(false);
 
 
-      <h3
-        className="
-        text-xl
-        font-bold
-        "
-      >
-        💳 Déposer avec Tranzak
-      </h3>
+}
 
 
 
+}
 
-      <input
 
-        type="number"
 
-        value={amount}
 
-        onChange={
-          e=>
-          setAmount(
-            Number(e.target.value)
-          )
-        }
 
 
-        className="
-        w-full
-        bg-black
-        rounded-xl
-        p-3
-        "
-        
-        placeholder="Montant HTG"
+return (
 
-      />
+<button
 
+onClick={deposit}
 
+disabled={loading}
 
+className="
+w-full
+bg-blue-600
+hover:bg-blue-700
+rounded-2xl
+py-4
+font-bold
+text-white
+"
 
+>
 
-      <input
 
-        type="tel"
+{
 
-        value={phone}
+loading
 
-        onChange={
-          e=>
-          setPhone(
-            e.target.value
-          )
-        }
+?
 
+"Création paiement..."
 
-        className="
-        w-full
-        bg-black
-        rounded-xl
-        p-3
-        "
+:
 
-        placeholder="+509xxxxxxxx"
+"💰 Déposer HTG"
 
-      />
+}
 
 
 
+</button>
 
 
-
-
-      <button
-
-        onClick={deposit}
-
-        disabled={loading}
-
-
-        className="
-        w-full
-        bg-blue-600
-        hover:bg-blue-700
-        rounded-xl
-        py-3
-        font-bold
-        "
-
-      >
-
-        {
-          loading
-          ?
-          "Création..."
-          :
-          "💰 Déposer"
-        }
-
-
-      </button>
-
-
-
-    </div>
-
-  );
+);
 
 
 }

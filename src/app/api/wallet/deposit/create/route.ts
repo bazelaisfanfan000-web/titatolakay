@@ -5,251 +5,366 @@ import {
   adminDB
 } from "@/lib/firebaseAdmin";
 
-import {
-  randomUUID
-} from "crypto";
 
+export const runtime = "nodejs";
 
 
 export async function POST(
-  request: Request
+req: Request
 ) {
 
-  try {
+try {
 
 
-    const body =
-    await request.json();
+const body = await req.json();
 
 
+const {
+amount
+}=body;
 
-    const {
-      token,
-      amount,
-      phone
-    } = body;
 
 
+const header =
+req.headers.get("authorization");
 
-    if(!token){
 
-      return NextResponse.json(
-        {
-          success:false,
-          message:"Utilisateur non connecté"
-        },
-        {
-          status:401
-        }
-      );
 
-    }
+if(!header){
 
+return NextResponse.json(
+{
+error:"Authorization manquante"
+},
+{
+status:401
+}
+);
 
+}
 
-    // Vérifier utilisateur Firebase
 
-    const decoded =
-    await adminAuth.verifyIdToken(token);
 
+const token =
+header.replace("Bearer ","");
 
-    const uid =
-    decoded.uid;
 
 
+const decoded =
+await adminAuth.verifyIdToken(token);
 
-    if(!amount || amount <= 0){
 
-      return NextResponse.json(
-        {
-          success:false,
-          message:"Montant invalide"
-        },
-        {
-          status:400
-        }
-      );
 
-    }
+const uid =
+decoded.uid;
 
 
 
-    const reference =
-    "TITATO_" + randomUUID();
+const value =
+Number(amount);
 
 
 
-    const apiKey =
-    process.env.TRANZAK_API_KEY;
+if(!value || value < 50){
 
+return NextResponse.json(
+{
+error:"Minimum dépôt 50 HTG"
+},
+{
+status:400
+}
+);
 
+}
 
-    if(!apiKey){
 
-      return NextResponse.json(
-        {
-          success:false,
-          message:"Clé Tranzak manquante"
-        },
-        {
-          status:500
-        }
-      );
 
-    }
+const apiKey =
+process.env.TRANZAK_API_KEY;
 
 
 
-    // Création paiement Tranzak
+if(!apiKey){
 
-    const response =
-    await fetch(
-      "https://tranzak.com/api/gateway/v1/payments",
-      {
+return NextResponse.json(
+{
+error:"TRANZAK_API_KEY manquante"
+},
+{
+status:500
+}
+);
 
-        method:"POST",
+}
 
-        headers:{
 
-          "Content-Type":
-          "application/json",
 
-          "X-API-Key":
-          apiKey
 
-        },
+/*
+1 - Créer une réservation wallet Transak
+*/
 
 
-        body:JSON.stringify({
+const reservationResponse =
+await fetch(
 
-          amount:Number(amount),
+"https://api.transak.com/api/v2/wallet-reservations",
 
-          currency:"HTG",
+{
 
-          payment_method:"moncash",
+method:"POST",
 
-          customer_phone:
-          phone || "",
+headers:{
 
+"Content-Type":"application/json",
 
-          description:
-          "Recharge Wallet TiTaTo",
+"api-secret":apiKey
 
+},
 
-          reference,
 
+body:JSON.stringify({
 
-          metadata:{
+walletAddress:
+process.env.TRANZAK_WALLET_ADDRESS,
 
-            uid,
+cryptoCurrencyCode:"USDT"
 
-            type:"deposit"
+})
 
-          }
 
-        })
+}
 
-      }
-    );
+);
 
 
 
-    const data =
-    await response.json();
+const reservationData =
+await reservationResponse.json();
 
 
 
-    if(!response.ok){
+if(!reservationResponse.ok){
 
-      console.log(
-        "Tranzak error",
-        data
-      );
+console.log(
+"TRANZAK RESERVATION ERROR",
+reservationData
+);
 
 
-      return NextResponse.json(
-        {
-          success:false,
-          message:
-          data.message ||
-          "Erreur création paiement"
-        },
-        {
-          status:500
-        }
-      );
+return NextResponse.json(
+{
+error:"Erreur réservation wallet",
+details:reservationData
+},
+{
+status:500
+}
+);
 
-    }
+}
 
 
 
-    // Sauvegarde transaction Firebase
 
-    await adminDB
-    .ref(
-      `transactions/${reference}`
-    )
-    .set({
+const walletReservationId =
+reservationData.response?.walletReservationId
+||
+reservationData.walletReservationId;
 
-      uid,
 
-      amount:Number(amount),
 
-      provider:"tranzak",
 
-      status:"processing",
 
-      transaction_id:
-      data.transaction_id,
+if(!walletReservationId){
 
+return NextResponse.json(
+{
+error:"Wallet reservation Id absent",
+details:reservationData
+},
+{
+status:500
+}
+);
 
-      createdAt:
-      Date.now()
+}
 
-    });
 
 
 
-    return NextResponse.json({
 
-      success:true,
+/*
+2 - Enregistrer transaction Firebase
+*/
 
-      payment_url:
-      data.payment_url,
 
+const transactionId =
+crypto.randomUUID();
 
-      transaction_id:
-      data.transaction_id
 
-    });
 
+await adminDB
+.ref(
+`transactions/${transactionId}`
+)
+.set({
 
+transactionId,
 
-  } catch(error:any){
+uid,
 
+type:"deposit",
 
-    console.error(
-      "Deposit error",
-      error
-    );
+amount:value,
 
+status:"pending",
 
-    return NextResponse.json(
-      {
+walletReservationId,
 
-        success:false,
+createdAt:Date.now()
 
-        message:
-        error.message ||
-        "Erreur serveur"
+});
 
-      },
-      {
-        status:500
-      }
-    );
 
 
-  }
+
+
+
+
+/*
+3 - Créer ordre Transak
+*/
+
+
+const response =
+await fetch(
+
+"https://api.transak.com/api/v2/orders",
+
+{
+
+method:"POST",
+
+headers:{
+
+
+"Content-Type":"application/json",
+
+
+"api-secret":apiKey
+
+
+},
+
+
+body:JSON.stringify({
+
+fiatAmount:value,
+
+
+fiatCurrency:"USD",
+
+
+cryptoCurrencyCode:"USDT",
+
+
+walletReservationId,
+
+
+redirectURL:
+`${process.env.NEXT_PUBLIC_APP_URL}/wallet`
+
+
+})
+
+
+}
+
+);
+
+
+
+
+
+const data =
+await response.json();
+
+
+
+
+
+if(!response.ok){
+
+
+console.log(
+"TRANZAK ERROR",
+data
+);
+
+
+return NextResponse.json(
+
+{
+error:"Erreur Transak",
+details:data
+},
+
+{
+status:500
+}
+
+);
+
+}
+
+
+
+
+
+return NextResponse.json({
+
+success:true,
+
+paymentUrl:
+data.response?.url
+||
+data.url,
+
+transactionId
+
+});
+
+
+
+
+
+}
+catch(error:any){
+
+
+console.error(
+"TRANSAK CREATE ERROR",
+error
+);
+
+
+
+return NextResponse.json(
+
+{
+error:error.message
+},
+
+{
+status:500
+}
+
+);
+
+
+}
+
 
 }

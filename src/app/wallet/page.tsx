@@ -7,7 +7,7 @@ import {
 
 import {
   auth,
-  db
+  database
 } from "@/lib/firebase";
 
 import {
@@ -63,7 +63,7 @@ export default function WalletPage(){
 
         const balanceRef =
         ref(
-          db,
+          database,
           `users/${user.uid}/balance`
         );
 
