@@ -9,13 +9,9 @@ export const dynamic = "force-dynamic";
 
 
 import {
-  adminDB
-} from "@/lib/firebaseAdmin";
-
-
-import {
+  adminDB,
   adminAuth
-} from "@/lib/firebaseAuthAdmin";
+} from "@/lib/firebaseAdmin";
 
 
 
@@ -56,6 +52,12 @@ status:400
 
 
 
+
+// ===============================
+// AUTH
+// ===============================
+
+
 const authHeader =
 request.headers.get(
 "authorization"
@@ -69,7 +71,7 @@ if(!authHeader){
 
 return NextResponse.json(
 {
-error:"Non connecte"
+error:"Non connecté"
 },
 {
 status:401
@@ -90,6 +92,7 @@ authHeader.replace(
 
 
 
+
 const decoded =
 await adminAuth.verifyIdToken(
 token
@@ -102,6 +105,13 @@ decoded.uid;
 
 
 
+
+
+// ===============================
+// ROOM
+// ===============================
+
+
 const roomRef =
 adminDB.ref(
 `rooms/${roomId}`
@@ -112,6 +122,7 @@ adminDB.ref(
 
 const snap =
 await roomRef.get();
+
 
 
 
@@ -133,13 +144,18 @@ status:404
 
 
 
+
 const room =
 snap.val();
 
 
 
 
-// Verifier que l'utilisateur est le createur
+
+
+
+// Vérifier créateur
+
 if(
 room.creatorId !== uid
 ){
@@ -147,7 +163,7 @@ room.creatorId !== uid
 
 return NextResponse.json(
 {
-error:"Vous n'etes pas le createur"
+error:"Vous n'êtes pas le créateur"
 },
 {
 status:403
@@ -159,7 +175,9 @@ status:403
 
 
 
-// Ne supprimer que les parties en attente
+
+// Seulement partie attente
+
 if(
 room.status !== "waiting"
 ){
@@ -179,7 +197,14 @@ status:400
 
 
 
-// Rembourser le createur si une mise a ete deduite
+
+
+
+// ===============================
+// REMBOURSEMENT
+// ===============================
+
+
 const bet =
 Number(room.bet || 0);
 
@@ -211,39 +236,73 @@ balanceSnap.val() || 0
 
 
 
-// Rembourser
+const newBalance =
+oldBalance + bet;
+
+
+
+
 await userRef.set(
-oldBalance + bet
+newBalance
 );
 
 
 
 
-// Enregistrer la transaction de remboursement
-await adminDB.ref(
+
+
+await adminDB
+.ref(
 `transactions/${uid}`
-).push({
+)
+.push({
+
 type:"room_refund",
+
 amount:bet,
+
+oldBalance,
+
+newBalance,
+
 roomId,
+
 createdAt:Date.now()
+
 });
+
+
 
 }
 
 
 
 
-// Supprimer la partie
+
+
+
+// ===============================
+// SUPPRIMER ROOM
+// ===============================
+
+
 await roomRef.remove();
 
 
 
 
+
+
 return NextResponse.json({
+
 success:true,
-message:"Partie supprimee et mise remboursee"
+
+message:
+"Partie supprimée et mise remboursée"
+
 });
+
+
 
 
 }
@@ -261,7 +320,7 @@ error
 return NextResponse.json(
 {
 error:
-error.message ||
+error?.message ||
 "Erreur serveur"
 },
 {

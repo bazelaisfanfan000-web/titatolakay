@@ -9,13 +9,9 @@ export const dynamic = "force-dynamic";
 
 
 import {
-  adminDB
-} from "@/lib/firebaseAdmin";
-
-
-import {
+  adminDB,
   adminAuth
-} from "@/lib/firebaseAuthAdmin";;
+} from "@/lib/firebaseAdmin";
 
 
 
@@ -23,7 +19,7 @@ import {
 
 
 export async function POST(
-request:Request
+request: Request
 ){
 
 
@@ -51,15 +47,12 @@ if(
 
 
 return NextResponse.json(
-
 {
 error:"Informations manquantes"
 },
-
 {
 status:400
 }
-
 );
 
 
@@ -70,6 +63,10 @@ status:400
 
 
 
+
+// ===============================
+// AUTH
+// ===============================
 
 
 const authHeader =
@@ -80,20 +77,16 @@ request.headers.get(
 
 
 
-
 if(!authHeader){
 
 
 return NextResponse.json(
-
 {
 error:"Non connecté"
 },
-
 {
 status:401
 }
-
 );
 
 
@@ -131,6 +124,10 @@ decoded.uid;
 
 
 
+// ===============================
+// ROOM
+// ===============================
+
 
 const roomRef =
 adminDB.ref(
@@ -150,15 +147,12 @@ if(!snapshot.exists()){
 
 
 return NextResponse.json(
-
 {
 error:"Partie inexistante"
 },
-
 {
 status:404
 }
-
 );
 
 
@@ -184,19 +178,17 @@ room.status !== "playing"
 
 
 return NextResponse.json(
-
 {
 error:"La partie n'est pas active"
 },
-
 {
 status:400
 }
-
 );
 
 
 }
+
 
 
 
@@ -212,23 +204,22 @@ room.players?.[uid];
 
 
 
+
 if(!player){
 
 
 return NextResponse.json(
-
 {
 error:"Vous ne participez pas à cette partie"
 },
-
 {
 status:403
 }
-
 );
 
 
 }
+
 
 
 
@@ -244,19 +235,17 @@ room.game;
 
 
 
+
 if(!game){
 
 
 return NextResponse.json(
-
 {
 error:"Jeu introuvable"
 },
-
 {
 status:400
 }
-
 );
 
 
@@ -269,7 +258,9 @@ status:400
 
 
 
-// vérifier le tour
+// ===============================
+// VERIFICATION TOUR
+// ===============================
 
 
 if(
@@ -278,15 +269,12 @@ game.turn !== player.symbol
 
 
 return NextResponse.json(
-
 {
 error:"Ce n'est pas votre tour"
 },
-
 {
 status:400
 }
-
 );
 
 
@@ -300,7 +288,9 @@ status:400
 
 
 
-// validation Ti Ta To 10x10
+// ===============================
+// VALIDATION POSITION
+// ===============================
 
 
 const row =
@@ -315,24 +305,18 @@ Number(move.col);
 
 
 if(
-
 isNaN(row) ||
-
 isNaN(col)
-
 ){
 
 
 return NextResponse.json(
-
 {
 error:"Coup invalide"
 },
-
 {
 status:400
 }
-
 );
 
 
@@ -344,28 +328,20 @@ status:400
 
 
 if(
-
 row < 0 ||
-
 row >= 10 ||
-
 col < 0 ||
-
 col >= 10
-
 ){
 
 
 return NextResponse.json(
-
 {
 error:"Position invalide"
 },
-
 {
 status:400
 }
-
 );
 
 
@@ -384,15 +360,12 @@ game.board[row][col] !== ""
 
 
 return NextResponse.json(
-
 {
 error:"Case déjà utilisée"
 },
-
 {
 status:400
 }
-
 );
 
 
@@ -403,12 +376,19 @@ status:400
 
 
 
+
+
+
+// ===============================
+// NOUVEAU BOARD
+// ===============================
 
 
 const newBoard =
 game.board.map(
 (row:any)=>[...row]
 );
+
 
 
 
@@ -424,7 +404,7 @@ player.symbol;
 
 
 
-let nextTurn =
+const nextTurn =
 
 player.symbol === "X"
 
@@ -445,21 +425,15 @@ player.symbol === "X"
 
 
 await roomRef
-.child(
-"game"
-)
+.child("game")
 .update({
-
 
 board:newBoard,
 
-
 turn:nextTurn,
-
 
 turnStartedAt:
 Date.now()
-
 
 });
 
@@ -475,14 +449,14 @@ return NextResponse.json({
 
 success:true,
 
-
 board:newBoard,
-
 
 turn:nextTurn
 
-
 });
+
+
+
 
 
 
@@ -497,18 +471,16 @@ error
 
 
 
-return NextResponse.json(
 
+return NextResponse.json(
 {
 error:
-error.message ||
+error?.message ||
 "Erreur serveur"
 },
-
 {
 status:500
 }
-
 );
 
 

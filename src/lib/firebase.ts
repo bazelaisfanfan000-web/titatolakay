@@ -5,6 +5,10 @@ import {
   getApps
 } from "firebase/app";
 
+import {
+  getAnalytics
+} from "firebase/analytics";
+
 
 import {
   getAuth
@@ -23,28 +27,13 @@ import {
 
 
 const firebaseConfig = {
-
-  apiKey:
-  process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-
-  authDomain:
-  process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-
-  databaseURL:
-  process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-
-  projectId:
-  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-
-  storageBucket:
-  process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-
-  messagingSenderId:
-  process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-
-  appId:
-  process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-
+  apiKey: "AIzaSyCwkDm3s9LAXkWWbpVZpRMMHrTYzYyxyGA",
+  authDomain: "titato-64a4d.firebaseapp.com",
+  projectId: "titato-64a4d",
+  storageBucket: "titato-64a4d.firebasestorage.app",
+  messagingSenderId: "942632105982",
+  appId: "1:942632105982:web:7ebb5b9a19b5c8d0feb2af",
+  measurementId: "G-NKBRW72RSH"
 };
 
 
@@ -55,6 +44,8 @@ getApps().length
 getApps()[0]
 :
 initializeApp(firebaseConfig);
+
+const analytics = typeof window !== "undefined" ? getAnalytics(app) : null;
 
 
 

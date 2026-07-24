@@ -9,13 +9,9 @@ export const dynamic = "force-dynamic";
 
 
 import {
-  adminDB
-} from "@/lib/firebaseAdmin";
-
-
-import {
+  adminDB,
   adminAuth
-} from "@/lib/firebaseAuthAdmin";
+} from "@/lib/firebaseAdmin";
 
 
 import {
@@ -174,6 +170,7 @@ snap.val();
 
 
 
+
 if(room.status !== "waiting"){
 
 return NextResponse.json(
@@ -272,6 +269,7 @@ room.bet || 0
 
 
 
+
 const balance =
 await checkUserBalance(
 uid
@@ -311,6 +309,7 @@ roomId
 
 
 
+
 // ===============================
 // PLAYER
 // ===============================
@@ -327,6 +326,7 @@ currentPlayers === 0
 "X"
 :
 "O";
+
 
 
 
@@ -361,6 +361,7 @@ Date.now()
 
 
 
+
 const newPlayersCount =
 playersCount + 1;
 
@@ -376,6 +377,8 @@ bet;
 
 const roomFull =
 newPlayersCount >= maxPlayers;
+
+
 
 
 
@@ -434,6 +437,7 @@ Date.now()
 
 
 
+
 return NextResponse.json({
 
 success:true,
@@ -456,6 +460,8 @@ roomFull
 "waiting"
 
 });
+
+
 
 
 
