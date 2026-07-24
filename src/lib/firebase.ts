@@ -2,28 +2,24 @@
 
 import {
   initializeApp,
-  getApps
+  getApps,
 } from "firebase/app";
 
 import {
-  getAnalytics
+  getAnalytics,
 } from "firebase/analytics";
 
-
 import {
-  getAuth
+  getAuth,
 } from "firebase/auth";
 
-
 import {
-  getDatabase
+  getDatabase,
 } from "firebase/database";
 
-
 import {
-  getFirestore
+  getFirestore,
 } from "firebase/firestore";
-
 
 
 const firebaseConfig = {
@@ -33,48 +29,49 @@ const firebaseConfig = {
   storageBucket: "titato-64a4d.firebasestorage.app",
   messagingSenderId: "942632105982",
   appId: "1:942632105982:web:7ebb5b9a19b5c8d0feb2af",
-  measurementId: "G-NKBRW72RSH"
+  measurementId: "G-NKBRW72RSH",
 };
 
 
-
 const app =
-getApps().length
-?
-getApps()[0]
-:
-initializeApp(firebaseConfig);
+  getApps().length > 0
+    ? getApps()[0]
+    : initializeApp(firebaseConfig);
 
-const analytics = typeof window !== "undefined" ? getAnalytics(app) : null;
 
+// Analytics
+
+export const analytics =
+  typeof window !== "undefined"
+    ? getAnalytics(app)
+    : null;
 
 
 // Firebase Auth
 
 export const auth =
-getAuth(app);
-
+  getAuth(app);
 
 
 // Realtime Database
 
 export const database =
-getDatabase(app);
+  getDatabase(
+    app,
+    "https://titato-64a4d-default-rtdb.firebaseio.com"
+  );
 
+
+// Alias
 
 export const rtdb =
-database;
-
-
-
-// Alias ancien code
+  database;
 
 export const db =
-database;
-
+  database;
 
 
 // Firestore
 
 export const firestore =
-getFirestore(app);
+  getFirestore(app);
