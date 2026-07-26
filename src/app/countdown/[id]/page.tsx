@@ -1,376 +1,695 @@
 "use client";
 
-
 import {
   useEffect,
-  useState
+  useState,
 } from "react";
-
 
 import {
   useParams,
-  useRouter
+  useRouter,
 } from "next/navigation";
-
 
 import {
   ref,
-  onValue
+  onValue,
 } from "firebase/database";
 
-
 import {
-  database
+  database,
 } from "@/lib/firebase";
 
+import {
+  motion,
+} from "framer-motion";
 
 
+/*
+====================================================
+COMPTE À REBOURS TITATO
+====================================================
+*/
 
+export default function CountdownPage() {
 
-export default function CountdownPage(){
+  const params = useParams();
 
+  const router = useRouter();
 
-const params =
-useParams();
+  const id = params.id as string;
 
 
-const router =
-useRouter();
+  /*
+  ==================================================
+  STATES
+  ==================================================
+  */
 
+  const [
+    count,
+    setCount,
+  ] = useState(5);
 
 
-const id =
-params.id as string;
+  const [
+    ready,
+    setReady,
+  ] = useState(false);
 
 
+  const [
+    roomName,
+    setRoomName,
+  ] = useState("Partie TiTaTo");
 
-const [count,setCount] =
-useState(5);
 
+  /*
+  ==================================================
+  RÉCUPÉRER LE TEMPS DE DÉPART
+  ==================================================
+  */
 
+  useEffect(() => {
 
-const [ready,setReady] =
-useState(false);
+    if (!id) {
+      return;
+    }
 
 
+    const roomRef = ref(
+      database,
+      `rooms/${id}`
+    );
 
 
+    let countdownAt: number | null = null;
 
+    let interval:
+      ReturnType<typeof setInterval> | null = null;
 
 
+    /*
+    ================================================
+    CALCUL DU COMPTE À REBOURS
+    ================================================
+    */
 
+    const startCountdown = (
+      startTime: number
+    ) => {
 
-useEffect(()=>{
+      if (interval) {
+        clearInterval(interval);
+      }
 
 
-if(!id)
-return;
+      countdownAt = startTime;
 
 
+      const updateCountdown = () => {
 
-const roomRef =
-ref(
-database,
-`rooms/${id}`
-);
+        const now = Date.now();
 
 
+        const elapsed =
+          Math.floor(
+            (now - startTime) / 1000
+          );
 
 
+        const remaining =
+          Math.max(
+            0,
+            5 - elapsed
+          );
 
-const unsubscribe =
-onValue(
-roomRef,
-(snapshot)=>{
 
+        setCount(
+          remaining
+        );
 
-const room =
-snapshot.val();
 
+        /*
+        ============================================
+        COMPTE À REBOURS TERMINÉ
+        ============================================
+        */
 
+        if (remaining <= 0) {
 
-if(!room)
-return;
+          if (interval) {
 
+            clearInterval(
+              interval
+            );
 
+            interval = null;
 
+          }
 
 
-let startTime =
-room.countdownAt;
+          setReady(true);
 
+          return;
 
+        }
 
-if(!startTime){
+      };
 
-startTime =
-Date.now();
 
-}
+      /*
+      PREMIÈRE MISE À JOUR IMMÉDIATE
+      */
 
+      updateCountdown();
 
 
+      /*
+      MISE À JOUR TOUTES LES 100 MS
+      */
 
+      interval =
+        setInterval(
+          updateCountdown,
+          100
+        );
 
-const interval =
-setInterval(()=>{
+    };
 
 
+    /*
+    =================================================
+    ÉCOUTER LA SALLE
+    =================================================
+    */
 
-const now =
-Date.now();
+    const unsubscribe =
+      onValue(
+        roomRef,
+        (snapshot) => {
 
+          const room =
+            snapshot.val();
 
 
-const diff =
-5 -
-Math.floor(
-(now - startTime)
-/1000
-);
+          if (!room) {
+            return;
+          }
 
 
+          /*
+          NOM DE LA PARTIE
+          */
 
+          setRoomName(
+            room.name ||
+            "Partie TiTaTo"
+          );
 
 
-if(diff <= 0){
+          /*
+          TEMPS DE DÉPART
+          */
 
+          const firebaseCountdownAt =
+            Number(
+              room.countdownAt || 0
+            );
 
-clearInterval(interval);
 
+          /*
+          SI FIREBASE A LE TIMESTAMP
+          */
 
-setCount(0);
+          if (
+            firebaseCountdownAt > 0
+          ) {
 
+            /*
+            ÉVITE DE REDÉMARRER
+            LE COMPTE À REBOURS
+            */
 
-setReady(true);
+            if (
+              countdownAt !==
+              firebaseCountdownAt
+            ) {
 
+              startCountdown(
+                firebaseCountdownAt
+              );
 
-return;
+            }
 
+          }
 
-}
+        }
+      );
 
 
+    /*
+    =================================================
+    CLEANUP
+    =================================================
+    */
 
-setCount(diff);
+    return () => {
 
+      unsubscribe();
 
 
-},200);
+      if (interval) {
 
+        clearInterval(
+          interval
+        );
 
+      }
 
+    };
 
+  }, [
+    id,
+  ]);
 
-return()=>clearInterval(interval);
 
+  /*
+  ==================================================
+  REDIRECTION VERS LE JEU
+  ==================================================
+  */
 
+  useEffect(() => {
 
-}
+    if (!ready) {
+      return;
+    }
 
-);
 
+    const timer =
+      setTimeout(
+        () => {
 
+          router.replace(
+            `/game/${id}`
+          );
 
-return()=>unsubscribe();
+        },
+        700
+      );
 
 
+    return () => {
 
-},[
-id
-]);
+      clearTimeout(
+        timer
+      );
 
+    };
 
+  }, [
+    ready,
+    id,
+    router,
+  ]);
 
 
+  /*
+  ==================================================
+  AFFICHAGE
+  ==================================================
+  */
 
+  return (
 
+    <main
+      className="
+        relative
+        min-h-screen
+        overflow-hidden
+        bg-[#020617]
+        text-white
+      "
+    >
 
 
-useEffect(()=>{
+      {/* ==========================================
+          LUMIÈRE BLEUE
+      ========================================== */}
 
+      <motion.div
+        animate={{
+          x: [
+            0,
+            40,
+            0,
+          ],
 
-if(!ready)
-return;
+          y: [
+            0,
+            25,
+            0,
+          ],
+        }}
+        transition={{
+          duration: 6,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="
+          pointer-events-none
+          absolute
+          -left-24
+          top-10
+          h-72
+          w-72
+          rounded-full
+          bg-blue-600/20
+          blur-3xl
+        "
+      />
+
+
+      {/* ==========================================
+          LUMIÈRE CYAN
+      ========================================== */}
+
+      <motion.div
+        animate={{
+          x: [
+            0,
+            -40,
+            0,
+          ],
+
+          y: [
+            0,
+            -20,
+            0,
+          ],
+        }}
+        transition={{
+          duration: 7,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="
+          pointer-events-none
+          absolute
+          -bottom-24
+          -right-24
+          h-72
+          w-72
+          rounded-full
+          bg-cyan-500/15
+          blur-3xl
+        "
+      />
+
+
+      {/* ==========================================
+          CONTENU MOBILE
+      ========================================== */}
 
-
-
-const timer =
-setTimeout(()=>{
-
-
-router.replace(
-`/game/${id}`
-);
-
-
-
-},800);
-
-
-
-
-
-return()=>clearTimeout(timer);
-
-
-
-},[
-ready,
-id,
-router
-]);
-
-
-
-
-
-
-
-
-
-return(
-
-
-<main
-
-className="
-min-h-screen
-bg-gradient-to-br
-from-black
-via-blue-950
-to-black
-text-white
-flex
-items-center
-justify-center
-"
-
->
-
-
-
-<div
-
-className="
-text-center
-"
-
->
-
-
-
-<div
-
-className="
-text-6xl
-mb-6
-animate-bounce
-"
-
->
-
-🎮
-
-</div>
-
-
-
-
-
-
-<h1
-
-className="
-text-3xl
-font-black
-"
-
->
-
-TiTaTo
-
-</h1>
-
-
-
-
-
-
-<p
-
-className="
-text-gray-300
-mt-3
-"
-
->
-
-La partie commence dans
-
-</p>
-
-
-
-
-
-
-
-<div
-
-className="
-text-9xl
-font-black
-text-cyan-400
-mt-6
-drop-shadow-lg
-"
-
->
-
-{count}
-
-</div>
-
-
-
-
-
-
-
-{
-
-count === 0 &&
-
-
-<p
-
-className="
-mt-6
-text-green-400
-font-black
-animate-pulse
-"
-
->
-
-🚀 Début de la partie !
-
-</p>
-
-
-}
-
-
-
-</div>
-
-
-
-</main>
-
-
-);
-
+      <div
+        className="
+          relative
+          z-10
+          flex
+          min-h-screen
+          w-full
+          flex-col
+          items-center
+          justify-center
+          px-6
+        "
+      >
+
+
+        {/* ========================================
+            LOGO
+        ======================================== */}
+
+        <motion.div
+          animate={{
+            scale: [
+              1,
+              1.08,
+              1,
+            ],
+
+            rotate: [
+              0,
+              3,
+              -3,
+              0,
+            ],
+          }}
+          transition={{
+            duration: 2.5,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="
+            mb-6
+            flex
+            h-20
+            w-20
+            items-center
+            justify-center
+            rounded-3xl
+            border
+            border-blue-400/20
+            bg-blue-500/10
+            text-4xl
+            shadow-[0_0_40px_rgba(37,99,235,0.2)]
+          "
+        >
+
+          🎮
+
+        </motion.div>
+
+
+        {/* ========================================
+            TITRE
+        ======================================== */}
+
+        <h1
+          className="
+            text-center
+            text-3xl
+            font-black
+            tracking-tight
+          "
+        >
+
+          TiTaTo
+
+        </h1>
+
+
+        {/* ========================================
+            NOM PARTIE
+        ======================================== */}
+
+        <p
+          className="
+            mt-2
+            max-w-[280px]
+            truncate
+            text-center
+            text-xs
+            font-medium
+            text-white/40
+          "
+        >
+
+          {roomName}
+
+        </p>
+
+
+        {/* ========================================
+            MESSAGE
+        ======================================== */}
+
+        <p
+          className="
+            mt-8
+            text-center
+            text-sm
+            font-medium
+            text-white/50
+          "
+        >
+
+          {ready
+            ? "Préparez-vous !"
+            : "La partie commence dans"
+          }
+
+        </p>
+
+
+        {/* ========================================
+            COMPTEUR
+        ======================================== */}
+
+        <div
+          className="
+            relative
+            mt-5
+            flex
+            h-44
+            w-44
+            items-center
+            justify-center
+          "
+        >
+
+
+          {/* CERCLE EXTÉRIEUR */}
+
+          <motion.div
+            animate={{
+              rotate: 360,
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            className="
+              absolute
+              inset-0
+              rounded-full
+              border
+              border-blue-500/20
+              border-t-blue-400/70
+            "
+          />
+
+
+          {/* CERCLE INTÉRIEUR */}
+
+          <div
+            className="
+              absolute
+              inset-4
+              rounded-full
+              border
+              border-white/[0.06]
+              bg-white/[0.025]
+              backdrop-blur-xl
+            "
+          />
+
+
+          {/* CHIFFRE */}
+
+          <motion.div
+            key={count}
+            initial={{
+              scale: 1.5,
+              opacity: 0,
+            }}
+            animate={{
+              scale: 1,
+              opacity: 1,
+            }}
+            transition={{
+              duration: 0.3,
+            }}
+            className="
+              relative
+              z-10
+              text-8xl
+              font-black
+              leading-none
+              text-cyan-400
+              drop-shadow-[0_0_25px_rgba(34,211,238,0.5)]
+            "
+          >
+
+            {count}
+
+          </motion.div>
+
+        </div>
+
+
+        {/* ========================================
+            MESSAGE FINAL
+        ======================================== */}
+
+        {ready && (
+
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 10,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            className="
+              mt-6
+              text-center
+              text-sm
+              font-black
+              text-green-400
+            "
+          >
+
+            🚀 Début de la partie !
+
+          </motion.div>
+
+        )}
+
+
+        {/* ========================================
+            INDICATEUR
+        ======================================== */}
+
+        {!ready && (
+
+          <div
+            className="
+              mt-8
+              flex
+              items-center
+              gap-2
+              text-[10px]
+              font-bold
+              uppercase
+              tracking-widest
+              text-white/25
+            "
+          >
+
+            <span
+              className="
+                h-1.5
+                w-1.5
+                animate-pulse
+                rounded-full
+                bg-cyan-400
+              "
+            />
+
+            Préparation de la partie
+
+          </div>
+
+        )}
+
+      </div>
+
+    </main>
+
+  );
 
 }

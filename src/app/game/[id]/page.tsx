@@ -2,39 +2,39 @@
 
 import {
   useEffect,
+  useRef,
   useState,
-  useRef
 } from "react";
 
 import {
   useParams,
-  useRouter
+  useRouter,
 } from "next/navigation";
 
 import {
-  ref,
   onValue,
-  remove
+  ref,
+  remove,
 } from "firebase/database";
 
 import {
+  auth,
   database,
-  auth
 } from "@/lib/firebase";
 
 import {
-  playGameMove
+  playGameMove,
 } from "@/lib/firebaseGame";
 
 import {
   addPlayerWin,
-  addPlayerLose
+  addPlayerLose,
 } from "@/lib/playerStats";
 
 import {
-  sendFriendRequest,
-  checkFriendStatus
-} from "@/lib/friends";
+  checkVyloFriendStatus,
+  sendVyloFriendRequest,
+} from "@/lib/vylo/vyloFriends";
 
 import TiTaToBoard from "@/components/TiTaToBoard";
 import GameTimer from "@/components/GameTimer";
@@ -42,1056 +42,1366 @@ import WinnerModal from "@/components/WinnerModal";
 import GameChat from "@/components/GameChat";
 
 
+type FriendStatus =
+  | "none"
+  | "pending"
+  | "friend";
 
-export default function GamePage(){
 
+export default function GamePage() {
 
-const params = useParams();
+  const params =
+    useParams();
 
-const router = useRouter();
+  const router =
+    useRouter();
 
+  const id =
+    params.id as string;
 
-const id =
-params.id as string;
 
+  const [
+    room,
+    setRoom,
+  ] = useState<any>(null);
 
 
-const [room,setRoom] =
-useState<any>(null);
+  const [
+    board,
+    setBoard,
+  ] = useState<string[][]>(
+    Array.from(
+      {
+        length: 10,
+      },
+      () =>
+        Array(10).fill("")
+    )
+  );
 
 
+  const [
+    turn,
+    setTurn,
+  ] = useState<"X" | "O">(
+    "X"
+  );
 
-const [board,setBoard] =
-useState<string[][]>(
 
-Array.from(
-{
-length:10
-},
-()=>Array(10).fill("")
-)
+  const [
+    winner,
+    setWinner,
+  ] = useState<string | null>(
+    null
+  );
 
-);
 
+  const [
+    mySymbol,
+    setMySymbol,
+  ] = useState<
+    "X" | "O" | ""
+  >("");
 
 
-const [turn,setTurn] =
-useState<"X"|"O">("X");
+  const [
+    turnStartedAt,
+    setTurnStartedAt,
+  ] = useState<number>(
+    0
+  );
 
 
+  const [
+    friendStatus,
+    setFriendStatus,
+  ] = useState<FriendStatus>(
+    "none"
+  );
 
-const [winner,setWinner] =
-useState<string|null>(null);
 
+  const [
+    friendMessage,
+    setFriendMessage,
+  ] = useState("");
 
 
-const [mySymbol,setMySymbol] =
-useState<
-"X"|"O"| ""
->("");
+  const [
+    gameMessage,
+    setGameMessage,
+  ] = useState("");
 
 
+  const [
+    friendLoading,
+    setFriendLoading,
+  ] = useState(false);
 
-const [turnStartedAt,setTurnStartedAt] =
-useState<number>(0);
 
+  const paymentDone =
+    useRef(false);
 
 
-const [friendStatus,setFriendStatus] =
-useState<
-"none"|
-"pending"|
-"friend"
->("none");
+  const friendStatusChecked =
+    useRef<string | null>(null);
 
 
+  /*
+  ========================================
+  FIREBASE ROOM
+  ========================================
+  */
 
-// MESSAGE UI
+  useEffect(() => {
 
-const [friendMessage,setFriendMessage] =
-useState("");
+    if (!id) {
+      return;
+    }
 
-const [gameMessage,setGameMessage] =
-useState("");
 
+    const roomRef =
+      ref(
+        database,
+        `rooms/${id}`
+      );
 
 
-const paymentDone =
-useRef(false);
+    const unsubscribe =
+      onValue(
+        roomRef,
+        (snapshot) => {
 
+          const data =
+            snapshot.val();
 
 
+          if (!data) {
+            return;
+          }
 
-// ==========================
-// FIREBASE ROOM
-// ==========================
 
+          setRoom(data);
 
-useEffect(()=>{
 
+          if (
+            data.game?.board
+          ) {
 
-if(!id)
-return;
+            setBoard(
+              data.game.board
+            );
 
+          } else {
 
+            setBoard(
+              Array.from(
+                {
+                  length: 10,
+                },
+                () =>
+                  Array(10).fill("")
+              )
+            );
 
-const roomRef =
-ref(
-database,
-`rooms/${id}`
-);
+          }
 
 
+          if (
+            data.game?.turn
+          ) {
 
-const unsubscribe =
-onValue(
+            setTurn(
+              data.game.turn
+            );
 
-roomRef,
+          }
 
-(snapshot)=>{
 
+          setWinner(
+            data.game?.winner ||
+              null
+          );
 
-const data =
-snapshot.val();
 
+          setTurnStartedAt(
+            data.game?.turnStartedAt ||
+              0
+          );
 
 
-if(!data)
-return;
+          const user =
+            auth.currentUser;
 
 
+          if (
+            user &&
+            data.players?.[user.uid]
+          ) {
 
-setRoom(data);
+            setMySymbol(
+              data.players[
+                user.uid
+              ].symbol
+            );
 
+          }
 
+        }
+      );
 
-if(data.game?.board){
 
-setBoard(
-data.game.board
-);
+    return () => {
+      unsubscribe();
+    };
 
-}
-else{
+  }, [
+    id,
+  ]);
 
-setBoard(
 
-Array.from(
-{
-length:10
-},
-()=>Array(10).fill("")
-)
+  /*
+  ========================================
+  TROUVER L'ADVERSAIRE
+  ========================================
+  */
 
-);
+  function getOpponentId() {
 
-}
+    const user =
+      auth.currentUser;
 
 
+    if (
+      !user ||
+      !room?.players
+    ) {
+      return null;
+    }
 
 
-if(data.game?.turn){
+    const opponentId =
+      Object.keys(
+        room.players
+      ).find(
+        (uid) =>
+          uid !== user.uid
+      );
 
-setTurn(
-data.game.turn
-);
 
-}
+    return opponentId ||
+      null;
+  }
 
 
+  /*
+  ========================================
+  VÉRIFIER STATUT AMI VYLO
+  ========================================
+  */
 
+  useEffect(() => {
 
-setWinner(
-data.game?.winner || null
-);
+    if (
+      !room ||
+      !auth.currentUser ||
+      !room.players
+    ) {
+      return;
+    }
 
 
+    const me =
+      auth.currentUser.uid;
 
-setTurnStartedAt(
-data.game?.turnStartedAt || 0
-);
 
+    const opponentId =
+      Object.keys(
+        room.players
+      ).find(
+        (uid) =>
+          uid !== me
+      );
 
 
+    if (!opponentId) {
 
+      setFriendStatus(
+        "none"
+      );
 
-const user =
-auth.currentUser;
+      return;
 
+    }
 
 
-if(
-user &&
-data.players?.[user.uid]
-){
+    const checkKey =
+      `${me}_${opponentId}`;
 
-setMySymbol(
-data.players[user.uid].symbol
-);
 
-}
+    if (
+      friendStatusChecked.current ===
+      checkKey
+    ) {
+      return;
+    }
 
 
-}
+    friendStatusChecked.current =
+      checkKey;
 
-);
 
+    let cancelled =
+      false;
 
 
-return ()=>unsubscribe();
+    async function checkStatus() {
 
+      try {
 
-},[id]);// ==========================
-// VERIFIER AMI
-// ==========================
+        const status =
+          await checkVyloFriendStatus(
+            me,
+            opponentId!
+          );
 
 
-useEffect(()=>{
+        if (
+          cancelled
+        ) {
+          return;
+        }
 
 
-if(
-!room ||
-!auth.currentUser ||
-!room.players
-)
-return;
+        setFriendStatus(
+          status
+        );
 
+      } catch (error) {
 
+        console.error(
+          "Erreur vérification statut VYLO :",
+          error
+        );
 
-const me =
-auth.currentUser.uid;
 
+        if (
+          !cancelled
+        ) {
 
+          setFriendStatus(
+            "none"
+          );
 
-const opponent =
-Object.keys(room.players)
-.find(
-uid=>uid!==me
-);
+        }
 
+      }
 
+    }
 
-if(!opponent)
-return;
 
+    checkStatus();
 
 
-checkFriendStatus(
-me,
-opponent
-)
-.then(status=>{
+    return () => {
 
+      cancelled =
+        true;
 
-setFriendStatus(status as any);
+    };
 
+  }, [
+    room,
+  ]);
 
-});
 
+  /*
+  ========================================
+  PAIEMENT GAGNANT
+  ========================================
+  */
 
-},[room]);
+  useEffect(() => {
 
+    if (!room) {
+      return;
+    }
 
 
+    if (
+      room.game?.status !==
+      "finished"
+    ) {
+      return;
+    }
 
 
+    if (
+      !room.game?.winner ||
+      room.game.winner ===
+      "draw"
+    ) {
+      return;
+    }
 
-// ==========================
-// PAIEMENT GAGNANT
-// ==========================
 
+    if (
+      room.game.paymentStatus ===
+      "completed"
+    ) {
+      return;
+    }
 
-useEffect(()=>{
 
+    if (
+      paymentDone.current
+    ) {
+      return;
+    }
 
-if(!room)
-return;
 
+    paymentDone.current =
+      true;
 
 
-if(
-room.game?.status !== "finished"
-)
-return;
+    async function pay() {
 
+      try {
 
+        const user =
+          auth.currentUser;
 
-if(
-!room.game?.winner ||
-room.game.winner==="draw"
-)
-return;
 
+        if (!user) {
 
+          throw new Error(
+            "Utilisateur non connecté"
+          );
 
-if(
-room.game.paymentStatus === "completed"
-)
-return;
+        }
 
 
+        const token =
+          await user.getIdToken();
 
-if(
-paymentDone.current
-)
-return;
 
+        const res =
+          await fetch(
+            "/api/game/finish-payment",
+            {
+              method: "POST",
 
+              headers: {
+                "Content-Type":
+                  "application/json",
 
-paymentDone.current=true;
+                authorization:
+                  `Bearer ${token}`,
+              },
 
+              body:
+                JSON.stringify({
+                  gameId: id,
+                }),
+            }
+          );
 
 
+        const result =
+          await res.json();
 
-async function pay(){
 
+        if (
+          !res.ok ||
+          !result.success
+        ) {
 
-try{
+          throw new Error(
+            result?.error ||
+              "Erreur paiement"
+          );
 
+        }
 
-const user =
-auth.currentUser;
 
+        await addPlayerWin(
+          result.winnerUid
+        );
 
 
-if(!user){
+        Object.keys(
+          room.players || {}
+        ).forEach(
+          (uid) => {
 
-throw new Error(
-"Utilisateur non connecté"
-);
+            if (
+              uid !==
+              result.winnerUid
+            ) {
 
-}
+              addPlayerLose(
+                uid
+              );
 
+            }
 
+          }
+        );
 
-const token =
-await user.getIdToken();
 
+        setTimeout(
+          async () => {
 
+            try {
 
-const res =
-await fetch(
+              await remove(
+                ref(
+                  database,
+                  `rooms/${id}`
+                )
+              );
 
-"/api/game/finish-payment",
+            } catch (error) {
 
-{
+              console.error(
+                "Erreur suppression room :",
+                error
+              );
 
-method:"POST",
+            }
 
-headers:{
+          },
+          5000
+        );
 
-"Content-Type":
-"application/json",
 
-"authorization":
-`Bearer ${token}`
+      } catch (error) {
 
-},
+        console.error(
+          "PAYMENT ERROR",
+          error
+        );
 
-body:JSON.stringify({
+        paymentDone.current =
+          false;
 
-gameId:id
+      }
 
-})
+    }
 
-}
 
-);
+    pay();
 
 
+  }, [
+    room,
+    id,
+  ]);
 
-const result =
-await res.json();
 
+  /*
+  ========================================
+  JOUER UN COUP
+  ========================================
+  */
 
+  async function handleMove(
+    row: number,
+    col: number
+  ) {
 
-if(
-!res.ok ||
-!result.success
-){
+    if (!mySymbol) {
+      return;
+    }
 
-throw new Error(
-result?.error ||
-"Erreur paiement"
-);
 
-}
+    if (
+      turn !== mySymbol
+    ) {
 
+      setGameMessage(
+        "⏳ Ce n'est pas ton tour"
+      );
 
 
-await addPlayerWin(
-result.winnerUid
-);
+      setTimeout(
+        () => {
+          setGameMessage("");
+        },
+        2500
+      );
 
 
+      return;
 
+    }
 
-Object.keys(
-room.players || {}
-)
-.forEach((uid)=>{
 
+    try {
 
-if(
-uid !== result.winnerUid
-){
+      await playGameMove(
+        id,
+        row,
+        col,
+        mySymbol
+      );
 
+    } catch (error: any) {
 
-addPlayerLose(uid);
+      setGameMessage(
+        "❌ " +
+          (
+            error?.message ||
+            "Erreur pendant le coup"
+          )
+      );
 
 
-}
+      setTimeout(
+        () => {
+          setGameMessage("");
+        },
+        2500
+      );
 
+    }
 
-});
+  }
 
 
+  /*
+  ========================================
+  AJOUTER L'ADVERSAIRE COMME AMI VYLO
+  ========================================
+  */
 
+  async function handleAddFriend() {
 
+    const user =
+      auth.currentUser;
 
-setTimeout(async()=>{
 
+    if (!user) {
 
-await remove(
+      setFriendMessage(
+        "❌ Utilisateur non connecté"
+      );
 
-ref(
 
-database,
+      setTimeout(
+        () => {
+          setFriendMessage("");
+        },
+        3000
+      );
 
-`rooms/${id}`
 
-)
+      return;
 
-);
+    }
 
 
-},5000);
+    const opponentId =
+      getOpponentId();
 
 
+    if (!opponentId) {
 
-}
+      setFriendMessage(
+        "❌ Adversaire introuvable"
+      );
 
-catch(error){
 
-console.log(
-"PAYMENT ERROR",
-error
-);
+      setTimeout(
+        () => {
+          setFriendMessage("");
+        },
+        3000
+      );
 
 
-}
+      return;
 
+    }
 
 
-}
+    if (
+      friendStatus ===
+      "friend"
+    ) {
 
+      return;
 
+    }
 
-pay();
 
+    if (
+      friendStatus ===
+      "pending"
+    ) {
 
+      setFriendMessage(
+        "📩 Demande déjà envoyée"
+      );
 
-},[
-room,
-id
-]);
 
+      setTimeout(
+        () => {
+          setFriendMessage("");
+        },
+        3000
+      );
 
 
+      return;
 
+    }
 
 
+    try {
 
-// ==========================
-// JOUER UN COUP
-// ==========================
+      setFriendLoading(
+        true
+      );
 
 
-async function handleMove(
+      setFriendMessage(
+        ""
+      );
 
-row:number,
 
-col:number
+      const currentStatus =
+        await checkVyloFriendStatus(
+          user.uid,
+          opponentId
+        );
 
-){
 
+      if (
+        currentStatus ===
+        "friend"
+      ) {
 
+        setFriendStatus(
+          "friend"
+        );
 
-if(!mySymbol)
-return;
 
+        setFriendMessage(
+          "✅ Vous êtes déjà amis"
+        );
 
 
+        setTimeout(
+          () => {
+            setFriendMessage("");
+          },
+          3000
+        );
 
-if(
-turn !== mySymbol
-){
 
+        return;
 
-setGameMessage(
-"⏳ Ce n'est pas ton tour"
-);
+      }
 
 
+      if (
+        currentStatus ===
+        "pending"
+      ) {
 
-setTimeout(()=>{
+        setFriendStatus(
+          "pending"
+        );
 
 
-setGameMessage("");
+        setFriendMessage(
+          "📩 Demande déjà envoyée"
+        );
 
-},2500);
 
+        setTimeout(
+          () => {
+            setFriendMessage("");
+          },
+          3000
+        );
 
 
-return;
+        return;
 
+      }
 
-}
 
+      await sendVyloFriendRequest(
+        user.uid,
+        opponentId
+      );
 
 
+      setFriendStatus(
+        "pending"
+      );
 
 
-try{
+      setFriendMessage(
+        "📩 Demande d'ami envoyée sur VYLO"
+      );
 
 
-await playGameMove(
+    } catch (error: any) {
 
-id,
+      console.error(
+        "Erreur demande d'ami VYLO :",
+        error
+      );
 
-row,
 
-col,
+      setFriendMessage(
+        "❌ " +
+          (
+            error?.message ||
+            "Impossible d'envoyer la demande"
+          )
+      );
 
-mySymbol
 
-);
+    } finally {
 
+      setFriendLoading(
+        false
+      );
 
 
-}
+      setTimeout(
+        () => {
+          setFriendMessage("");
+        },
+        3500
+      );
 
-catch(error:any){
+    }
 
+  }
 
-setGameMessage(
 
-"❌ " + error.message
+  /*
+  ========================================
+  CHARGEMENT
+  ========================================
+  */
 
-);
+  if (!room) {
 
+    return (
 
+      <main
+        className="
+          flex
+          min-h-screen
+          items-center
+          justify-center
+          bg-[#020617]
+          px-5
+          text-white
+        "
+      >
 
-setTimeout(()=>{
+        <div
+          className="
+            flex
+            flex-col
+            items-center
+            gap-3
+          "
+        >
 
+          <div
+            className="
+              flex
+              h-12
+              w-12
+              items-center
+              justify-center
+              rounded-2xl
+              border
+              border-blue-500/20
+              bg-blue-500/10
+              text-2xl
+            "
+          >
 
-setGameMessage("");
+            🎮
 
-},2500);
+          </div>
 
 
+          <div
+            className="
+              text-sm
+              font-bold
+              text-white/50
+            "
+          >
 
-}
+            Chargement...
 
+          </div>
 
+        </div>
 
-}
+      </main>
 
+    );
 
+  }
 
 
+  const user =
+    auth.currentUser;
 
 
+  const bet =
+    Number(
+      room.bet || 0
+    );
 
 
-// ==========================
-// DEMANDE AMI
-// ==========================
+  const pot =
+    Number(
+      room.pot || 0
+    );
 
 
-async function handleAddFriend(){
+  const commission =
+    Math.floor(
+      pot * 0.1
+    );
 
 
-const user =
-auth.currentUser;
+  const reward =
+    Math.floor(
+      pot * 0.9
+    );
 
 
+  return (
 
-if(!user)
-return;
+    <main
+      className="
+        relative
+        min-h-screen
+        overflow-x-hidden
+        bg-[#020617]
+        text-white
+      "
+    >
 
+      {/* DÉCORATION MOBILE */}
 
+      <div
+        className="
+          pointer-events-none
+          fixed
+          -left-32
+          top-20
+          h-64
+          w-64
+          rounded-full
+          bg-blue-600/10
+          blur-3xl
+        "
+      />
 
-if(!room?.players)
-return;
 
+      <div
+        className="
+          pointer-events-none
+          fixed
+          -right-32
+          bottom-20
+          h-64
+          w-64
+          rounded-full
+          bg-cyan-500/10
+          blur-3xl
+        "
+      />
 
 
+      {/* CONTENEUR PRINCIPAL */}
 
+      <div
+        className="
+          relative
+          z-10
+          mx-auto
+          flex
+          min-h-screen
+          w-full
+          max-w-[430px]
+          flex-col
+          px-3
+          pb-8
+          pt-4
+        "
+      >
 
-const opponentId =
+        {/* HEADER */}
 
-Object.keys(room.players)
+        <header
+          className="
+            mb-3
+            flex
+            items-center
+            justify-between
+            rounded-2xl
+            border
+            border-white/[0.07]
+            bg-white/[0.025]
+            px-3
+            py-2.5
+            backdrop-blur-xl
+          "
+        >
 
-.find(
+          <div
+            className="
+              min-w-0
+              flex-1
+            "
+          >
 
-uid=>uid!==user.uid
+            <p
+              className="
+                truncate
+                text-[12px]
+                font-black
+                text-white
+              "
+            >
 
-);
+              🎮 {room.name || "TiTaTo"}
 
+            </p>
 
 
+            <p
+              className="
+                mt-0.5
+                text-[8px]
+                font-medium
+                text-white/30
+              "
+            >
 
-if(!opponentId)
-return;
+              Partie en cours
 
+            </p>
 
+          </div>
 
 
+          <div
+            className="
+              ml-3
+              shrink-0
+              rounded-xl
+              border
+              border-yellow-400/20
+              bg-yellow-500/10
+              px-3
+              py-1.5
+              text-center
+            "
+          >
 
-await sendFriendRequest(
+            <p
+              className="
+                text-[7px]
+                font-bold
+                text-white/35
+              "
+            >
 
-user.uid,
+              POT
 
-opponentId
+            </p>
 
-);
 
+            <p
+              className="
+                text-[12px]
+                font-black
+                text-yellow-400
+              "
+            >
 
+              {pot.toLocaleString(
+                "fr-FR"
+              )} HTG
 
+            </p>
 
+          </div>
 
-setFriendStatus(
+        </header>
 
-"pending"
 
-);
+        {/* INFORMATIONS JOUEUR */}
 
+        <div
+          className="
+            mb-3
+            flex
+            items-center
+            justify-between
+            rounded-xl
+            border
+            border-white/[0.06]
+            bg-white/[0.02]
+            px-3
+            py-2
+          "
+        >
 
+          <div
+            className="
+              text-[10px]
+              text-white/45
+            "
+          >
 
+            Votre symbole
 
+          </div>
 
-setFriendMessage(
 
-"📩 Demande d'ami envoyée"
+          <div
+            className="
+              flex
+              h-8
+              w-8
+              items-center
+              justify-center
+              rounded-lg
+              border
+              border-blue-400/20
+              bg-blue-500/10
+              text-lg
+              font-black
+            "
+          >
 
-);
+            {mySymbol || "—"}
 
+          </div>
 
+        </div>
 
 
+        {/* PLATEAU */}
 
-setTimeout(()=>{
+        <div
+          className="
+            flex
+            w-full
+            justify-center
+          "
+        >
 
+          <div
+            className="
+              w-full
+              max-w-[390px]
+              overflow-hidden
+              rounded-2xl
+            "
+          >
 
-setFriendMessage("");
+            <TiTaToBoard
+              board={board}
+              mySymbol={mySymbol}
+              turn={turn}
+              winner={winner}
+              playMove={handleMove}
+            />
 
-},3000);
+          </div>
 
+        </div>
 
 
-}
+        {/* TIMER */}
 
+        <div
+          className="
+            mt-3
+            flex
+            justify-center
+          "
+        >
 
+          <GameTimer
+            turnStartedAt={
+              turnStartedAt
+            }
+            isMyTurn={
+              turn === mySymbol
+            }
+            onTimeout={() => {}}
+          />
 
+        </div>
 
 
+        {/* CHAT */}
 
+        <div
+          className="
+            mt-3
+            w-full
+          "
+        >
 
-// ==========================
-// CHARGEMENT
-// ==========================
+          <GameChat
+            roomId={id}
+            uid={
+              user?.uid || ""
+            }
+            userName={
+              user?.displayName ||
+              room.players?.[
+                user?.uid || ""
+              ]?.name ||
+              "Joueur"
+            }
+          />
 
+        </div>
 
-if(!room){
 
+        {/* MODAL GAGNANT */}
 
-return(
+        {
+          winner && (
 
-<div
+            <WinnerModal
+              winner={winner}
+              mySymbol={mySymbol}
+              reward={reward}
+              bet={bet}
+              pot={pot}
+              commission={commission}
+              friendStatus={
+                friendStatus
+              }
+              onAddFriend={
+                handleAddFriend
+              }
+              onClose={() => {
+                router.push(
+                  "/dashboard"
+                );
+              }}
+            />
 
-className="
-min-h-screen
-bg-black
-text-white
-flex
-items-center
-justify-center
-"
+          )
+        }
 
->
 
-Chargement...
+        {/* MESSAGE AMI */}
 
-</div>
+        {
+          friendMessage && (
 
-);
+            <div
+              className="
+                fixed
+                bottom-5
+                left-1/2
+                z-[100]
+                w-[calc(100%-24px)]
+                max-w-[406px]
+                -translate-x-1/2
+                rounded-2xl
+                border
+                border-blue-400/30
+                bg-blue-600
+                px-4
+                py-3
+                text-center
+                text-xs
+                font-bold
+                text-white
+                shadow-[0_6px_0_rgba(20,70,200,0.7)]
+              "
+            >
 
+              {friendMessage}
 
-}
+            </div>
 
+          )
+        }
 
 
+        {/* MESSAGE JEU */}
 
+        {
+          gameMessage && (
 
+            <div
+              className="
+                fixed
+                bottom-5
+                left-1/2
+                z-[100]
+                w-[calc(100%-24px)]
+                max-w-[406px]
+                -translate-x-1/2
+                rounded-2xl
+                border
+                border-red-400/30
+                bg-red-600
+                px-4
+                py-3
+                text-center
+                text-xs
+                font-bold
+                text-white
+                shadow-xl
+              "
+            >
 
-const user =
-auth.currentUser;
+              {gameMessage}
 
+            </div>
 
+          )
+        }
 
 
-const bet =
-Number(room.bet || 0);
+        {/* CHARGEMENT DEMANDE AMI */}
 
+        {
+          friendLoading && (
 
+            <div
+              className="
+                pointer-events-none
+                fixed
+                inset-0
+                z-[90]
+              "
+            />
 
+          )
+        }
 
-const pot =
-Number(room.pot || 0);
+      </div>
 
+    </main>
 
-
-
-const commission =
-Math.floor(
-pot * 0.1
-);
-
-
-
-
-const reward =
-Math.floor(
-pot * 0.9
-);return(
-
-
-<main
-
-className="
-min-h-screen
-bg-gradient-to-br
-from-black
-via-blue-950
-to-black
-text-white
-p-4
-flex
-flex-col
-items-center
-"
-
->
-
-
-
-<h1
-
-className="
-text-2xl
-font-black
-mb-4
-"
-
->
-
-🎮 {room.name}
-
-</h1>
-
-
-
-
-
-
-
-<div
-
-className="
-bg-yellow-500/10
-border
-border-yellow-400/20
-rounded-2xl
-p-4
-text-center
-mb-4
-"
-
->
-
-
-💰 POT
-
-
-<br/>
-
-
-<span
-
-className="
-text-yellow-400
-font-black
-text-xl
-"
-
->
-
-{pot} HTG
-
-</span>
-
-
-</div>
-
-
-
-
-
-
-
-<div
-
-className="
-mb-4
-"
-
->
-
-
-Votre symbole :
-
-
-<span
-
-className="
-ml-2
-font-black
-text-xl
-"
-
->
-
-{mySymbol}
-
-</span>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<TiTaToBoard
-
-board={board}
-
-mySymbol={mySymbol}
-
-turn={turn}
-
-winner={winner}
-
-playMove={handleMove}
-
-/>
-
-
-
-
-
-
-
-
-
-
-<GameTimer
-
-turnStartedAt={turnStartedAt}
-
-isMyTurn={
-turn === mySymbol
-}
-
-onTimeout={()=>{}}
-
-/>
-
-
-
-
-
-
-
-
-
-<GameChat
-
-roomId={id}
-
-uid={
-user?.uid || ""
-}
-
-userName={
-user?.displayName || "Joueur"
-}
-
-/>
-
-
-
-
-
-
-
-
-
-{
-
-winner &&
-
-
-<WinnerModal
-
-
-winner={winner}
-
-
-mySymbol={mySymbol}
-
-
-reward={reward}
-
-
-bet={bet}
-
-
-pot={pot}
-
-
-commission={commission}
-
-
-friendStatus={friendStatus}
-
-
-
-onAddFriend={handleAddFriend}
-
-
-
-
-
-onClose={()=>{
-
-
-router.push(
-
-"/dashboard"
-
-);
-
-
-}}
-
-
-
-/>
-
-
-}
-
-
-
-
-
-
-
-
-{/* MESSAGE DEMANDE AMI */}
-
-{
-
-friendMessage &&
-
-
-<div
-
-className="
-fixed
-bottom-24
-left-1/2
--translate-x-1/2
-bg-blue-600
-text-white
-px-5
-py-3
-rounded-2xl
-shadow-xl
-font-bold
-z-50
-"
-
->
-
-{friendMessage}
-
-</div>
-
-}
-
-
-
-
-
-
-
-{/* MESSAGE JEU */}
-
-{
-
-gameMessage &&
-
-
-<div
-
-className="
-fixed
-bottom-24
-left-1/2
--translate-x-1/2
-bg-red-600
-text-white
-px-5
-py-3
-rounded-2xl
-shadow-xl
-font-bold
-z-50
-"
-
->
-
-{gameMessage}
-
-</div>
-
-}
-
-
-
-
-
-</main>
-
-
-);
-
+  );
 
 }

@@ -1,504 +1,439 @@
 import {
-  NextResponse
+  NextResponse,
 } from "next/server";
-
 
 export const runtime = "nodejs";
 
 export const dynamic = "force-dynamic";
 
-
 import {
   adminDB,
-  adminAuth
+  adminAuth,
 } from "@/lib/firebaseAdmin";
-
 
 import {
   checkUserBalance,
-  deductBet
+  deductBet,
 } from "@/lib/firebaseEconomyAdmin";
 
 import {
-  sendNotification
+  sendNotification,
 } from "@/lib/notifications";
-
-
 
 
 export async function POST(
   request: Request
 ) {
 
-try {
+  try {
 
+    // =========================================
+    // LIRE LES DONNÉES
+    // =========================================
 
+    const body =
+      await request.json();
 
-const body =
-await request.json();
 
+    const {
+      name,
+      bet,
+      mode,
+      gameType,
+      friendId,
+    } = body;
 
 
-const {
+    // =========================================
+    // VALIDATION MISE
+    // =========================================
 
-name,
+    const amount =
+      Number(bet);
 
-bet,
 
-mode,
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
 
-gameType,
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Mise invalide",
+        },
+        {
+          status: 400,
+        }
+      );
 
-friendId
+    }
 
-} = body;
 
+    // =========================================
+    // AUTH TOKEN
+    // =========================================
 
+    const authHeader =
+      request.headers.get(
+        "authorization"
+      );
 
 
-const amount =
-Number(bet);
+    if (
+      !authHeader ||
+      !authHeader.startsWith(
+        "Bearer "
+      )
+    ) {
 
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Token manquant",
+        },
+        {
+          status: 401,
+        }
+      );
 
+    }
 
 
+    const token =
+      authHeader.replace(
+        "Bearer ",
+        ""
+      ).trim();
 
-if(!amount || amount <= 0){
 
+    if (!token) {
 
-return NextResponse.json(
-{
-success:false,
-error:"Mise invalide"
-},
-{
-status:400
-}
-);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Token vide",
+        },
+        {
+          status: 401,
+        }
+      );
 
+    }
 
-}
 
+    // =========================================
+    // VÉRIFIER TOKEN FIREBASE
+    // =========================================
 
+    let decoded;
 
+    try {
 
+      decoded =
+        await adminAuth.verifyIdToken(
+          token
+        );
 
+    } catch (error) {
 
+      console.error(
+        "FIREBASE AUTH ERROR:",
+        error
+      );
 
-// ===============================
-// AUTH TOKEN
-// ===============================
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Token Firebase invalide",
+        },
+        {
+          status: 401,
+        }
+      );
 
+    }
 
-const authHeader =
-request.headers.get(
-"authorization"
-);
 
+    const uid =
+      decoded.uid;
 
 
-if(!authHeader){
+    console.log(
+      "CREATE ROOM:",
+      {
+        uid,
+        amount,
+        mode,
+        gameType,
+        friendId,
+      }
+    );
 
 
-return NextResponse.json(
-{
-success:false,
-error:"Token manquant"
-},
-{
-status:401
-}
-);
+    // =========================================
+    // VÉRIFIER LE SOLDE
+    // =========================================
 
+    const balance =
+      await checkUserBalance(
+        uid
+      );
 
-}
 
+    if (
+      balance < amount
+    ) {
 
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            `Solde insuffisant (${balance} HTG)`,
+        },
+        {
+          status: 400,
+        }
+      );
 
+    }
 
-const token =
-authHeader.replace(
-"Bearer ",
-""
-);
 
+    // =========================================
+    // DÉDUIRE LA MISE
+    // =========================================
 
+    await deductBet(
+      uid,
+      amount,
+      "create-room"
+    );
 
 
+    // =========================================
+    // CONFIGURATION PARTIE
+    // =========================================
 
-if(!token){
+    const maxPlayers =
+      mode === "2v2"
+        ? 4
+        : 2;
 
 
-return NextResponse.json(
-{
-success:false,
-error:"Token vide"
-},
-{
-status:401
-}
-);
+    // =========================================
+    // CRÉER ROOM
+    // =========================================
 
+    const newRoomRef =
+      adminDB
+        .ref("rooms")
+        .push();
 
-}
 
+    const roomId =
+      newRoomRef.key;
 
 
+    if (!roomId) {
 
+      throw new Error(
+        "Room ID impossible"
+      );
 
+    }
 
 
-let decoded;
+    // =========================================
+    // NOM DU JOUEUR
+    // =========================================
 
+    const playerName =
+      decoded.name ||
+      decoded.email ||
+      "Joueur";
 
 
-try {
+    const now =
+      Date.now();
 
 
-decoded =
-await adminAuth.verifyIdToken(
-token
-);
+    // =========================================
+    // DONNÉES ROOM
+    // =========================================
 
+    const roomData = {
 
+      id: roomId,
 
-}
+      name:
+        typeof name === "string" &&
+        name.trim()
+          ? name.trim()
+          : "Partie TiTaTo",
 
-catch(err:any){
+      bet: amount,
 
+      mode:
+        mode || "1v1",
 
-console.error(
-"FIREBASE AUTH ERROR",
-err
-);
+      gameType:
+        gameType || "titato",
 
+      creatorId: uid,
 
+      status: "waiting",
 
-return NextResponse.json(
-{
-success:false,
-error:"Token Firebase invalide"
-},
-{
-status:401
-}
-);
+      playersCount: 1,
 
+      maxPlayers,
 
-}
+      pot: amount,
 
+      createdAt: now,
 
+      updatedAt: now,
 
+      players: {
 
+        [uid]: {
 
+          uid,
 
+          name: playerName,
 
-const uid =
-decoded.uid;
+          symbol: "X",
 
+          ready: true,
 
+          betPaid: true,
 
-console.log(
-"CREATE ROOM",
-{
-uid,
-amount
-}
-);
+          joinedAt: now,
 
+        },
 
+      },
 
+    };
 
 
+    // =========================================
+    // ENREGISTRER ROOM
+    // =========================================
 
+    await newRoomRef.set(
+      roomData
+    );
 
 
+    console.log(
+      "ROOM CREATED:",
+      roomId
+    );
 
-// ===============================
-// CHECK BALANCE
-// ===============================
 
+    // =========================================
+    // INVITATION AMI
+    // =========================================
 
-const balance =
-await checkUserBalance(
-uid
-);
+    if (
+      friendId &&
+      typeof friendId === "string" &&
+      friendId !== uid
+    ) {
 
+      try {
 
+        await sendNotification(
+          friendId,
+          {
+            title:
+              "🎮 Invitation partie",
 
+            message:
+              `${playerName} t'invite à rejoindre une partie.`,
 
+            type:
+              "game",
 
-if(balance < amount){
+            roomId,
 
+          }
+        );
 
-return NextResponse.json(
-{
-success:false,
-error:
-`Solde insuffisant (${balance} HTG)`
-},
-{
-status:400
-}
-);
+      } catch (
+        notificationError
+      ) {
 
+        console.error(
+          "NOTIFICATION ERROR:",
+          notificationError
+        );
 
-}
+        // La chambre existe déjà.
+        // Une erreur de notification
+        // ne doit pas faire échouer
+        // la création de la partie.
 
+      }
 
+    }
 
 
+    // =========================================
+    // RÉPONSE
+    // =========================================
 
+    return NextResponse.json(
 
+      {
 
-// ===============================
-// DEBIT MISE
-// ===============================
+        success: true,
 
+        roomId,
 
-await deductBet(
-uid,
-amount,
-"create-room"
-);
+        status: "waiting",
 
+      },
 
+      {
 
+        status: 200,
 
+      }
 
+    );
 
 
+  } catch (
+    error: any
+  ) {
 
-// ===============================
-// CREATION ROOM
-// ===============================
+    console.error(
+      "CREATE ROOM CRASH:",
+      error
+    );
 
 
-const maxPlayers =
+    return NextResponse.json(
 
-mode === "2v2"
+      {
 
-?
+        success: false,
 
-4
+        error:
+          error?.message ||
+          "Erreur serveur création partie",
 
-:
+      },
 
-2;
+      {
 
+        status: 500,
 
+      }
 
+    );
 
-
-
-
-const newRoomRef =
-adminDB
-.ref("rooms")
-.push();
-
-
-
-
-
-const roomId =
-newRoomRef.key;
-
-
-
-
-if(!roomId){
-
-
-throw new Error(
-"Room ID impossible"
-);
-
-
-}
-
-
-
-
-
-
-
-const playerName =
-
-decoded.name ||
-
-decoded.email ||
-
-"Joueur";
-
-
-
-
-
-
-
-
-
-await newRoomRef.set({
-
-id:roomId,
-
-
-name:
-
-name?.trim()
-
-?
-
-name.trim()
-
-:
-
-"Partie TiTaTo",
-
-
-
-bet:amount,
-
-
-
-mode:
-
-mode || "1v1",
-
-
-
-gameType:
-
-gameType || "titato",
-
-
-
-creatorId:uid,
-
-
-
-status:"waiting",
-
-
-
-playersCount:1,
-
-
-
-maxPlayers,
-
-
-
-pot:amount,
-
-
-
-createdAt:Date.now(),
-
-
-
-players:{
-
-
-[uid]:{
-
-
-uid,
-
-
-name:playerName,
-
-
-symbol:"X",
-
-
-ready:true,
-
-
-betPaid:true,
-
-
-joinedAt:Date.now()
-
-
-}
-
-
-}
-
-
-
-});
-
-
-
-
-
-
-
-
-
-return NextResponse.json({
-
-success:true,
-
-roomId,
-
-status:"waiting"
-
-});
-
-
-
-if(friendId){
-
-await sendNotification(
-friendId,
-{
-title:"🎮 Invitation partie",
-message:"Un joueur t'invite à rejoindre une partie",
-type:"game"
-}
-);
-
-}
-
-
-
-
-
-
-}
-
-catch(error:any){
-
-
-
-console.error(
-"CREATE ROOM CRASH:",
-error
-);
-
-
-
-
-
-return NextResponse.json(
-{
-success:false,
-error:
-error?.message ||
-"Erreur serveur création partie"
-},
-{
-status:500
-}
-);
-
-
-
-}
-
+  }
 
 }

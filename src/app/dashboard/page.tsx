@@ -2,1217 +2,1396 @@
 
 import {
   useEffect,
-  useState
+  useState,
 } from "react";
 
 import {
-  useRouter
+  useRouter,
 } from "next/navigation";
 
 import {
   auth,
-  database
+  database,
 } from "@/lib/firebase";
 
 import {
-  onAuthStateChanged
+  onAuthStateChanged,
 } from "firebase/auth";
 
 import {
+  onValue,
   ref,
-  onValue
 } from "firebase/database";
-
-import {
-  useBalance
-} from "@/hooks/useBalance";
-
-import {
-  motion
-} from "framer-motion";
 
 import RewardAdButton from "@/components/RewardAdButton";
 
 
+/*
+====================================================
+DASHBOARD TITATO
+====================================================
+*/
 
-export default function Dashboard(){
+export default function Dashboard() {
 
-
-const router = useRouter();
-
-
-
-const {
- balance,
- loading:balanceLoading
-}=useBalance();
+  const router = useRouter();
 
 
+  /*
+  ==================================================
+  STATES
+  ==================================================
+  */
+
+  const [
+    balance,
+    setBalance,
+  ] = useState(0);
 
 
-const [
- username,
- setUsername
-]=useState("Joueur");
+  const [
+    balanceLoading,
+    setBalanceLoading,
+  ] = useState(true);
 
 
-
-const [
- notificationCount,
- setNotificationCount
-]=useState(0);
-
+  const [
+    username,
+    setUsername,
+  ] = useState("Joueur");
 
 
-
-const [
- stats,
- setStats
-]=useState({
-
-wins:0,
-
-games:0
-
-});
+  const [
+    notificationCount,
+    setNotificationCount,
+  ] = useState(0);
 
 
+  const [
+    stats,
+    setStats,
+  ] = useState({
+    wins: 0,
+    games: 0,
+  });
 
 
+  /*
+  ==================================================
+  TAUX DE VICTOIRE
+  ==================================================
+  */
 
-const winRate =
-
-stats.games > 0
-
-?
-
-Math.round(
-(stats.wins / stats.games) * 100
-)
-
-:
-
-0;
+  const winRate =
+    stats.games > 0
+      ? Math.round(
+          (stats.wins / stats.games) * 100
+        )
+      : 0;
 
 
+  /*
+  ==================================================
+  AUTH + DONNÉES FIREBASE
+  ==================================================
+  */
+
+  useEffect(() => {
+
+    let unsubscribeUser:
+      (() => void) | null = null;
+
+    let unsubscribeNotif:
+      (() => void) | null = null;
+
+    let unsubscribeFriendRequests:
+      (() => void) | null = null;
 
 
+    const unsubscribeAuth =
+      onAuthStateChanged(
+        auth,
+        (user) => {
 
-useEffect(()=>{
+          if (!user) {
+
+            setBalance(0);
+
+            setBalanceLoading(false);
+
+            router.push("/login");
+
+            return;
+
+          }
 
 
-const unsubscribeAuth =
+          /*
+          ==========================================
+          PROFIL UTILISATEUR
+          ==========================================
+          */
 
-onAuthStateChanged(
+          const userRef =
+            ref(
+              database,
+              `users/${user.uid}`
+            );
 
-auth,
 
-(user)=>{
+          unsubscribeUser =
+            onValue(
+              userRef,
+              (snapshot) => {
+
+                const data =
+                  snapshot.val();
 
 
-if(!user){
+                if (!data) {
 
-router.push("/login");
+                  setUsername(
+                    "Joueur"
+                  );
 
-return;
+                  setBalance(0);
+
+                  setStats({
+                    wins: 0,
+                    games: 0,
+                  });
+
+                  setBalanceLoading(
+                    false
+                  );
+
+                  return;
+
+                }
+
+
+                const firebaseBalance =
+                  Number(
+                    data.balance ?? 0
+                  );
+
+
+                setBalance(
+                  Number.isFinite(
+                    firebaseBalance
+                  )
+                    ? firebaseBalance
+                    : 0
+                );
+
+
+                setBalanceLoading(
+                  false
+                );
+
+
+                setUsername(
+                  data.username ||
+                  "Joueur"
+                );
+
+
+                setStats({
+
+                  wins:
+                    Number(
+                      data.wins || 0
+                    ),
+
+                  games:
+                    Number(
+                      data.gamesPlayed || 0
+                    ),
+
+                });
+
+              },
+
+              (error) => {
+
+                console.error(
+                  "Erreur lecture profil Firebase:",
+                  error
+                );
+
+                setBalance(0);
+
+                setBalanceLoading(
+                  false
+                );
+
+              }
+            );
+
+
+          /*
+          ==========================================
+          NOTIFICATIONS
+          ==========================================
+          */
+
+          const notifRef =
+            ref(
+              database,
+              `notifications/${user.uid}`
+            );
+
+
+          unsubscribeNotif =
+            onValue(
+              notifRef,
+              (snapshot) => {
+
+                const data =
+                  snapshot.val();
+
+
+                let unreadNotifications =
+                  0;
+
+
+                if (data) {
+
+                  unreadNotifications =
+                    Object.values(data)
+                      .filter(
+                        (item: any) =>
+                          item &&
+                          item.read !== true
+                      )
+                      .length;
+
+                }
+
+
+                /*
+                ==================================
+                DEMANDES D'AMIS
+                ==================================
+                */
+
+                const friendRequestRef =
+                  ref(
+                    database,
+                    "friendRequests"
+                  );
+
+
+                unsubscribeFriendRequests =
+                  onValue(
+                    friendRequestRef,
+                    (friendSnapshot) => {
+
+                      const requests =
+                        friendSnapshot.val();
+
+
+                      let friendRequestsCount =
+                        0;
+
+
+                      if (requests) {
+
+                        friendRequestsCount =
+                          Object.values(requests)
+                            .filter(
+                              (item: any) =>
+                                item &&
+                                item.to ===
+                                  user.uid &&
+                                item.status ===
+                                  "pending"
+                            )
+                            .length;
+
+                      }
+
+
+                      setNotificationCount(
+                        unreadNotifications +
+                        friendRequestsCount
+                      );
+
+                    }
+                  );
+
+              }
+            );
+
+        }
+      );
+
+
+    /*
+    ==============================================
+    CLEANUP
+    ==============================================
+    */
+
+    return () => {
+
+      unsubscribeAuth();
+
+
+      if (
+        unsubscribeUser
+      ) {
+
+        unsubscribeUser();
+
+      }
+
+
+      if (
+        unsubscribeNotif
+      ) {
+
+        unsubscribeNotif();
+
+      }
+
+
+      if (
+        unsubscribeFriendRequests
+      ) {
+
+        unsubscribeFriendRequests();
+
+      }
+
+    };
+
+  }, [
+    router,
+  ]);
+
+
+  /*
+  ==================================================
+  DASHBOARD
+  ==================================================
+  */
+
+  return (
+
+    <main
+      className="
+        relative
+        min-h-screen
+        overflow-hidden
+        bg-[#020617]
+        text-white
+      "
+    >
+
+
+      {/* ==========================================
+          DÉCORATIONS
+      ========================================== */}
+
+      <div
+        className="
+          pointer-events-none
+          fixed
+          -left-24
+          top-20
+          h-64
+          w-64
+          rounded-full
+          bg-blue-600/10
+          blur-3xl
+        "
+      />
+
+
+      <div
+        className="
+          pointer-events-none
+          fixed
+          -right-24
+          bottom-24
+          h-64
+          w-64
+          rounded-full
+          bg-purple-600/10
+          blur-3xl
+        "
+      />
+
+
+      {/* ==========================================
+          CONTENEUR MOBILE
+      ========================================== */}
+
+      <div
+        className="
+          relative
+          mx-auto
+          min-h-screen
+          w-full
+          max-w-[430px]
+          overflow-x-hidden
+          pb-28
+        "
+      >
+
+
+        {/* ========================================
+            HEADER FIXE
+        ======================================== */}
+
+        <header
+          className="
+            fixed
+            left-0
+            right-0
+            top-0
+            z-50
+            border-b
+            border-white/[0.08]
+            bg-[#020617]/95
+            backdrop-blur-2xl
+          "
+        >
+
+          <div
+            className="
+              mx-auto
+              flex
+              h-[64px]
+              w-full
+              max-w-[430px]
+              items-center
+              justify-between
+              px-4
+            "
+          >
+
+            {/* LOGO */}
+
+            <div
+              className="
+                flex
+                min-w-0
+                flex-col
+                justify-center
+              "
+            >
+
+              <h1
+                className="
+                  text-[17px]
+                  font-black
+                  leading-none
+                  tracking-tight
+                  text-white
+                "
+              >
+
+                TiTaTo
+
+              </h1>
+
+
+              <p
+                className="
+                  mt-1
+                  text-[8px]
+                  font-medium
+                  leading-none
+                  text-white/35
+                "
+              >
+
+                Jouez. Défilez. Gagnez.
+
+              </p>
+
+            </div>
+
+
+            {/* SOLDE */}
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push("/wallet")
+              }
+              className="
+                flex
+                h-[38px]
+                min-w-[92px]
+                items-center
+                justify-center
+                gap-1.5
+                rounded-xl
+                border
+                border-blue-400/30
+                bg-blue-500/[0.10]
+                px-3
+                text-center
+                shadow-[0_3px_0_rgba(30,64,175,0.65),0_0_15px_rgba(37,99,235,0.08)]
+                backdrop-blur-md
+                transition-all
+                hover:border-blue-300/50
+                hover:bg-blue-500/[0.16]
+                active:translate-y-[2px]
+                active:shadow-none
+              "
+            >
+
+              <span
+                className="
+                  text-[14px]
+                  leading-none
+                "
+              >
+
+                💰
+
+              </span>
+
+
+              <span
+                className="
+                  whitespace-nowrap
+                  text-[10px]
+                  font-black
+                  leading-none
+                  text-blue-300
+                "
+              >
+
+                {balanceLoading
+                  ? "..."
+                  : `${balance.toLocaleString(
+                      "fr-FR"
+                    )} HTG`
+                }
+
+              </span>
+
+            </button>
+
+          </div>
+
+        </header>
+
+
+        {/* ========================================
+            CONTENU
+        ======================================== */}
+
+        <div
+          className="
+            px-4
+            pb-10
+            pt-[88px]
+          "
+        >
+
+
+          {/* ======================================
+              SALUTATION
+          ====================================== */}
+
+          <section>
+
+            <p
+              className="
+                text-[10px]
+                font-medium
+                text-white/35
+              "
+            >
+
+              Salut 👋
+
+            </p>
+
+
+            <h2
+              className="
+                mt-1
+                text-[23px]
+                font-black
+                tracking-tight
+              "
+            >
+
+              {username}
+
+            </h2>
+
+          </section>
+
+
+          {/* ======================================
+              STATISTIQUES
+          ====================================== */}
+
+          <section
+            className="
+              mt-5
+              grid
+              grid-cols-3
+              overflow-hidden
+              rounded-xl
+              border
+              border-white/[0.07]
+              bg-white/[0.025]
+            "
+          >
+
+            {/* VICTOIRES */}
+
+            <div
+              className="
+                border-r
+                border-white/[0.06]
+                px-1
+                py-2.5
+                text-center
+              "
+            >
+
+              <div
+                className="
+                  text-sm
+                  leading-none
+                "
+              >
+
+                🏆
+
+              </div>
+
+
+              <p
+                className="
+                  mt-1
+                  text-[13px]
+                  font-black
+                  leading-none
+                "
+              >
+
+                {stats.wins}
+
+              </p>
+
+
+              <p
+                className="
+                  mt-1
+                  text-[7px]
+                  leading-none
+                  text-white/30
+                "
+              >
+
+                Victoires
+
+              </p>
+
+            </div>
+
+
+            {/* TAUX */}
+
+            <div
+              className="
+                border-r
+                border-white/[0.06]
+                px-1
+                py-2.5
+                text-center
+              "
+            >
+
+              <div
+                className="
+                  text-sm
+                  leading-none
+                "
+              >
+
+                📈
+
+              </div>
+
+
+              <p
+                className="
+                  mt-1
+                  text-[13px]
+                  font-black
+                  leading-none
+                  text-green-400
+                "
+              >
+
+                {winRate}%
+
+              </p>
+
+
+              <p
+                className="
+                  mt-1
+                  text-[7px]
+                  leading-none
+                  text-white/30
+                "
+              >
+
+                Taux de victoire
+
+              </p>
+
+            </div>
+
+
+            {/* PARTIES */}
+
+            <div
+              className="
+                px-1
+                py-2.5
+                text-center
+              "
+            >
+
+              <div
+                className="
+                  text-sm
+                  leading-none
+                "
+              >
+
+                🎮
+
+              </div>
+
+
+              <p
+                className="
+                  mt-1
+                  text-[13px]
+                  font-black
+                  leading-none
+                "
+              >
+
+                {stats.games}
+
+              </p>
+
+
+              <p
+                className="
+                  mt-1
+                  text-[7px]
+                  leading-none
+                  text-white/30
+                "
+              >
+
+                Parties
+
+              </p>
+
+            </div>
+
+          </section>
+
+
+          {/* ======================================
+              ACTIONS
+          ====================================== */}
+
+          <section
+            className="
+              mt-6
+            "
+          >
+
+            <div
+              className="
+                space-y-2.5
+              "
+            >
+
+              {/* CRÉER UNE PARTIE */}
+
+              <button
+                type="button"
+                onClick={() =>
+                  router.push(
+                    "/create-room"
+                  )
+                }
+                className="
+                  flex
+                  min-h-[68px]
+                  w-full
+                  items-center
+                  gap-3
+                  rounded-2xl
+                  border
+                  border-blue-400/30
+                  bg-blue-500/[0.10]
+                  px-3.5
+                  py-2.5
+                  text-left
+                  shadow-[0_4px_0_rgba(30,64,175,0.65),0_0_18px_rgba(37,99,235,0.08)]
+                  backdrop-blur-md
+                  transition-all
+                  hover:border-blue-300/50
+                  hover:bg-blue-500/[0.16]
+                  hover:shadow-[0_5px_0_rgba(30,64,175,0.7),0_0_24px_rgba(37,99,235,0.14)]
+                  active:translate-y-[3px]
+                  active:shadow-none
+                "
+              >
+
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-blue-300/25
+                    bg-blue-400/[0.10]
+                    text-lg
+                    shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]
+                  "
+                >
+
+                  🎮
+
+                </div>
+
+
+                <div
+                  className="
+                    min-w-0
+                    flex-1
+                  "
+                >
+
+                  <h4
+                    className="
+                      text-[13px]
+                      font-black
+                      leading-tight
+                      text-blue-100
+                    "
+                  >
+
+                    Créer une partie
+
+                  </h4>
+
+
+                  <p
+                    className="
+                      mt-1
+                      truncate
+                      text-[9px]
+                      leading-tight
+                      text-blue-100/40
+                    "
+                  >
+
+                    Lancez votre propre défi.
+
+                  </p>
+
+                </div>
+
+
+                <span
+                  className="
+                    shrink-0
+                    pr-1
+                    text-2xl
+                    font-light
+                    leading-none
+                    text-blue-200/50
+                  "
+                >
+
+                  ›
+
+                </span>
+
+              </button>
+
+
+              {/* REJOINDRE UNE PARTIE */}
+
+              <button
+                type="button"
+                onClick={() =>
+                  router.push(
+                    "/join-room"
+                  )
+                }
+                className="
+                  flex
+                  min-h-[68px]
+                  w-full
+                  items-center
+                  gap-3
+                  rounded-2xl
+                  border
+                  border-blue-400/25
+                  bg-blue-500/[0.07]
+                  px-3.5
+                  py-2.5
+                  text-left
+                  shadow-[0_4px_0_rgba(30,64,175,0.5),0_0_15px_rgba(37,99,235,0.06)]
+                  backdrop-blur-md
+                  transition-all
+                  hover:border-blue-300/45
+                  hover:bg-blue-500/[0.12]
+                  hover:shadow-[0_5px_0_rgba(30,64,175,0.6),0_0_22px_rgba(37,99,235,0.1)]
+                  active:translate-y-[3px]
+                  active:shadow-none
+                "
+              >
+
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-blue-300/20
+                    bg-blue-400/[0.07]
+                    text-lg
+                    shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]
+                  "
+                >
+
+                  🚀
+
+                </div>
+
+
+                <div
+                  className="
+                    min-w-0
+                    flex-1
+                  "
+                >
+
+                  <h4
+                    className="
+                      text-[13px]
+                      font-black
+                      leading-tight
+                      text-blue-100
+                    "
+                  >
+
+                    Rejoindre une partie
+
+                  </h4>
+
+
+                  <p
+                    className="
+                      mt-1
+                      truncate
+                      text-[9px]
+                      leading-tight
+                      text-blue-100/35
+                    "
+                  >
+
+                    Trouvez une partie disponible.
+
+                  </p>
+
+                </div>
+
+
+                <span
+                  className="
+                    shrink-0
+                    pr-1
+                    text-2xl
+                    font-light
+                    leading-none
+                    text-blue-200/50
+                  "
+                >
+
+                  ›
+
+                </span>
+
+              </button>
+
+            </div>
+
+          </section>
+
+
+          {/* ======================================
+              BONUS
+          ====================================== */}
+
+          <section
+            className="
+              mt-6
+            "
+          >
+
+            <div
+              className="
+                overflow-hidden
+                rounded-2xl
+                border
+                border-yellow-500/15
+                bg-yellow-500/[0.04]
+                p-4
+              "
+            >
+
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-3
+                "
+              >
+
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-yellow-500/10
+                    text-lg
+                  "
+                >
+
+                  🎁
+
+                </div>
+
+
+                <div
+                  className="
+                    min-w-0
+                    flex-1
+                  "
+                >
+
+                  <h4
+                    className="
+                      text-[12px]
+                      font-black
+                    "
+                  >
+
+                    Bonus
+
+                  </h4>
+
+
+                  <p
+                    className="
+                      mt-1
+                      text-[9px]
+                      text-white/30
+                    "
+                  >
+
+                    Regardez une publicité et recevez votre récompense.
+
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              <div
+                className="
+                  mt-4
+                "
+              >
+
+                <RewardAdButton />
+
+              </div>
+
+            </div>
+
+          </section>
+
+
+        </div>
+
+
+        {/* ========================================
+            NAVIGATION BAS
+        ======================================== */}
+
+        <nav
+          className="
+            fixed
+            bottom-3
+            left-1/2
+            z-50
+            flex
+            h-[64px]
+            w-[calc(100%-24px)]
+            max-w-[406px]
+            -translate-x-1/2
+            items-center
+            justify-around
+            rounded-2xl
+            border
+            border-blue-400/20
+            bg-[#050914]/95
+            px-2
+            shadow-[0_10px_40px_rgba(0,0,0,0.5),0_3px_0_rgba(30,64,175,0.35)]
+            backdrop-blur-xl
+          "
+        >
+
+          {/* ACCUEIL */}
+
+          <DashboardNavItem
+            icon="🏠"
+            label="Accueil"
+            active
+            onClick={() =>
+              router.push(
+                "/dashboard"
+              )
+            }
+          />
+
+
+          {/* PORTEFEUILLE */}
+
+          <DashboardNavItem
+            icon="💼"
+            label="Portefeuille"
+            onClick={() =>
+              router.push(
+                "/wallet"
+              )
+            }
+          />
+
+
+          {/* NOTIFICATIONS */}
+
+          <button
+            type="button"
+            onClick={() =>
+              router.push(
+                "/notifications"
+              )
+            }
+            className="
+              relative
+              flex
+              min-w-[60px]
+              flex-col
+              items-center
+              justify-center
+              gap-1
+              rounded-xl
+              py-1.5
+              text-[8px]
+              text-white/35
+              transition
+              active:translate-y-[2px]
+            "
+          >
+
+            <span
+              className="
+                relative
+                flex
+                h-8
+                w-8
+                items-center
+                justify-center
+                rounded-xl
+                text-[19px]
+              "
+            >
+
+              🔔
+
+
+              {notificationCount > 0 && (
+
+                <span
+                  className="
+                    absolute
+                    -right-2
+                    -top-2
+                    flex
+                    h-4
+                    min-w-4
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-red-500
+                    px-1
+                    text-[8px]
+                    font-black
+                    text-white
+                  "
+                >
+
+                  {notificationCount > 9
+                    ? "9+"
+                    : notificationCount
+                  }
+
+                </span>
+
+              )}
+
+            </span>
+
+
+            Notifications
+
+          </button>
+
+
+          {/* VYLO */}
+
+          <DashboardNavItem
+            icon="👥"
+            label="VYLO"
+            onClick={() =>
+              router.push(
+                "/vylo"
+              )
+            }
+          />
+
+        </nav>
+
+
+      </div>
+
+    </main>
+
+  );
 
 }
 
 
+/*
+====================================================
+NAVIGATION ITEM
+====================================================
+*/
 
+function DashboardNavItem({
 
+  icon,
 
-const userRef = ref(
+  label,
 
-database,
+  active = false,
 
-`users/${user.uid}`
+  onClick,
 
-);
+}: {
 
+  icon: string;
 
+  label: string;
 
-const unsubscribeUser =
+  active?: boolean;
 
-onValue(
+  onClick: () => void;
 
-userRef,
+}) {
 
-(snapshot)=>{
+  return (
 
+    <button
+      type="button"
+      onClick={onClick}
+      className={`
+        flex
+        min-w-[60px]
+        flex-col
+        items-center
+        justify-center
+        gap-1
+        rounded-xl
+        py-1.5
+        text-[8px]
+        transition
+        active:translate-y-[2px]
+        ${
+          active
+            ? "font-bold text-blue-400"
+            : "text-white/35"
+        }
+      `}
+    >
 
-const data = snapshot.val();
+      <span
+        className={`
+          flex
+          h-8
+          w-8
+          items-center
+          justify-center
+          rounded-xl
+          text-[18px]
+          ${
+            active
+              ? "border border-blue-400/25 bg-blue-500/[0.10] shadow-[0_2px_0_rgba(30,64,175,0.5)]"
+              : ""
+          }
+        `}
+      >
 
+        {icon}
 
+      </span>
 
-if(data){
 
+      {label}
 
-setUsername(
+    </button>
 
-data.username || "Joueur"
-
-);
-
-
-
-setStats({
-
-wins:Number(data.wins || 0),
-
-games:Number(data.gamesPlayed || 0)
-
-});
-
-
-}
-
-
-}
-
-);
-
-
-
-
-
-
-const notifRef = ref(
-
-database,
-
-`notifications/${user.uid}`
-
-);
-
-
-
-const unsubscribeNotif =
-
-onValue(
-
-notifRef,
-
-(snapshot)=>{
-
-
-const data = snapshot.val();
-
-
-
-let unreadNotifications = 0;
-
-
-
-if(data){
-
-
-unreadNotifications =
-
-Object.values(data)
-
-.filter((item:any)=>{
-
-
-return item && item.read !== true;
-
-
-})
-
-.length;
-
-
-}
-
-
-
-
-
-const friendRequestRef = ref(
-
-database,
-
-"friendRequests"
-
-);
-
-
-
-
-onValue(
-
-friendRequestRef,
-
-(friendSnapshot)=>{
-
-
-const requests = friendSnapshot.val();
-
-
-
-let friendRequestsCount = 0;
-
-
-
-if(requests){
-
-
-friendRequestsCount =
-
-Object.values(requests)
-
-.filter((item:any)=>
-
-
-item.to === user.uid &&
-
-item.status === "pending"
-
-
-)
-
-.length;
-
-
-}
-
-
-
-
-setNotificationCount(
-
-unreadNotifications +
-
-friendRequestsCount
-
-);
-
-
-
-}
-
-
-
-);
-
-
-
-}
-
-
-);
-
-
-
-
-return()=>{
-
-
-unsubscribeUser();
-
-unsubscribeNotif();
-
-
-};
-
-
-}
-
-);
-
-
-
-return()=>unsubscribeAuth();
-
-
-
-},[router]);return(
-
-<main
-
-className="
-min-h-screen
-relative
-overflow-hidden
-bg-gradient-to-br
-from-[#020617]
-via-[#07152f]
-to-black
-text-white
-px-4
-pb-40
-flex
-justify-center
-"
-
->
-
-
-
-<motion.div
-
-animate={{
-
-x:[0,30,0],
-
-y:[0,20,0]
-
-}}
-
-transition={{
-
-duration:6,
-
-repeat:Infinity
-
-}}
-
-className="
-absolute
-w-52
-h-52
-bg-blue-500/20
-rounded-full
-blur-3xl
-top-10
-left-[-40px]
-"
-
-/>
-
-
-
-
-
-<motion.div
-
-animate={{
-
-x:[0,-30,0],
-
-y:[0,-20,0]
-
-}}
-
-transition={{
-
-duration:7,
-
-repeat:Infinity
-
-}}
-
-className="
-absolute
-w-52
-h-52
-bg-purple-500/20
-rounded-full
-blur-3xl
-bottom-20
-right-[-40px]
-"
-
-/>
-
-
-
-
-
-
-
-<section
-
-className="
-relative
-z-10
-w-full
-max-w-xs
-pt-16
-"
-
->
-
-
-
-
-
-<header
-
-className="
-fixed
-top-0
-left-0
-right-0
-bg-white/10
-backdrop-blur-2xl
-border-b
-border-white/20
-z-50
-"
-
->
-
-
-
-<div
-
-className="
-max-w-xs
-mx-auto
-px-4
-py-3
-flex
-justify-between
-items-center
-"
-
->
-
-
-
-<motion.h1
-
-animate={{
-
-y:[0,-4,0]
-
-}}
-
-transition={{
-
-duration:3,
-
-repeat:Infinity
-
-}}
-
-className="
-text-sm
-font-black
-bg-gradient-to-r
-from-blue-400
-to-cyan-300
-bg-clip-text
-text-transparent
-"
-
->
-
-⭕ TI TA TO
-
-</motion.h1>
-
-
-
-
-
-
-<button
-
-onClick={()=>router.push("/wallet")}
-
-className="
-bg-gradient-to-b
-from-green-400
-to-green-700
-border
-border-green-300/50
-rounded-xl
-px-4
-py-2
-shadow-[0_5px_0_#166534]
-"
-
->
-
-
-<span
-
-className="
-text-white
-font-black
-text-xs
-"
-
->
-
-💰 {balanceLoading ? "..." : Math.floor(balance)} HTG
-
-</span>
-
-
-</button>
-
-
-
-
-</div>
-
-
-</header>
-
-
-
-
-
-
-
-
-<div className="mt-4">
-
-
-
-<p
-
-className="
-text-[11px]
-text-gray-400
-"
-
->
-
-Salut 👋
-
-</p>
-
-
-
-
-
-<h2
-
-className="
-text-base
-font-bold
-mt-1
-"
-
->
-
-{username}
-
-</h2>
-
-
-
-
-
-
-
-
-<div
-
-className="
-mt-4
-bg-white/10
-backdrop-blur-2xl
-border
-border-white/20
-rounded-3xl
-p-4
-grid
-grid-cols-3
-items-center
-text-center
-"
-
->
-
-
-
-
-<div>
-
-<p className="text-yellow-300 font-bold text-sm">
-
-🏆 {stats.wins}
-
-</p>
-
-<p className="text-[10px] text-gray-400">
-
-Victoire
-
-</p>
-
-</div>
-
-
-
-
-
-<div>
-
-<p className="text-green-400 font-bold text-sm">
-
-📈 {winRate}%
-
-</p>
-
-<p className="text-[10px] text-gray-400">
-
-Taux gagner
-
-</p>
-
-</div>
-
-
-
-
-
-<div>
-
-<p className="text-cyan-300 font-bold text-sm">
-
-🎮 {stats.games}
-
-</p>
-
-<p className="text-[10px] text-gray-400">
-
-Parties
-
-</p>
-
-</div>
-
-
-
-
-</div>
-</div>
-
-
-
-
-
-
-<div
-
-className="
-flex
-flex-col
-gap-4
-mt-5
-"
-
->
-
-
-
-
-<ActionButton
-
-variant="glass"
-
-big
-
-onClick={()=>router.push("/create-room")}
-
->
-
-🎮 Créer une partie
-
-</ActionButton>
-
-
-
-
-
-
-
-<ActionButton
-
-variant="glass"
-
-big
-
-onClick={()=>router.push("/join-room")}
-
->
-
-🚀 Rejoindre une partie
-
-</ActionButton>
-
-
-
-
-
-
-
-<div
-
-className="
-mt-8
-flex
-flex-col
-items-center
-"
-
->
-
-
-
-
-<motion.div
-
-animate={{
-
-scale:[1,1.08,1]
-
-}}
-
-transition={{
-
-duration:2,
-
-repeat:Infinity
-
-}}
-
-className="relative w-full"
-
->
-
-
-
-<ActionButton
-
-variant="blue"
-
-onClick={()=>router.push("/more")}
-
->
-
-➕ Plus
-
-</ActionButton>
-
-
-
-
-
-<motion.div
-
-animate={{
-
-y:[0,8,0]
-
-}}
-
-transition={{
-
-duration:1.2,
-
-repeat:Infinity
-
-}}
-
-className="
-absolute
-left-1/2
--translate-x-1/2
-top-full
-mt-2
-text-2xl
-"
-
->
-
-👆
-
-</motion.div>
-
-
-
-
-
-</motion.div>
-
-
-
-
-
-<div className="mt-32">
-
-
-<RewardAdButton />
-
-
-</div>
-
-
-</div>
-
-
-
-</div></section>
-
-
-
-
-
-
-<nav
-
-className="
-fixed
-bottom-3
-left-1/2
--translate-x-1/2
-w-[92%]
-max-w-xs
-h-14
-bg-white/10
-backdrop-blur-2xl
-border
-border-white/20
-rounded-2xl
-flex
-justify-around
-items-center
-z-50
-"
-
->
-
-
-
-<NavItem
-
-icon="🏠"
-
-text="Accueil"
-
-onClick={()=>router.push("/dashboard")}
-
-/>
-
-
-
-
-
-
-<NavItem
-
-icon="💼"
-
-text="Portefeuille"
-
-onClick={()=>router.push("/wallet")}
-
-/>
-
-
-
-
-
-
-
-
-<div
-
-onClick={()=>router.push("/notifications")}
-
-className="
-relative
-text-center
-text-[10px]
-cursor-pointer
-"
-
->
-
-🔔
-
-
-
-
-{
-
-notificationCount > 0 &&
-
-
-<span
-
-className="
-absolute
-right-[-8px]
-top-[-8px]
-bg-red-500
-text-white
-rounded-full
-text-[9px]
-px-1
-font-bold
-"
-
->
-
-
-{
-
-notificationCount > 9
-
-?
-
-"9+"
-
-:
-
-notificationCount
-
-}
-
-
-</span>
-
-
-}
-
-
-
-
-
-<br/>
-
-
-Notification
-
-
-</div>
-
-
-
-
-
-
-
-
-<NavItem
-
-icon="⚙️"
-
-text="Paramètre"
-
-onClick={()=>router.push("/settings")}
-
-/>
-
-
-
-
-
-</nav>
-
-
-
-
-
-</main>
-
-
-);
-
-
-}
-
-
-
-
-
-
-
-
-
-function ActionButton({
-
-
-children,
-
-onClick,
-
-variant="blue",
-
-big=false
-
-
-
-}:{
-
-children:React.ReactNode;
-
-onClick:()=>void;
-
-variant?:"blue"|"glass";
-
-big?:boolean;
-
-
-}){
-
-
-return(
-
-
-<motion.button
-
-
-whileHover={{
-
-scale:1.03,
-
-y:-3
-
-}}
-
-
-whileTap={{
-
-scale:.95
-
-}}
-
-
-onClick={onClick}
-
-
-
-className={
-
-
-variant==="blue"
-
-
-?
-
-
-`
-
-w-full
-
-${big ? "py-5 text-base rounded-2xl" : "py-3 text-sm rounded-xl"}
-
-font-bold
-
-bg-gradient-to-b
-
-from-blue-400
-
-to-blue-700
-
-border
-
-border-blue-300/40
-
-shadow-[0_6px_0_#123a8a]
-
-`
-
-
-
-:
-
-
-`
-
-w-full
-
-${big ? "py-5 text-base rounded-2xl" : "py-3 text-sm rounded-xl"}
-
-font-bold
-
-bg-white/20
-
-backdrop-blur-xl
-
-border
-
-border-white/30
-
-shadow-[0_6px_0_rgba(255,255,255,0.15)]
-
-`
-
-}
-
-
->
-
-
-{children}
-
-
-</motion.button>
-
-
-);
-
-
-}
-
-
-
-
-
-
-
-
-
-function NavItem({
-
-
-icon,
-
-text,
-
-onClick
-
-
-
-}:{
-
-icon:string;
-
-text:string;
-
-onClick:()=>void;
-
-
-}){
-
-
-return(
-
-
-<button
-
-onClick={onClick}
-
-className="
-
-text-[10px]
-
-text-gray-200
-
-"
-
->
-
-{icon}
-
-<br/>
-
-{text}
-
-
-</button>
-
-
-);
-
+  );
 
 }

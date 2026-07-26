@@ -31,6 +31,8 @@ export async function sendNotification(
     friendId?:string;
 
     link?:string;
+
+    roomId?:string;
   }
 
 ){
@@ -87,6 +89,9 @@ export async function sendNotification(
 
         link:
         data.link || "",
+
+        roomId:
+        data.roomId || "",
 
 
 

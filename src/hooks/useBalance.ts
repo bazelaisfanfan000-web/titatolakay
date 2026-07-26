@@ -2,138 +2,194 @@
 
 import {
   useEffect,
-  useState
+  useState,
 } from "react";
 
 import {
   auth,
-  database
+  database,
 } from "@/lib/firebase";
 
 import {
-  onAuthStateChanged
+  onAuthStateChanged,
 } from "firebase/auth";
 
 import {
+  onValue,
   ref,
-  onValue
 } from "firebase/database";
 
 
-export function useBalance(){
+export function useBalance() {
 
+  const [
+    balance,
+    setBalance,
+  ] = useState<number>(0);
 
-const [balance,setBalance] =
-useState(0);
 
+  const [
+    loading,
+    setLoading,
+  ] = useState<boolean>(true);
 
-const [loading,setLoading] =
-useState(true);
 
+  useEffect(() => {
 
+    let unsubscribeBalance:
+      (() => void) | null = null;
 
-useEffect(()=>{
 
+    const unsubscribeAuth =
+      onAuthStateChanged(
+        auth,
+        (user) => {
 
-let unsubscribeBalance:any;
+          // =====================================
+          // UTILISATEUR NON CONNECTÉ
+          // =====================================
 
+          if (!user) {
 
-const unsubscribeAuth =
-onAuthStateChanged(
-auth,
-(user)=>{
+            setBalance(0);
 
+            setLoading(false);
 
-if(!user){
+            if (unsubscribeBalance) {
 
-setBalance(0);
-setLoading(false);
+              unsubscribeBalance();
 
-return;
+              unsubscribeBalance = null;
 
-}
+            }
 
+            return;
 
+          }
 
 
-const balanceRef =
-ref(
-database,
-`users/${user.uid}/balance`
-);
+          // =====================================
+          // NOUVEAU CHARGEMENT
+          // =====================================
 
+          setLoading(true);
 
 
-unsubscribeBalance =
-onValue(
+          // =====================================
+          // RÉFÉRENCE DU SOLDE
+          // =====================================
 
-balanceRef,
+          const balanceRef =
+            ref(
+              database,
+              `users/${user.uid}/balance`
+            );
 
-(snapshot)=>{
 
+          // =====================================
+          // ÉCOUTE TEMPS RÉEL
+          // =====================================
 
-const value =
-snapshot.val();
+          unsubscribeBalance =
+            onValue(
 
+              balanceRef,
 
+              (snapshot) => {
 
-console.log(
-"💰 DASHBOARD BALANCE",
-value
-);
+                const value =
+                  snapshot.val();
 
 
+                console.log(
+                  "💰 SOLDE FIREBASE :",
+                  value
+                );
 
-setBalance(
-Number(value || 0)
-);
 
+                // =================================
+                // SOLDE VALIDE
+                // =================================
 
+                if (
+                  value !== null &&
+                  value !== undefined
+                ) {
 
-setLoading(false);
+                  const numericBalance =
+                    Number(value);
 
 
-}
+                  setBalance(
+                    Number.isFinite(
+                      numericBalance
+                    )
+                      ? numericBalance
+                      : 0
+                  );
 
+                } else {
 
-);
+                  setBalance(0);
 
+                }
 
 
-}
+                setLoading(false);
 
-);
+              },
 
 
+              (error) => {
 
-return()=>{
+                console.error(
+                  "❌ ERREUR LECTURE SOLDE FIREBASE :",
+                  error
+                );
 
 
-unsubscribeAuth();
+                setBalance(0);
 
+                setLoading(false);
 
-if(unsubscribeBalance){
+              }
 
-unsubscribeBalance();
+            );
 
-}
+        }
+      );
 
 
-};
+    // =========================================
+    // NETTOYAGE
+    // =========================================
 
+    return () => {
 
+      unsubscribeAuth();
 
-},[]);
 
+      if (
+        unsubscribeBalance
+      ) {
 
+        unsubscribeBalance();
 
-return {
+        unsubscribeBalance = null;
 
-balance,
+      }
 
-loading
+    };
 
-};
+  }, []);
 
+
+  return {
+
+    balance,
+
+    loading,
+
+  };
 
 }

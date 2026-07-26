@@ -1,759 +1,1045 @@
 "use client";
 
-
 import {
   useEffect,
-  useState
+  useState,
 } from "react";
-
 
 import {
   ref,
-  onValue
+  onValue,
 } from "firebase/database";
-
 
 import {
   auth,
-  database
+  database,
 } from "@/lib/firebase";
 
-
 import {
-  useRouter
+  useRouter,
 } from "next/navigation";
 
+import {
+  motion,
+} from "framer-motion";
 
+import BackButton from "@/components/BackButton";
+
+
+/*
+====================================================
+TYPE ROOM
+====================================================
+*/
 
 type Room = {
 
-  id:string;
+  id: string;
 
-  name:string;
+  name: string;
 
-  bet:number;
+  bet: number;
 
-  mode:"1vs1" | "2vs2" | string;
+  mode: string;
 
-  gameType:"titato" | "dominos" | string;
+  gameType: string;
 
-  playersCount:number;
+  playersCount: number;
 
-  maxPlayers:number;
+  maxPlayers: number;
 
-  status:string;
+  status: string;
 
 };
 
 
+/*
+====================================================
+PAGE REJOINDRE UNE PARTIE
+====================================================
+*/
 
+export default function JoinGame() {
 
 
-export default function JoinGame(){
+  const router = useRouter();
 
 
+  /*
+  ==================================================
+  STATES
+  ==================================================
+  */
 
-const router = useRouter();
+  const [
+    rooms,
+    setRooms,
+  ] = useState<Room[]>([]);
 
 
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
 
-const [
-rooms,
-setRooms
-] = useState<Room[]>([]);
 
+  /*
+  ==================================================
+  CHARGER LES PARTIES EN TEMPS RÉEL
+  ==================================================
+  */
 
+  useEffect(() => {
 
-const [
-loading,
-setLoading
-] = useState(false);
 
+    const roomsRef =
+      ref(
+        database,
+        "rooms"
+      );
 
 
+    const unsubscribe =
+      onValue(
+        roomsRef,
+        (snapshot) => {
 
 
-useEffect(()=>{
+          const data =
+            snapshot.val();
 
 
-const roomsRef =
-ref(
-database,
-"rooms"
-);
+          /*
+          ==========================================
+          AUCUNE PARTIE
+          ==========================================
+          */
 
+          if (!data) {
 
+            setRooms([]);
 
-const unsubscribe =
-onValue(
-roomsRef,
-(snapshot)=>{
+            return;
 
+          }
 
-const data =
-snapshot.val();
 
+          const list: Room[] = [];
 
 
-if(!data){
+          /*
+          ==========================================
+          FILTRER LES PARTIES DISPONIBLES
+          ==========================================
+          */
 
-setRooms([]);
+          Object.entries(data)
+            .forEach(
+              (
+                [
+                  id,
+                  value,
+                ]
+              ) => {
 
-return;
 
-}
+                const room =
+                  value as any;
 
 
+                /*
+                ----------------------------------
+                SEULEMENT TITATO
+                ----------------------------------
+                */
 
-const list:Room[] = [];
+                if (
+                  room.gameType &&
+                  room.gameType !== "titato"
+                ) {
 
+                  return;
 
+                }
 
 
+                /*
+                ----------------------------------
+                SEULEMENT PARTIES EN ATTENTE
+                ----------------------------------
+                */
 
-Object.entries(data)
-.forEach(
-([id,value]:any)=>{
+                if (
+                  room.status !== "waiting"
+                ) {
 
+                  return;
 
-if(
+                }
 
-value.status === "waiting"
 
-&&
+                /*
+                ----------------------------------
+                PARTIE PAS ENCORE REMPLIE
+                ----------------------------------
+                */
 
-value.playersCount < value.maxPlayers
+                const playersCount =
+                  Number(
+                    room.playersCount || 0
+                  );
 
-){
 
+                const maxPlayers =
+                  Number(
+                    room.maxPlayers || 2
+                  );
 
-list.push({
 
-id,
+                if (
+                  playersCount >=
+                  maxPlayers
+                ) {
 
-name:
-value.name || "Partie TiTaTo",
+                  return;
 
-bet:
-Number(value.bet || 0),
+                }
 
-mode:
-value.mode || "1vs1",
 
-gameType:
-value.gameType || "titato",
+                /*
+                ----------------------------------
+                AJOUTER LA PARTIE
+                ----------------------------------
+                */
 
-playersCount:
-Number(value.playersCount || 0),
+                list.push({
 
-maxPlayers:
-Number(value.maxPlayers || 2),
+                  id,
 
-status:
-value.status
+                  name:
+                    room.name ||
+                    "Partie TiTaTo",
 
+                  bet:
+                    Number(
+                      room.bet || 0
+                    ),
 
-});
+                  mode:
+                    "1 VS 1",
 
+                  gameType:
+                    "titato",
 
-}
+                  playersCount,
 
+                  maxPlayers,
 
-});
+                  status:
+                    room.status,
 
+                });
 
-setRooms(list);
+              }
+            );
 
 
+          /*
+          ==========================================
+          METTRE À JOUR LA LISTE
+          ==========================================
+          */
 
-}
+          setRooms(
+            list
+          );
 
-);
+        }
+      );
 
 
+    /*
+    ================================================
+    CLEANUP
+    ================================================
+    */
 
-return()=>unsubscribe();
+    return () => {
 
+      unsubscribe();
 
+    };
 
-},[]);
 
+  }, []);
 
 
+  /*
+  ==================================================
+  REJOINDRE UNE PARTIE
+  ==================================================
+  */
 
+  async function joinRoom(
+    roomId: string
+  ) {
 
 
+    try {
 
-async function joinRoom(
-roomId:string
-){
 
+      setLoading(
+        true
+      );
 
 
-try{
+      /*
+      ============================================
+      VÉRIFIER UTILISATEUR
+      ============================================
+      */
 
+      const user =
+        auth.currentUser;
 
-setLoading(true);
 
+      if (!user) {
 
+        alert(
+          "Vous devez être connecté"
+        );
 
-const user =
-auth.currentUser;
+        return;
 
+      }
 
 
-if(!user){
+      /*
+      ============================================
+      TOKEN FIREBASE
+      ============================================
+      */
 
+      const token =
+        await user.getIdToken();
 
-alert(
-"Vous devez être connecté"
-);
 
+      /*
+      ============================================
+      APPEL API
+      ============================================
+      */
 
-return;
+      const response =
+        await fetch(
+          "/api/game/join",
+          {
 
+            method:
+              "POST",
 
-}
+            headers: {
 
+              "Content-Type":
+                "application/json",
 
+              "Authorization":
+                `Bearer ${token}`,
 
-const token =
-await user.getIdToken();
+            },
 
+            body:
+              JSON.stringify({
 
+                roomId,
 
+              }),
 
+          }
+        );
 
-const response =
-await fetch(
-"/api/game/join",
-{
 
-method:"POST",
+      /*
+      ============================================
+      RÉPONSE API
+      ============================================
+      */
 
-headers:{
+      const data =
+        await response.json();
 
-"Content-Type":
-"application/json",
 
-"Authorization":
-`Bearer ${token}`
+      if (
+        !response.ok
+      ) {
 
-},
+        throw new Error(
+          data.error ||
+          "Impossible de rejoindre la partie"
+        );
 
+      }
 
-body:JSON.stringify({
 
-roomId
+      /*
+      ============================================
+      REDIRECTION SALLE
+      ============================================
+      */
 
-})
+      router.push(
+        `/room/${roomId}`
+      );
 
 
-}
+    }
+    catch (
+      error: any
+    ) {
 
-);
 
+      alert(
+        error.message ||
+        "Une erreur est survenue"
+      );
 
 
+    }
+    finally {
 
 
-const data =
-await response.json();
+      setLoading(
+        false
+      );
 
 
+    }
 
+  }
 
 
-if(!response.ok){
+  /*
+  ==================================================
+  RENDER
+  ==================================================
+  */
 
+  return (
 
-throw new Error(
-data.error ||
-"Impossible de rejoindre"
-);
+    <main
+      className="
+        relative
+        min-h-screen
+        overflow-hidden
+        bg-[#020617]
+        text-white
+      "
+    >
 
 
-}
+      {/* ==========================================
+          DÉCORATION GAUCHE
+      ========================================== */}
 
+      <div
+        className="
+          pointer-events-none
+          fixed
+          -left-24
+          top-24
+          h-64
+          w-64
+          rounded-full
+          bg-blue-600/10
+          blur-3xl
+        "
+      />
 
 
+      {/* ==========================================
+          DÉCORATION DROITE
+      ========================================== */}
 
+      <div
+        className="
+          pointer-events-none
+          fixed
+          -right-24
+          bottom-24
+          h-64
+          w-64
+          rounded-full
+          bg-purple-600/10
+          blur-3xl
+        "
+      />
 
 
-router.push(
-`/room/${roomId}`
-);
+      {/* ==========================================
+          CONTENEUR MOBILE
+      ========================================== */}
 
+      <div
+        className="
+          relative
+          z-10
+          mx-auto
+          min-h-screen
+          w-full
+          max-w-[430px]
+          px-4
+          pb-10
+        "
+      >
 
 
+        {/* ========================================
+            RETOUR
+        ======================================== */}
 
-}
+        <div
+          className="
+            pt-8
+          "
+        >
 
-catch(error:any){
+          <BackButton />
 
+        </div>
 
-alert(
-error.message
-);
 
+        {/* ========================================
+            HEADER
+        ======================================== */}
 
-}
+        <header
+          className="
+            mt-7
+            mb-6
+          "
+        >
 
-finally{
 
+          <h1
+            className="
+              text-[24px]
+              font-black
+              tracking-tight
+            "
+          >
 
-setLoading(false);
+            Rejoindre une partie
 
+          </h1>
 
-}
 
+          <p
+            className="
+              mt-1
+              text-[11px]
+              text-white/35
+            "
+          >
 
+            Trouvez une partie TiTaTo disponible.
 
-}
+          </p>
 
 
+        </header>
 
 
+        {/* ========================================
+            COMPTEUR
+        ======================================== */}
 
+        <div
+          className="
+            mb-4
+            flex
+            items-center
+            justify-between
+            rounded-2xl
+            border
+            border-white/[0.07]
+            bg-white/[0.025]
+            px-4
+            py-3
+          "
+        >
 
 
+          <div
+            className="
+              flex
+              items-center
+              gap-3
+            "
+          >
 
+            <div
+              className="
+                flex
+                h-9
+                w-9
+                items-center
+                justify-center
+                rounded-xl
+                border
+                border-blue-500/20
+                bg-blue-500/10
+                text-lg
+              "
+            >
 
-return (
+              🎮
 
-<div
+            </div>
 
-className="
-min-h-screen
-bg-gradient-to-br
-from-slate-950
-via-slate-900
-to-black
-px-4
-py-5
-text-white
-"
 
->
+            <div>
 
+              <p
+                className="
+                  text-[11px]
+                  font-black
+                "
+              >
 
-<div
+                Parties disponibles
 
-className="
-max-w-md
-mx-auto
-"
+              </p>
 
->
 
+              <p
+                className="
+                  mt-0.5
+                  text-[9px]
+                  text-white/30
+                "
+              >
 
+                En attente d'un joueur
 
-<button
+              </p>
 
-onClick={()=>router.back()}
+            </div>
 
-className="
-text-blue-400
-font-bold
-mb-6
-"
+          </div>
 
->
 
-← Retour
+          <span
+            className="
+              rounded-lg
+              bg-blue-500/10
+              px-3
+              py-1
+              text-[11px]
+              font-black
+              text-blue-400
+            "
+          >
 
-</button>
+            {rooms.length}
 
+          </span>
 
 
+        </div>
 
 
-<h1
+        {/* ========================================
+            AUCUNE PARTIE
+        ======================================== */}
 
-className="
-text-3xl
-font-black
-mb-1
-"
+        {
+          rooms.length === 0 && (
 
->
+            <div
+              className="
+                mt-5
+                rounded-2xl
+                border
+                border-white/[0.07]
+                bg-white/[0.025]
+                p-8
+                text-center
+              "
+            >
 
-🎮 Rejoindre TiTaTo
 
-</h1>
+              <div
+                className="
+                  mb-4
+                  text-4xl
+                "
+              >
 
+                🎲
 
+              </div>
 
-<p
 
-className="
-text-gray-400
-text-sm
-mb-6
-"
+              <h2
+                className="
+                  text-[15px]
+                  font-black
+                "
+              >
 
->
+                Aucune partie disponible
 
-Choisis une partie en attente
+              </h2>
 
-</p>
 
+              <p
+                className="
+                  mt-2
+                  text-[10px]
+                  leading-5
+                  text-white/30
+                "
+              >
 
+                Créez une nouvelle partie
+                ou revenez plus tard.
 
+              </p>
 
 
+              <motion.button
+                type="button"
 
-{
-rooms.length === 0 &&
+                whileTap={{
+                  scale: 0.97,
+                  y: 3,
+                }}
 
+                onClick={() =>
+                  router.push(
+                    "/create-room"
+                  )
+                }
 
-<div
+                className="
+                  mt-5
+                  flex
+                  h-10
+                  w-full
+                  items-center
+                  justify-center
+                  rounded-xl
+                  border
+                  border-blue-400/40
+                  bg-blue-500/20
+                  py-3
+                  text-[11px]
+                  font-black
+                  text-blue-100
+                  shadow-[0_4px_0_rgba(30,64,175,0.8),0_0_18px_rgba(37,99,235,0.12)]
+                  backdrop-blur-md
+                  transition-all
+                  hover:border-blue-300/60
+                  hover:bg-blue-500/30
+                  hover:shadow-[0_5px_0_rgba(30,64,175,0.8),0_0_25px_rgba(37,99,235,0.2)]
+                  active:translate-y-[3px]
+                  active:shadow-none
+                "
+              >
 
-className="
-bg-white/10
-backdrop-blur-xl
-border
-border-white/10
-rounded-3xl
-p-6
-text-center
-"
+                🎮 Créer une partie
 
->
+              </motion.button>
 
-<div
-className="
-text-3xl
-mb-2
-"
->
 
-🎲
+            </div>
 
-</div>
+          )
+        }
 
 
-<p
-className="
-font-bold
-"
->
+        {/* ========================================
+            LISTE DES PARTIES
+        ======================================== */}
 
-Aucune partie disponible
+        <div
+          className="
+            space-y-3
+          "
+        >
 
-</p>
 
+          {
+            rooms.map(
+              (
+                room
+              ) => (
 
-</div>
+                <div
+                  key={
+                    room.id
+                  }
+                  className="
+                    rounded-2xl
+                    border
+                    border-white/[0.08]
+                    bg-white/[0.025]
+                    p-4
+                    shadow-[0_8px_30px_rgba(0,0,0,0.2)]
+                  "
+                >
 
-}
 
+                  {/* =================================
+                      NOM + MODE
+                  ================================= */}
 
+                  <div
+                    className="
+                      flex
+                      items-center
+                      justify-between
+                      gap-3
+                    "
+                  >
 
 
+                    <div
+                      className="
+                        min-w-0
+                        flex-1
+                      "
+                    >
 
-<div
+                      <h2
+                        className="
+                          truncate
+                          text-[14px]
+                          font-black
+                        "
+                      >
 
-className="
-space-y-4
-"
+                        🎮 {room.name}
 
->
+                      </h2>
 
 
-{
-rooms.map((room)=>(
+                      <p
+                        className="
+                          mt-1
+                          text-[9px]
+                          text-white/30
+                        "
+                      >
 
+                        TiTaTo · 1 VS 1
 
+                      </p>
 
-<div
+                    </div>
 
-key={room.id}
 
-className="
-bg-white/10
-backdrop-blur-xl
-border
-border-white/20
-rounded-3xl
-p-5
-shadow-xl
-"
+                    <div
+                      className="
+                        shrink-0
+                        rounded-lg
+                        border
+                        border-blue-500/20
+                        bg-blue-500/10
+                        px-2.5
+                        py-1.5
+                        text-[9px]
+                        font-black
+                        text-blue-400
+                      "
+                    >
 
->
+                      1 VS 1
 
+                    </div>
 
 
-<div
+                  </div>
 
-className="
-flex
-justify-between
-items-center
-mb-4
-"
 
->
+                  {/* =================================
+                      INFORMATIONS
+                  ================================= */}
 
+                  <div
+                    className="
+                      mt-4
+                      grid
+                      grid-cols-2
+                      gap-2
+                    "
+                  >
 
-<div>
 
+                    {/* MISE */}
 
-<h2
+                    <div
+                      className="
+                        rounded-xl
+                        border
+                        border-white/[0.05]
+                        bg-black/20
+                        px-3
+                        py-2.5
+                      "
+                    >
 
-className="
-font-black
-text-lg
-"
+                      <p
+                        className="
+                          text-[8px]
+                          text-white/30
+                        "
+                      >
 
->
+                        Mise
 
-🔥 {room.name}
+                      </p>
 
-</h2>
 
+                      <p
+                        className="
+                          mt-1
+                          text-[11px]
+                          font-black
+                        "
+                      >
 
+                        💰{" "}
+                        {room.bet.toLocaleString(
+                          "fr-FR"
+                        )}{" "}
+                        HTG
 
-<p
+                      </p>
 
-className="
-text-xs
-text-gray-400
-"
+                    </div>
 
->
 
+                    {/* JOUEURS */}
 
-{
+                    <div
+                      className="
+                        rounded-xl
+                        border
+                        border-white/[0.05]
+                        bg-black/20
+                        px-3
+                        py-2.5
+                      "
+                    >
 
-room.gameType==="titato"
+                      <p
+                        className="
+                          text-[8px]
+                          text-white/30
+                        "
+                      >
 
-?
+                        Joueurs
 
-"⭕ TiTaTo"
+                      </p>
 
-:
 
-"🁫 Dominos"
+                      <p
+                        className="
+                          mt-1
+                          text-[11px]
+                          font-black
+                        "
+                      >
 
-}
+                        👥{" "}
+                        {room.playersCount}
+                        /
+                        {room.maxPlayers}
 
+                      </p>
 
-</p>
+                    </div>
 
 
-</div>
+                  </div>
 
 
+                  {/* =================================
+                      BOUTON REJOINDRE
+                  ================================= */}
 
-<div
+                  <motion.button
+                    type="button"
 
-className="
-bg-blue-500/20
-border
-border-blue-400/30
-rounded-xl
-px-3
-py-1
-text-xs
-font-bold
-"
+                    disabled={
+                      loading
+                    }
 
->
+                    whileTap={{
+                      scale: 0.97,
+                      y: 3,
+                    }}
 
-{room.mode}
+                    onClick={() =>
+                      joinRoom(
+                        room.id
+                      )
+                    }
 
-</div>
+                    className="
+                      mt-3
+                      flex
+                      h-10
+                      w-full
+                      items-center
+                      justify-center
+                      rounded-xl
+                      border
+                      border-blue-400/40
+                      bg-blue-500/20
+                      py-3
+                      text-[11px]
+                      font-black
+                      text-blue-100
+                      shadow-[0_4px_0_rgba(30,64,175,0.8),0_0_18px_rgba(37,99,235,0.12)]
+                      backdrop-blur-md
+                      transition-all
+                      hover:border-blue-300/60
+                      hover:bg-blue-500/30
+                      hover:shadow-[0_5px_0_rgba(30,64,175,0.8),0_0_25px_rgba(37,99,235,0.2)]
+                      active:translate-y-[3px]
+                      active:shadow-none
+                      disabled:cursor-not-allowed
+                      disabled:opacity-50
+                    "
+                  >
 
+                    {loading
+                      ? "Connexion..."
+                      : "🚀 Rejoindre la partie"
+                    }
 
+                  </motion.button>
 
-</div>
 
+                </div>
 
+              )
+            )
 
+          }
 
 
+        </div>
 
-<div
 
-className="
-grid
-grid-cols-2
-gap-3
-mb-4
-"
+      </div>
 
->
 
+    </main>
 
-
-<div
-
-className="
-bg-black/30
-rounded-2xl
-p-3
-"
-
->
-
-
-<p
-
-className="
-text-xs
-text-gray-400
-"
-
->
-
-Mise
-
-</p>
-
-
-<p
-className="
-font-black
-"
-
->
-
-💰 {room.bet} HTG
-
-</p>
-
-
-</div>
-
-
-
-
-
-
-<div
-
-className="
-bg-black/30
-rounded-2xl
-p-3
-"
-
->
-
-
-<p
-
-className="
-text-xs
-text-gray-400
-"
-
->
-
-Joueurs
-
-</p>
-
-
-<p
-
-className="
-font-black
-"
-
->
-
-👥 {room.playersCount}/{room.maxPlayers}
-
-</p>
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-
-
-<button
-
-
-disabled={loading}
-
-
-onClick={()=>joinRoom(room.id)}
-
-
-
-className="
-w-full
-py-3
-rounded-2xl
-font-black
-bg-gradient-to-b
-from-blue-400
-to-blue-700
-border-b-4
-border-blue-950
-shadow-[0_6px_0_#00143d]
-active:translate-y-1
-active:border-b-0
-transition
-"
-
->
-
-
-{
-
-loading
-
-?
-
-"Connexion..."
-
-:
-
-"🎮 Rejoindre"
-
-}
-
-
-
-</button>
-
-
-
-
-
-</div>
-
-
-))
-
-
-}
-
-
-
-</div>
-
-
-
-</div>
-
-
-</div>
-
-
-);
-
-
+  );
 
 }
