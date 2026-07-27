@@ -2214,9 +2214,8 @@ export async function POST(
           {
             withdrawalId:
               withdrawal.id,
-
-            reason:
-              refundResult.reason,
+            status:
+              refundResult.status,
           },
         );
 
@@ -2269,8 +2268,7 @@ export async function POST(
             "refunded",
 
           alreadyRefunded:
-            refundResult.alreadyRefunded ??
-            false,
+            refundResult.status === "already_refunded",
         },
 
         {
