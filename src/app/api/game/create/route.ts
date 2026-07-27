@@ -6,20 +6,43 @@ export const runtime = "nodejs";
 
 export const dynamic = "force-dynamic";
 
+
 import {
   adminDB,
   adminAuth,
+  adminMessaging,
 } from "@/lib/firebaseAdmin";
+
 
 import {
   checkUserBalance,
   deductBet,
 } from "@/lib/firebaseEconomyAdmin";
 
+
 import {
   sendNotification,
 } from "@/lib/notifications";
 
+
+/*
+====================================================
+TYPES
+====================================================
+*/
+
+type FCMTokenRecord = {
+
+  token?: string;
+
+};
+
+
+/*
+====================================================
+POST CREATE ROOM
+====================================================
+*/
 
 export async function POST(
   request: Request
@@ -27,9 +50,41 @@ export async function POST(
 
   try {
 
-    // =========================================
-    // LIRE LES DONNÉES
-    // =========================================
+    /*
+    ================================================
+    0. VÉRIFIER FIREBASE ADMIN
+    ================================================
+    */
+
+    if (!adminAuth || !adminDB) {
+
+      console.error(
+        "CREATE ROOM: Firebase Admin non initialisé"
+      );
+
+      return NextResponse.json(
+
+        {
+          success: false,
+
+          error:
+            "Service Firebase non disponible. Réessayez plus tard.",
+        },
+
+        {
+          status: 503,
+        }
+
+      );
+
+    }
+
+
+    /*
+    ================================================
+    1. LIRE LES DONNÉES
+    ================================================
+    */
 
     const body =
       await request.json();
@@ -44,9 +99,11 @@ export async function POST(
     } = body;
 
 
-    // =========================================
-    // VALIDATION MISE
-    // =========================================
+    /*
+    ================================================
+    2. VALIDATION MISE
+    ================================================
+    */
 
     const amount =
       Number(bet);
@@ -58,21 +115,28 @@ export async function POST(
     ) {
 
       return NextResponse.json(
+
         {
           success: false,
-          error: "Mise invalide",
+
+          error:
+            "Mise invalide",
         },
+
         {
           status: 400,
         }
+
       );
 
     }
 
 
-    // =========================================
-    // AUTH TOKEN
-    // =========================================
+    /*
+    ================================================
+    3. AUTHORIZATION HEADER
+    ================================================
+    */
 
     const authHeader =
       request.headers.get(
@@ -88,43 +152,57 @@ export async function POST(
     ) {
 
       return NextResponse.json(
+
         {
           success: false,
-          error: "Token manquant",
+
+          error:
+            "Token manquant",
         },
+
         {
           status: 401,
         }
+
       );
 
     }
 
 
     const token =
-      authHeader.replace(
-        "Bearer ",
-        ""
-      ).trim();
+      authHeader
+        .replace(
+          "Bearer ",
+          ""
+        )
+        .trim();
 
 
     if (!token) {
 
       return NextResponse.json(
+
         {
           success: false,
-          error: "Token vide",
+
+          error:
+            "Token vide",
         },
+
         {
           status: 401,
         }
+
       );
 
     }
 
 
-    // =========================================
-    // VÉRIFIER TOKEN FIREBASE
-    // =========================================
+    /*
+    ================================================
+    4. VÉRIFIER TOKEN FIREBASE
+    ================================================
+    */
 
     let decoded;
 
@@ -142,14 +220,20 @@ export async function POST(
         error
       );
 
+
       return NextResponse.json(
+
         {
           success: false,
-          error: "Token Firebase invalide",
+
+          error:
+            "Token Firebase invalide",
         },
+
         {
           status: 401,
         }
+
       );
 
     }
@@ -171,9 +255,11 @@ export async function POST(
     );
 
 
-    // =========================================
-    // VÉRIFIER LE SOLDE
-    // =========================================
+    /*
+    ================================================
+    5. VÉRIFIER LE SOLDE
+    ================================================
+    */
 
     const balance =
       await checkUserBalance(
@@ -186,22 +272,28 @@ export async function POST(
     ) {
 
       return NextResponse.json(
+
         {
           success: false,
+
           error:
             `Solde insuffisant (${balance} HTG)`,
         },
+
         {
           status: 400,
         }
+
       );
 
     }
 
 
-    // =========================================
-    // DÉDUIRE LA MISE
-    // =========================================
+    /*
+    ================================================
+    6. DÉDUIRE LA MISE
+    ================================================
+    */
 
     await deductBet(
       uid,
@@ -210,9 +302,11 @@ export async function POST(
     );
 
 
-    // =========================================
-    // CONFIGURATION PARTIE
-    // =========================================
+    /*
+    ================================================
+    7. CONFIGURATION PARTIE
+    ================================================
+    */
 
     const maxPlayers =
       mode === "2v2"
@@ -220,9 +314,11 @@ export async function POST(
         : 2;
 
 
-    // =========================================
-    // CRÉER ROOM
-    // =========================================
+    /*
+    ================================================
+    8. CRÉER ROOM
+    ================================================
+    */
 
     const newRoomRef =
       adminDB
@@ -243,9 +339,11 @@ export async function POST(
     }
 
 
-    // =========================================
-    // NOM DU JOUEUR
-    // =========================================
+    /*
+    ================================================
+    9. NOM DU JOUEUR
+    ================================================
+    */
 
     const playerName =
       decoded.name ||
@@ -257,13 +355,17 @@ export async function POST(
       Date.now();
 
 
-    // =========================================
-    // DONNÉES ROOM
-    // =========================================
+    /*
+    ================================================
+    10. DONNÉES ROOM
+    ================================================
+    */
 
     const roomData = {
 
-      id: roomId,
+      id:
+        roomId,
+
 
       name:
         typeof name === "string" &&
@@ -271,27 +373,45 @@ export async function POST(
           ? name.trim()
           : "Partie TiTaTo",
 
-      bet: amount,
+
+      bet:
+        amount,
+
 
       mode:
         mode || "1v1",
 
+
       gameType:
         gameType || "titato",
 
-      creatorId: uid,
 
-      status: "waiting",
+      creatorId:
+        uid,
 
-      playersCount: 1,
+
+      status:
+        "waiting",
+
+
+      playersCount:
+        1,
+
 
       maxPlayers,
 
-      pot: amount,
 
-      createdAt: now,
+      pot:
+        amount,
 
-      updatedAt: now,
+
+      createdAt:
+        now,
+
+
+      updatedAt:
+        now,
+
 
       players: {
 
@@ -299,15 +419,20 @@ export async function POST(
 
           uid,
 
-          name: playerName,
+          name:
+            playerName,
 
-          symbol: "X",
+          symbol:
+            "X",
 
-          ready: true,
+          ready:
+            true,
 
-          betPaid: true,
+          betPaid:
+            true,
 
-          joinedAt: now,
+          joinedAt:
+            now,
 
         },
 
@@ -316,9 +441,11 @@ export async function POST(
     };
 
 
-    // =========================================
-    // ENREGISTRER ROOM
-    // =========================================
+    /*
+    ================================================
+    11. ENREGISTRER ROOM
+    ================================================
+    */
 
     await newRoomRef.set(
       roomData
@@ -331,9 +458,61 @@ export async function POST(
     );
 
 
-    // =========================================
-    // INVITATION AMI
-    // =========================================
+    /*
+    ================================================
+    12. RÉCUPÉRER USERS
+    ================================================
+    */
+
+    let users:
+      Record<
+        string,
+        any
+      > = {};
+
+
+    try {
+
+      const usersSnapshot =
+        await adminDB
+          .ref("users")
+          .once("value");
+
+
+      if (
+        usersSnapshot.exists()
+      ) {
+
+        users =
+          usersSnapshot.val() || {};
+
+      }
+
+    } catch (error) {
+
+      console.error(
+        "USERS READ ERROR:",
+        error
+      );
+
+    }
+
+
+    /*
+    ================================================
+    13. DÉTERMINER DESTINATAIRES
+    ================================================
+    */
+
+    const recipientIds:
+      string[] = [];
+
+
+    /*
+    -----------------------------------------------
+    INVITATION PRIVÉE
+    -----------------------------------------------
+    */
 
     if (
       friendId &&
@@ -341,63 +520,410 @@ export async function POST(
       friendId !== uid
     ) {
 
-      try {
+      recipientIds.push(
+        friendId
+      );
 
-        await sendNotification(
-          friendId,
-          {
-            title:
-              "🎮 Invitation partie",
+    }
 
-            message:
-              `${playerName} t'invite à rejoindre une partie.`,
 
-            type:
-              "game",
+    /*
+    -----------------------------------------------
+    NOUVELLE PARTIE PUBLIQUE
+    -----------------------------------------------
+    */
 
-            roomId,
+    else {
 
-          }
-        );
-
-      } catch (
-        notificationError
+      for (
+        const userId
+        of Object.keys(users)
       ) {
 
-        console.error(
-          "NOTIFICATION ERROR:",
-          notificationError
-        );
+        if (
+          userId === uid
+        ) {
 
-        // La chambre existe déjà.
-        // Une erreur de notification
-        // ne doit pas faire échouer
-        // la création de la partie.
+          continue;
+
+        }
+
+
+        recipientIds.push(
+          userId
+        );
 
       }
 
     }
 
 
-    // =========================================
-    // RÉPONSE
-    // =========================================
+    /*
+    ================================================
+    14. NOTIFICATIONS
+    ================================================
+    */
+
+    const notificationPromises:
+      Promise<any>[] = [];
+
+
+    /*
+    ================================================
+    15. BOUCLE DESTINATAIRES
+    ================================================
+    */
+
+    for (
+      const userId
+      of recipientIds
+    ) {
+
+      /*
+      ==============================================
+      DONNÉES NOTIFICATION
+      ==============================================
+      */
+
+      const notificationTitle =
+        friendId
+          ? "🎮 Invitation partie"
+          : "🎮 Nouvelle partie disponible";
+
+
+      const notificationMessage =
+        friendId
+          ? `${playerName} t'invite à rejoindre une partie.`
+          : `${playerName} a créé une partie. Rejoins-la maintenant !`;
+
+
+      /*
+      ==============================================
+      NOTIFICATION FIRESTORE
+      ==============================================
+      */
+
+      notificationPromises.push(
+
+        sendNotification(
+
+          userId,
+
+          {
+
+            title:
+              notificationTitle,
+
+            message:
+              notificationMessage,
+
+            type:
+              "game",
+
+            roomId,
+
+            link:
+              `/game/${roomId}`,
+
+          }
+
+        )
+
+      );
+
+
+      /*
+      ==============================================
+      RÉCUPÉRER LES TOKENS FCM
+      ==============================================
+      */
+
+      const user =
+        users[userId];
+
+
+      const fcmTokens =
+        user?.fcmTokens;
+
+
+      if (
+        !fcmTokens ||
+        typeof fcmTokens !== "object"
+      ) {
+
+        continue;
+
+      }
+
+
+      /*
+      ==============================================
+      BOUCLE TOKENS
+      ==============================================
+      */
+
+      for (
+        const tokenKey
+        of Object.keys(
+          fcmTokens
+        )
+      ) {
+
+        const tokenRecord:
+          FCMTokenRecord =
+          fcmTokens[tokenKey];
+
+
+        const fcmToken =
+          tokenRecord?.token;
+
+
+        /*
+        ==========================================
+        TOKEN INVALIDE DANS LA BASE
+        ==========================================
+        */
+
+        if (
+          !fcmToken ||
+          typeof fcmToken !== "string"
+        ) {
+
+          continue;
+
+        }
+
+
+        /*
+        ==========================================
+        ENVOYER PUSH FCM
+        ==========================================
+        */
+
+        const pushPromise =
+
+          adminMessaging
+            .send({
+
+              token:
+                fcmToken,
+
+
+              notification: {
+
+                title:
+                  notificationTitle,
+
+                body:
+                  notificationMessage,
+
+              },
+
+
+              data: {
+
+                title:
+                  notificationTitle,
+
+                body:
+                  notificationMessage,
+
+                type:
+                  "game",
+
+                roomId,
+
+                link:
+                  `/game/${roomId}`,
+
+              },
+
+
+              webpush: {
+
+                fcmOptions: {
+
+                  link:
+                    `/game/${roomId}`,
+
+                },
+
+              },
+
+            })
+
+            .then(
+              () => {
+
+                console.log(
+                  "FCM PUSH SENT:",
+                  {
+                    userId,
+                    roomId,
+                  }
+                );
+
+              }
+            )
+
+            .catch(
+              async (
+                error: any
+              ) => {
+
+                console.error(
+                  "FCM PUSH ERROR:",
+                  {
+                    userId,
+                    tokenKey,
+                    error:
+                      error?.message ||
+                      error,
+                  }
+                );
+
+
+                /*
+                ==================================
+                TOKEN EXPIRÉ OU INVALIDE
+                ==================================
+                */
+
+                const errorCode =
+                  error?.code ||
+                  "";
+
+
+                const invalidToken =
+                  errorCode ===
+                    "messaging/registration-token-not-registered" ||
+
+                  errorCode ===
+                    "messaging/invalid-registration-token";
+
+
+                if (
+                  invalidToken
+                ) {
+
+                  try {
+
+                    await adminDB
+                      .ref(
+                        `users/${userId}/fcmTokens/${tokenKey}`
+                      )
+                      .remove();
+
+
+                    console.log(
+                      "FCM TOKEN SUPPRIMÉ:",
+                      {
+                        userId,
+                        tokenKey,
+                      }
+                    );
+
+                  } catch (
+                    removeError
+                  ) {
+
+                    console.error(
+                      "FCM TOKEN REMOVE ERROR:",
+                      removeError
+                    );
+
+                  }
+
+                }
+
+              }
+            );
+
+
+        notificationPromises.push(
+          pushPromise
+        );
+
+      }
+
+    }
+
+
+    /*
+    ================================================
+    16. ATTENDRE NOTIFICATIONS
+    ================================================
+    */
+
+    const results =
+      await Promise.allSettled(
+        notificationPromises
+      );
+
+
+    /*
+    ================================================
+    17. STATISTIQUES
+    ================================================
+    */
+
+    const successful =
+      results.filter(
+        result =>
+          result.status ===
+          "fulfilled"
+      ).length;
+
+
+    const failed =
+      results.filter(
+        result =>
+          result.status ===
+          "rejected"
+      ).length;
+
+
+    console.log(
+      "GAME NOTIFICATIONS FINISHED:",
+      {
+
+        roomId,
+
+        recipients:
+          recipientIds.length,
+
+        successful,
+
+        failed,
+
+      }
+    );
+
+
+    /*
+    ================================================
+    18. RÉPONSE
+    ================================================
+    */
 
     return NextResponse.json(
 
       {
 
-        success: true,
+        success:
+          true,
 
         roomId,
 
-        status: "waiting",
+        status:
+          "waiting",
 
       },
 
       {
 
-        status: 200,
+        status:
+          200,
 
       }
 
@@ -407,6 +933,12 @@ export async function POST(
   } catch (
     error: any
   ) {
+
+    /*
+    ================================================
+    ERREUR GLOBALE
+    ================================================
+    */
 
     console.error(
       "CREATE ROOM CRASH:",
@@ -418,7 +950,8 @@ export async function POST(
 
       {
 
-        success: false,
+        success:
+          false,
 
         error:
           error?.message ||
@@ -428,7 +961,8 @@ export async function POST(
 
       {
 
-        status: 500,
+        status:
+          500,
 
       }
 

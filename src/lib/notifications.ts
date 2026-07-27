@@ -1,44 +1,57 @@
 import {
   collection,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
 } from "firebase/firestore";
 
-
 import {
-  firestore
+  firestore,
 } from "./firebase";
 
+
+export type NotificationData = {
+
+  title: string;
+
+  message: string;
+
+  type: string;
+
+  amount?: number;
+
+  from?: string;
+
+  text?: string;
+
+  friendId?: string;
+
+  link?: string;
+
+  roomId?: string;
+
+};
 
 
 export async function sendNotification(
 
-  userId:string,
+  userId: string,
 
-  data:{
-    title:string;
+  data: NotificationData
 
-    message:string;
+) {
 
-    type:string;
+  try {
 
-    amount?:number;
+    if (
+      !userId ||
+      typeof userId !== "string"
+    ) {
 
-    from?:string;
+      throw new Error(
+        "User ID invalide"
+      );
 
-    text?:string;
-
-    friendId?:string;
-
-    link?:string;
-
-    roomId?:string;
-  }
-
-){
-
-
-  try{
+    }
 
 
     await addDoc(
@@ -52,65 +65,98 @@ export async function sendNotification(
 
       {
 
+        // =====================================
+        // INFORMATIONS NOTIFICATION
+        // =====================================
 
-        title:data.title,
-
-
-        message:data.message,
-
-
-        type:data.type,
+        title:
+          data.title || "",
 
 
+        message:
+          data.message || "",
+
+
+        type:
+          data.type || "general",
+
+
+        // =====================================
+        // DONNÉES FINANCIÈRES
+        // =====================================
 
         amount:
-        data.amount || 0,
+          data.amount ?? 0,
 
 
-
-        // message ami
+        // =====================================
+        // DONNÉES AMIS / CHAT
+        // =====================================
 
         from:
-        data.from || "",
-
+          data.from || "",
 
 
         text:
-        data.text || "",
-
+          data.text || "",
 
 
         friendId:
-        data.friendId || "",
+          data.friendId || "",
 
 
-
-        // redirection
+        // =====================================
+        // REDIRECTION
+        // =====================================
 
         link:
-        data.link || "",
+          data.link || "",
+
+
+        // =====================================
+        // PARTIE TÍTATO
+        // =====================================
 
         roomId:
-        data.roomId || "",
+          data.roomId || "",
 
 
+        // =====================================
+        // ÉTAT
+        // =====================================
 
-        read:false,
+        read:
+          false,
 
 
+        // =====================================
+        // DATE
+        // =====================================
 
         createdAt:
-        serverTimestamp()
-
+          serverTimestamp(),
 
       }
 
     );
 
 
+    console.log(
+      "Notification envoyée:",
+      {
+        userId,
+        type: data.type,
+        roomId: data.roomId,
+      }
+    );
 
-  }catch(error){
 
+    return {
+      success: true,
+    };
+
+
+  } catch (error) {
 
     console.error(
       "Erreur création notification:",
@@ -120,8 +166,6 @@ export async function sendNotification(
 
     throw error;
 
-
   }
-
 
 }

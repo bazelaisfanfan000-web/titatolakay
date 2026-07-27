@@ -1,6 +1,8 @@
 /**
  * Système Wallet HTG sécurisé
- * Utilise users/${uid}/balance
+ * Utilise users/${uid}/balance et users/${uid}/reservedBalance
+ *
+ * MODIFIÉ POUR UNIFIER SUR reservedBalance
  */
 
 import {
@@ -12,7 +14,7 @@ export interface Wallet {
 
   balance:number;
 
-  locked:number;
+  reservedBalance:number;
 
   createdAt:number;
 
@@ -93,7 +95,7 @@ return {
 
 balance:Number(data.balance || 0),
 
-locked:Number(data.locked || 0),
+reservedBalance:Number(data.reservedBalance || 0),
 
 createdAt:data.createdAt || Date.now(),
 
@@ -113,7 +115,7 @@ const wallet:Wallet={
 
 balance:1000,
 
-locked:0,
+reservedBalance:0,
 
 createdAt:Date.now(),
 
@@ -177,7 +179,7 @@ return {
 balance:Number(data.balance || 0),
 
 
-locked:Number(data.locked || 0),
+reservedBalance:Number(data.reservedBalance || 0),
 
 
 createdAt:data.createdAt || Date.now(),
@@ -220,7 +222,7 @@ return 0;
 
 
 
-return wallet.balance - wallet.locked;
+return wallet.balance - wallet.reservedBalance;
 
 
 }
@@ -291,7 +293,7 @@ return null;
 const available =
 Number(current.balance || 0)
 -
-Number(current.locked || 0);
+Number(current.reservedBalance || 0);
 
 
 
@@ -309,8 +311,8 @@ return {
 ...current,
 
 
-locked:
-Number(current.locked || 0)
+reservedBalance:
+Number(current.reservedBalance || 0)
 +
 amount,
 
@@ -500,12 +502,12 @@ Number(current.balance || 0);
 
 
 
-const locked =
-Number(current.locked || 0);
+const reservedBalance =
+Number(current.reservedBalance || 0);
 
 
 
-if(balance - locked < amount){
+if(balance - reservedBalance < amount){
 
 return;
 

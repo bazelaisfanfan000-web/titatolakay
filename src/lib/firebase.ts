@@ -23,23 +23,51 @@ import {
 
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCwkDm3s9LAXkWWbpVZpRMMHrTYzYyxyGA",
-  authDomain: "titato-64a4d.firebaseapp.com",
-  projectId: "titato-64a4d",
-  storageBucket: "titato-64a4d.firebasestorage.app",
-  messagingSenderId: "942632105982",
-  appId: "1:942632105982:web:7ebb5b9a19b5c8d0feb2af",
-  measurementId: "G-NKBRW72RSH",
+
+  apiKey:
+    "AIzaSyCwkDm3s9LAXkWWbpVZpRMMHrTYzYyxyGA",
+
+  authDomain:
+    "titato-64a4d.firebaseapp.com",
+
+  projectId:
+    "titato-64a4d",
+
+  storageBucket:
+    "titato-64a4d.firebasestorage.app",
+
+  messagingSenderId:
+    "942632105982",
+
+  appId:
+    "1:942632105982:web:7ebb5b9a19b5c8d0feb2af",
+
+  measurementId:
+    "G-NKBRW72RSH",
+
 };
 
 
 const app =
   getApps().length > 0
     ? getApps()[0]
-    : initializeApp(firebaseConfig);
+    : initializeApp(
+        firebaseConfig
+      );
 
 
-// Analytics
+// =========================================
+// EXPORT APP
+// =========================================
+
+export {
+  app,
+};
+
+
+// =========================================
+// ANALYTICS
+// =========================================
 
 export const analytics =
   typeof window !== "undefined"
@@ -47,13 +75,17 @@ export const analytics =
     : null;
 
 
-// Firebase Auth
+// =========================================
+// FIREBASE AUTH
+// =========================================
 
 export const auth =
   getAuth(app);
 
 
-// Realtime Database
+// =========================================
+// REALTIME DATABASE
+// =========================================
 
 export const database =
   getDatabase(
@@ -62,7 +94,9 @@ export const database =
   );
 
 
-// Alias
+// =========================================
+// ALIAS DATABASE
+// =========================================
 
 export const rtdb =
   database;
@@ -71,7 +105,9 @@ export const db =
   database;
 
 
-// Firestore
+// =========================================
+// FIRESTORE
+// =========================================
 
 export const firestore =
   getFirestore(app);

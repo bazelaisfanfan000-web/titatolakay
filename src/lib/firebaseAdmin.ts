@@ -1,39 +1,139 @@
 import admin from "firebase-admin";
 
 
-if(!admin.apps.length){
+/*
+====================================================
+FIREBASE ADMIN INITIALISATION
+====================================================
+*/
 
-  admin.initializeApp({
+const projectId =
+  process.env.FIREBASE_PROJECT_ID?.trim();
 
-    credential:
-      admin.credential.cert({
 
-        projectId:
-          process.env.FIREBASE_PROJECT_ID,
+const clientEmail =
+  process.env.FIREBASE_CLIENT_EMAIL?.trim();
 
-        clientEmail:
-          process.env.FIREBASE_CLIENT_EMAIL,
 
-        privateKey:
-          process.env.FIREBASE_PRIVATE_KEY
-          ?.replace(/\\n/g,"\n"),
+const privateKey =
+  process.env.FIREBASE_PRIVATE_KEY
+    ?.replace(/\\n/g, "\n")
+    .trim();
 
-      }),
 
-    databaseURL:
-      process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+const databaseURL =
+  process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL?.trim();
 
-  });
 
+/*
+====================================================
+VALIDATION ENVIRONNEMENT
+====================================================
+*/
+
+if (
+  !projectId ||
+  !clientEmail ||
+  !privateKey ||
+  !databaseURL
+) {
+
+  console.error(
+    "[FIREBASE ADMIN] Configuration Firebase manquante.",
+    {
+      hasProjectId:
+        Boolean(projectId),
+
+      hasClientEmail:
+        Boolean(clientEmail),
+
+      hasPrivateKey:
+        Boolean(privateKey),
+
+      hasDatabaseURL:
+        Boolean(databaseURL),
+    }
+  );
 
 }
 
 
+/*
+====================================================
+INITIALISER FIREBASE ADMIN UNE SEULE FOIS
+====================================================
+*/
+
+if (
+  !admin.apps.length
+) {
+
+  try {
+
+    admin.initializeApp({
+
+      credential:
+        admin.credential.cert({
+
+          projectId,
+
+          clientEmail,
+
+          privateKey,
+
+        }),
+
+      databaseURL,
+
+    });
+
+
+    console.log(
+      "[FIREBASE ADMIN] Firebase Admin initialisé.",
+      {
+        projectId,
+
+        databaseURL,
+      }
+    );
+
+  } catch (error) {
+
+    console.error(
+      "[FIREBASE ADMIN] Erreur d'initialisation:",
+      error
+    );
+
+  }
+
+}
+
+
+/*
+====================================================
+EXPORT AUTH
+====================================================
+*/
 
 export const adminAuth =
-admin.auth();
+  admin.auth();
 
 
+/*
+====================================================
+EXPORT REALTIME DATABASE
+====================================================
+*/
 
 export const adminDB =
-admin.database();
+  admin.database();
+
+
+/*
+====================================================
+EXPORT FIREBASE CLOUD MESSAGING
+====================================================
+*/
+
+export const adminMessaging =
+  admin.messaging();

@@ -459,10 +459,6 @@ export default function GamePage() {
     }
 
 
-    paymentDone.current =
-      true;
-
-
     async function pay() {
 
       try {
@@ -510,6 +506,25 @@ export default function GamePage() {
           await res.json();
 
 
+        /*
+        Si le paiement est déjà en cours ou terminé,
+        on considère que c'est un succès (idempotence)
+        */
+
+        if (
+          res.status === 409 &&
+          result?.error === "Paiement déjà traité"
+        ) {
+
+          console.log(
+            "Paiement déjà traité, ignoré"
+          );
+
+          return;
+
+        }
+
+
         if (
           !res.ok ||
           !result.success
@@ -521,6 +536,14 @@ export default function GamePage() {
           );
 
         }
+
+
+        /*
+        Marquer comme terminé uniquement après succès
+        */
+
+        paymentDone.current =
+          true;
 
 
         await addPlayerWin(

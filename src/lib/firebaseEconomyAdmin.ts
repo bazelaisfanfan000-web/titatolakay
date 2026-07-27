@@ -191,6 +191,179 @@ export async function deductBet(
 
 
 // ===============================
+// CRÉER UN DÉPÔT
+// ===============================
+
+export async function createDeposit(
+
+  uid:string,
+
+  amount:number,
+
+  method:string
+
+){
+
+  checkDatabase();
+
+
+
+  if(amount <= 0){
+
+    throw new Error(
+      "Montant invalide"
+    );
+
+  }
+
+
+
+  const depositRef =
+    adminDB
+      .ref(
+        "deposits"
+      )
+      .push();
+
+
+
+  const depositId =
+    depositRef.key;
+
+
+  if(!depositId){
+
+    throw new Error(
+      "Erreur création dépôt"
+    );
+
+  }
+
+
+
+  await depositRef.set({
+
+    id: depositId,
+
+    uid,
+
+    amount,
+
+    method,
+
+    status: "pending",
+
+    createdAt: Date.now(),
+
+  });
+
+
+
+  console.log(
+    "[ECONOMY] CREATE DEPOSIT",
+    {
+      depositId,
+      uid,
+      amount,
+      method,
+    }
+  );
+
+
+
+  return depositId;
+
+}
+
+
+
+// ===============================
+// CONFIRMER UN DÉPÔT
+// ===============================
+
+export async function confirmDeposit(
+
+  depositId:string
+
+){
+
+  checkDatabase();
+
+
+
+  const depositRef =
+    adminDB
+      .ref(
+        `deposits/${depositId}`
+      );
+
+
+
+  const snapshot =
+    await depositRef.get();
+
+
+
+  if(!snapshot.exists()){
+
+    throw new Error(
+      "Dépôt introuvable"
+    );
+
+  }
+
+
+
+  const deposit =
+    snapshot.val();
+
+
+
+  if(deposit.status === "completed"){
+
+    return;
+
+  }
+
+
+
+  await depositRef.update({
+
+    status: "completed",
+
+    completedAt: Date.now(),
+
+  });
+
+
+
+  await addBalance(
+
+    deposit.uid,
+
+    deposit.amount,
+
+    "deposit",
+
+    depositId
+
+  );
+
+
+
+  console.log(
+    "[ECONOMY] CONFIRM DEPOSIT",
+    {
+      depositId,
+      uid: deposit.uid,
+      amount: deposit.amount,
+    }
+  );
+
+}
+
+
+// ===============================
 // AJOUTER UN SOLDE
 // ===============================
 

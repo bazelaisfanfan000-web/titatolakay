@@ -38,8 +38,12 @@ if(!snapshot.exists()){
 const user = snapshot.val();
 
 
+const balance = Number(user.balance || 0);
+const reservedBalance = Number(user.reservedBalance || 0);
+const available = balance - reservedBalance;
 
-if(user.balance < amount){
+
+if(available < amount){
 
  throw new Error(
  "Solde insuffisant"
@@ -51,11 +55,8 @@ if(user.balance < amount){
 
 await update(userRef,{
 
- balance:
- user.balance - amount,
-
- lockedBalance:
- (user.lockedBalance || 0)
+ reservedBalance:
+ (user.reservedBalance || 0)
  + amount
 
 });

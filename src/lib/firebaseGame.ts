@@ -12,15 +12,15 @@ import {
 
 export async function playGameMove(
 
-  gameId:string,
+  gameId: string,
 
-  row:number,
+  row: number,
 
-  col:number,
+  col: number,
 
-  symbol:"X"|"O"
+  symbol: "X" | "O"
 
-){
+) {
 
 
   const gameRef =
@@ -34,7 +34,7 @@ export async function playGameMove(
     await get(gameRef);
 
 
-  if(!snap.exists()){
+  if (!snap.exists()) {
 
     throw new Error(
       "Partie introuvable"
@@ -48,18 +48,18 @@ export async function playGameMove(
 
 
 
-  const board:string[][] =
+  const board: string[][] =
     game.board ||
     Array.from(
       {
-        length:10
+        length: 10
       },
-      ()=>Array(10).fill("")
+      () => Array(10).fill("")
     );
 
 
 
-  if(board[row][col]){
+  if (board[row][col]) {
 
     throw new Error(
       "Case déjà utilisée"
@@ -69,7 +69,7 @@ export async function playGameMove(
 
 
 
-  if(game.turn !== symbol){
+  if (game.turn !== symbol) {
 
     throw new Error(
       "Ce n'est pas ton tour"
@@ -79,7 +79,7 @@ export async function playGameMove(
 
 
 
-  board[row][col]=symbol;
+  board[row][col] = symbol;
 
 
 
@@ -96,19 +96,19 @@ export async function playGameMove(
   const draw =
     !winner &&
     board.every(
-      r=>r.every(
-        cell=>cell!==""
-      )
+      r =>
+        r.every(
+          cell =>
+            cell !== ""
+        )
     );
 
 
 
   const nextTurn =
-    symbol==="X"
-    ?
-    "O"
-    :
-    "X";
+    symbol === "X"
+      ? "O"
+      : "X";
 
 
 
@@ -122,28 +122,24 @@ export async function playGameMove(
 
 
       turn:
-      winner || draw
-      ?
-      symbol
-      :
-      nextTurn,
+        winner || draw
+          ? symbol
+          : nextTurn,
 
 
       winner:
-      winner ||
-      (draw ? "draw" : null),
+        winner ||
+        (draw ? "draw" : null),
 
 
       status:
-      winner || draw
-      ?
-      "finished"
-      :
-      "playing",
+        winner || draw
+          ? "finished"
+          : "playing",
 
 
       turnStartedAt:
-      Date.now()
+        Date.now()
 
     }
 
@@ -153,7 +149,7 @@ export async function playGameMove(
 
   return {
 
-    success:true,
+    success: true,
 
     winner
 
@@ -175,11 +171,11 @@ export async function playGameMove(
 
 export async function finishGamePayment(
 
-  gameId:string,
+  gameId: string,
 
-  winnerUid:string
+  winnerUid: string
 
-){
+) {
 
 
   const gameRef =
@@ -195,7 +191,7 @@ export async function finishGamePayment(
 
 
 
-  if(!gameSnap.exists()){
+  if (!gameSnap.exists()) {
 
     throw new Error(
       "Partie introuvable"
@@ -210,22 +206,35 @@ export async function finishGamePayment(
 
 
 
-  // Protection double paiement (leave check to server-side API)
-  // This client helper should call the server API instead of writing to RTDB directly.
-  const res = await fetch("/api/game/finish-payment", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ gameId })
-  });
+  // Protection double paiement
+  // Le paiement doit être traité par l'API serveur.
+  const res =
+    await fetch(
+      "/api/game/finish-payment",
+      {
+        method: "POST",
 
-  const json = await res.json();
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body:
+          JSON.stringify({
+            gameId
+          })
+
+      }
+    );
+
+
+
+  const json =
+    await res.json();
+
+
 
   return json;
-
-
-
 
 
 }
@@ -237,84 +246,95 @@ export async function finishGamePayment(
 
 
 // ================================
-// VERIFICATION ALIGNEMENT 4
+// VERIFICATION ALIGNEMENT 5
 // ================================
 
 
 function checkWinner(
 
-  board:string[][],
+  board: string[][],
 
-  row:number,
+  row: number,
 
-  col:number,
+  col: number,
 
-  symbol:string
+  symbol: string
 
-){
+) {
 
 
-  const directions=[
+  const directions = [
 
-    [1,0],
+    [1, 0],
 
-    [0,1],
+    [0, 1],
 
-    [1,1],
+    [1, 1],
 
-    [1,-1]
+    [1, -1]
 
   ];
 
 
 
-  for(
-    const [dr,dc]
+  for (
+
+    const [dr, dc]
+
     of directions
-  ){
+
+  ) {
 
 
-    let count=1;
-
-
-
-    count += countDirection(
-
-      board,
-
-      row,
-
-      col,
-
-      dr,
-
-      dc,
-
-      symbol
-
-    );
+    let count = 1;
 
 
 
-    count += countDirection(
+    // Vérifier dans une direction
+    count +=
+      countDirection(
 
-      board,
+        board,
 
-      row,
+        row,
 
-      col,
+        col,
 
-      -dr,
+        dr,
 
-      -dc,
+        dc,
 
-      symbol
+        symbol
 
-    );
+      );
 
 
 
-    if(count>=4){
+    // Vérifier dans la direction opposée
+    count +=
+      countDirection(
+
+        board,
+
+        row,
+
+        col,
+
+        -dr,
+
+        -dc,
+
+        symbol
+
+      );
+
+
+
+    // ==================================
+    // 5 ALIGNÉS POUR GAGNER
+    // ==================================
+
+    if (count >= 5) {
 
       return symbol;
 
@@ -336,53 +356,63 @@ function checkWinner(
 
 
 
+// ================================
+// COMPTER LES CASES ALIGNÉES
+// ================================
+
+
 function countDirection(
 
-  board:string[][],
+  board: string[][],
 
-  row:number,
+  row: number,
 
-  col:number,
+  col: number,
 
-  dr:number,
+  dr: number,
 
-  dc:number,
+  dc: number,
 
-  symbol:string
+  symbol: string
 
-){
-
-
-  let count=0;
+) {
 
 
-  let r=row+dr;
-
-  let c=col+dc;
+  let count = 0;
 
 
 
-  while(
+  let r =
+    row + dr;
 
-    r>=0 &&
 
-    r<board.length &&
+  let c =
+    col + dc;
 
-    c>=0 &&
 
-    c<board[0].length &&
 
-    board[r][c]===symbol
+  while (
 
-  ){
+    r >= 0 &&
+
+    r < board.length &&
+
+    c >= 0 &&
+
+    c < board[0].length &&
+
+    board[r][c] === symbol
+
+  ) {
 
 
     count++;
 
 
-    r+=dr;
+    r += dr;
 
-    c+=dc;
+
+    c += dc;
 
 
   }
