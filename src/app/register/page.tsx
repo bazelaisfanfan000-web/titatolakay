@@ -46,7 +46,7 @@ export default function Register() {
 
   async function register() {
 
-    if (!username || !email || !password) {
+    if (!username.trim() || !email.trim() || !password) {
       return setError(
         "Tous les champs sont obligatoires"
       );
@@ -71,10 +71,16 @@ export default function Register() {
       setError("");
 
 
+      /*
+      ========================================
+      CRÉATION DU COMPTE FIREBASE AUTH
+      ========================================
+      */
+
       const { user } =
         await createUserWithEmailAndPassword(
           auth,
-          email,
+          email.trim(),
           password
         );
 
@@ -84,71 +90,119 @@ export default function Register() {
 
       /*
       ========================================
-      CRÉATION DU PROFIL
+      CRÉATION DU PROFIL UTILISATEUR
       ========================================
       */
 
-      await set(
-        ref(
-          database,
-          `users/${user.uid}`
-        ),
-        {
-          uid: user.uid,
-          username,
-          email,
+      try {
 
-          balance: 25,
-          currency: "HTG",
-
-          bonusReceived: true,
-
-          createdAt: now,
-
-          acceptedTerms: true,
-          acceptedTermsAt: now,
-
-          balanceUpdatedAt: now,
-
-          lastReward: 25,
-        }
-      );
-
-
-      /*
-      ========================================
-      NOTIFICATION BONUS
-      ========================================
-      */
-
-      await set(
-        push(
+        await set(
           ref(
             database,
-            `notifications/${user.uid}`
-          )
-        ),
-        {
-          title:
-            "🎁 Bonus de bienvenue",
+            `users/${user.uid}`
+          ),
+          {
+            uid: user.uid,
 
-          message:
-            "Tu as reçu +25 HTG de bonus de bienvenue pour commencer à jouer.",
+            username: username.trim(),
 
-          amount: 25,
+            email: user.email || email.trim(),
 
-          type: "bonus",
+            balance: 25,
 
-          read: false,
+            currency: "HTG",
 
-          createdAt: now,
-        }
-      );
+            bonusReceived: true,
+
+            createdAt: now,
+
+            acceptedTerms: true,
+
+            acceptedTermsAt: now,
+
+            balanceUpdatedAt: now,
+
+            lastReward: 25,
+          }
+        );
+
+      } catch (profileError: any) {
+
+        console.error(
+          "ERREUR CRÉATION PROFIL FIREBASE:",
+          profileError
+        );
+
+        throw new Error(
+          `Erreur création profil: ${
+            profileError?.code ||
+            profileError?.message ||
+            "PERMISSION_DENIED"
+          }`
+        );
+
+      }
 
 
       /*
       ========================================
-      REDIRECTION
+      NOTIFICATION BONUS DE BIENVENUE
+      ========================================
+      */
+
+      try {
+
+        const notificationRef =
+          push(
+            ref(
+              database,
+              `notifications/${user.uid}`
+            )
+          );
+
+
+        await set(
+          notificationRef,
+          {
+            receiverId: user.uid,
+
+            title:
+              "🎁 Bonus de bienvenue",
+
+            message:
+              "Tu as reçu +25 HTG de bonus de bienvenue pour commencer à jouer.",
+
+            amount: 25,
+
+            type: "bonus",
+
+            read: false,
+
+            createdAt: now,
+          }
+        );
+
+      } catch (notificationError: any) {
+
+        console.error(
+          "ERREUR CRÉATION NOTIFICATION FIREBASE:",
+          notificationError
+        );
+
+        throw new Error(
+          `Erreur notification: ${
+            notificationError?.code ||
+            notificationError?.message ||
+            "PERMISSION_DENIED"
+          }`
+        );
+
+      }
+
+
+      /*
+      ========================================
+      REDIRECTION DASHBOARD
       ========================================
       */
 
@@ -159,21 +213,51 @@ export default function Register() {
 
     } catch (err: any) {
 
-      setError(
-
-        err.code ===
-        "auth/email-already-in-use"
-
-          ? "Cet email existe déjà"
-
-          : err.code ===
-            "auth/invalid-email"
-
-          ? "Email invalide"
-
-          : err.message
-
+      console.error(
+        "ERREUR INSCRIPTION:",
+        err
       );
+
+
+      const errorCode =
+        err?.code || "";
+
+
+      if (
+        errorCode ===
+        "auth/email-already-in-use"
+      ) {
+
+        setError(
+          "Cet email existe déjà"
+        );
+
+      } else if (
+        errorCode ===
+        "auth/invalid-email"
+      ) {
+
+        setError(
+          "Email invalide"
+        );
+
+      } else if (
+        errorCode ===
+        "auth/weak-password"
+      ) {
+
+        setError(
+          "Le mot de passe est trop faible"
+        );
+
+      } else {
+
+        setError(
+          err?.message ||
+          "Une erreur est survenue pendant la création du compte"
+        );
+
+      }
 
     } finally {
 
@@ -553,7 +637,6 @@ export default function Register() {
 
           {/* ========================================
               BOUTON CRÉER
-              3D BLEU TRANSPARENT
           ======================================== */}
 
           <motion.button
