@@ -1,114 +1,151 @@
 const BASE_URL =
-"https://api.moncashconnect.com/v1";
+  process.env.MONCASH_API_URL ||
+  "https://api.moncashconnect.com/v1";
 
+
+
+const API_KEY =
+  process.env.MONCASH_API_KEY ||
+  process.env.MCC_SECRET ||
+  "";
 
 
 
 
 export async function createMonCashPayment(
 
-amount:number,
+  amount:number,
 
-referenceId:string,
+  referenceId:string,
 
-customerName:string
+  customerName:string
 
 ){
 
 
-const response =
+  if(!API_KEY){
 
-await fetch(
+    throw new Error(
+      "Clé MonCash manquante dans .env.local"
+    );
 
-`${BASE_URL}/pay-create`,
-
-{
-
-
-method:"POST",
-
-
-headers:{
-
-
-"Authorization":
-
-`Bearer ${process.env.MCC_SECRET}`,
+  }
 
 
 
-"Content-Type":
+  const response = await fetch(
 
-"application/json",
+    `${BASE_URL}/pay-create`,
 
+    {
 
-"Origin":
-
-process.env.NEXT_PUBLIC_APP_URL || ""
-
-
-},
+      method:"POST",
 
 
-
-body:JSON.stringify({
-
-amount,
-
-referenceId,
+      headers:{
 
 
-returnUrl:
-
-`${process.env.NEXT_PUBLIC_APP_URL}/checkout/return`,
-
-
-customerName
+        "Authorization":
+          `Bearer ${API_KEY}`,
 
 
-})
+        "Content-Type":
+          "application/json",
+
+
+        "Accept":
+          "application/json",
+
+
+        "Origin":
+          process.env.NEXT_PUBLIC_APP_URL || ""
+
+      },
+
+
+      body:JSON.stringify({
+
+        amount,
+
+
+        referenceId,
+
+
+        customerName,
+
+
+        returnUrl:
+
+          `${process.env.NEXT_PUBLIC_APP_URL}/checkout/return`
+
+
+      })
+
+
+    }
+
+  );
+
+
+
+  const text =
+    await response.text();
+
+
+
+  let data:any = {};
+
+
+
+  try {
+
+    data =
+      JSON.parse(text);
+
+  }
+
+  catch {
+
+    data =
+      {
+        raw:text
+      };
+
+  }
+
+
+
+
+  console.log(
+    "MONCASH CREATE PAYMENT RESPONSE:",
+    {
+      status:response.status,
+      data
+    }
+  );
+
+
+
+
+  if(!response.ok){
+
+
+    throw new Error(
+
+      JSON.stringify(data)
+
+    );
+
+
+  }
+
+
+
+
+  return data;
 
 
 }
-
-);
-
-
-
-
-
-const data =
-
-await response.json();
-
-
-
-
-
-if(!response.ok){
-
-
-throw new Error(
-
-data.error ||
-
-"Erreur création paiement MonCash"
-
-);
-
-
-}
-
-
-
-
-return data;
-
-
-}
-
-
-
 
 
 
@@ -117,120 +154,83 @@ return data;
 
 export async function createMonCashPayout(
 
-
 amount:number,
-
 
 number:string,
 
-
 referenceId:string
-
 
 ){
 
 
+ const response = await fetch(
+
+ `${BASE_URL}/payout-create`,
+
+ {
+
+ method:"POST",
+
+
+ headers:{
+
+
+ "Authorization":
+
+ `Bearer ${API_KEY}`,
+
+
+ "Content-Type":
+
+ "application/json"
+
+
+ },
+
+
+ body:JSON.stringify({
+
+ amount,
+
+
+ moncashNumber:number,
+
+
+ referenceId
+
+
+ })
+
+
+ }
+
+ );
 
 
 
-const response =
-
-await fetch(
-
-`${BASE_URL}/payout-create`,
-
-{
-
-
-method:"POST",
+ const data =
+ await response.json();
 
 
 
-headers:{
+ if(!response.ok){
+
+
+ throw new Error(
+
+ JSON.stringify(data)
+
+ );
+
+
+ }
 
 
 
-"Authorization":
-
-`Bearer ${process.env.MCC_SECRET}`,
-
-
-
-"Content-Type":
-
-"application/json"
-
-
-
-},
-
-
-
-
-
-body:JSON.stringify({
-
-
-
-amount,
-
-
-
-moncashNumber:number,
-
-
-
-referenceId
-
-
-
-})
-
-
-
-}
-
-
-);
-
-
-
-
-
-
-const data =
-
-await response.json();
-
-
-
-
-
-
-if(!response.ok){
-
-
-throw new Error(
-
-data.error ||
-
-"Erreur retrait MonCash"
-
-);
+ return data;
 
 
 }
-
-
-
-
-
-return data;
-
-
-
-}
-
 
 
 
@@ -239,54 +239,36 @@ return data;
 
 export async function checkMonCashPayment(
 
-
 referenceId:string
-
 
 ){
 
 
-
 const response =
-
 await fetch(
 
 `${BASE_URL}/pay-status?referenceId=${referenceId}`,
 
 {
 
-
-method:"GET",
-
-
 headers:{
 
 
 "Authorization":
 
-`Bearer ${process.env.MCC_SECRET}`
+`Bearer ${API_KEY}`
 
 
 }
 
-
-
 }
-
 
 );
 
 
 
-
-
-
 const data =
-
 await response.json();
-
-
-
 
 
 
@@ -295,9 +277,7 @@ if(!response.ok){
 
 throw new Error(
 
-data.error ||
-
-"Erreur vérification paiement"
+JSON.stringify(data)
 
 );
 
@@ -306,10 +286,7 @@ data.error ||
 
 
 
-
-
 return data;
-
 
 
 }

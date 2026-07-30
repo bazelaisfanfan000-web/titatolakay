@@ -3,57 +3,22 @@
 TiTaTo - Atomic Withdrawal Operations
 ====================================================
 
-Gestion atomique des fonds pour les retraits.
+Gestion atomique des retraits.
 
-FLOW :
-
-1. reserveWithdrawal()
-   ↓
-   balance disponible
-   ↓
-   réservation du montant
-   ↓
-   création withdrawal pending
-
-2. markWithdrawalProcessing()
-   ↓
-   pending → processing
-
-3. markWithdrawalFailed()
-   ↓
-   processing/pending → failed
-   ↓
-   remboursement nécessaire
-
-4. refundFailedWithdrawal()
-   ↓
-   failed → refund_pending
-   ↓
-   restitution du solde
-   ↓
-   reservedBalance diminué
-   ↓
-   refunded
-
-IMPORTANT :
-
-Toutes les modifications financières utilisent
-des transactions Firebase RTDB.
-
-Cela évite :
-
-- double retrait
-- double réservation
-- double remboursement
-- solde négatif
-- concurrence entre deux requêtes
+Correction :
+- Réservation atomique sur users/{uid}
+- balance + reservedBalance dans une seule transaction
+- évite les doubles retraits
+- évite les incohérences de solde
 
 ====================================================
 */
 
+
 import {
   getDatabase,
 } from "firebase-admin/database";
+
 
 
 /*
@@ -62,814 +27,569 @@ TYPES
 ====================================================
 */
 
+
 export type WithdrawalReservationReason =
 
   | "insufficient_balance"
-
   | "active_withdrawal"
-
   | "invalid_amount"
-
   | "already_reserved"
-
   | "user_not_found"
-
   | "database_error";
+
 
 
 export interface ReserveWithdrawalInput {
 
-  uid: string;
+  uid:string;
 
-  withdrawalId: string;
+  withdrawalId:string;
 
-  amount: number;
+  amount:number;
 
-  referenceId: string;
+  referenceId:string;
 
-  moncashNumber: string;
+  moncashNumber:string;
 
 }
+
 
 
 export interface ReserveWithdrawalSuccess {
 
-  success: true;
+  success:true;
 
-  withdrawalId: string;
+  withdrawalId:string;
 
 }
+
 
 
 export interface ReserveWithdrawalFailure {
 
-  success: false;
+  success:false;
 
-  reason: WithdrawalReservationReason;
+  reason:WithdrawalReservationReason;
 
 }
 
 
+
 export type ReserveWithdrawalResult =
-
-  | ReserveWithdrawalSuccess
-
-  | ReserveWithdrawalFailure;
+ReserveWithdrawalSuccess |
+ReserveWithdrawalFailure;
 
 
-/*
-====================================================
-STATUTS ACTIFS
-====================================================
-*/
 
-const ACTIVE_WITHDRAWAL_STATUSES = new Set([
+const ACTIVE_WITHDRAWAL_STATUSES =
+new Set([
 
-  "pending",
+"pending",
 
-  "processing",
+"processing",
 
-  "refund_pending",
+"refund_pending"
 
 ]);
 
 
+
 /*
 ====================================================
-VALIDATION MONTANT
+VALIDATION
 ====================================================
 */
+
 
 function isValidAmount(
-  amount: number,
-): boolean {
+amount:number
+){
 
-  return (
+return (
 
-    typeof amount === "number" &&
+typeof amount==="number" &&
 
-    Number.isFinite(amount) &&
+Number.isFinite(amount) &&
 
-    amount > 0
+amount>0
 
-  );
+);
+
 }
 
 
-/*
-====================================================
-VALIDATION UID
-====================================================
-*/
 
 function isValidUid(
-  uid: string,
-): boolean {
+uid:string
+){
 
-  return (
+return (
 
-    typeof uid === "string" &&
+typeof uid==="string" &&
 
-    uid.trim().length > 0
+uid.trim().length>0
 
-  );
+);
+
 }
 
 
-/*
-====================================================
-VALIDATION ID
-====================================================
-*/
 
 function isValidId(
-  value: string,
-): boolean {
+value:string
+){
 
-  return (
+return (
 
-    typeof value === "string" &&
+typeof value==="string" &&
 
-    value.trim().length > 0
+value.trim().length>0
 
-  );
+);
+
 }
+
 
 
 /*
 ====================================================
 RÉSERVER UN RETRAIT
 ====================================================
+*/
 
-Cette fonction effectue une réservation atomique.
 
-IMPORTANT :
+export async function reserveWithdrawal(
 
-Le système utilise :
+input:ReserveWithdrawalInput
 
-users/{uid}/balance
-users/{uid}/reservedBalance
+):Promise<ReserveWithdrawalResult>{
 
-Le solde réellement disponible est :
 
-balance - reservedBalance
 
-Exemple :
+const {
 
-balance = 500
+uid,
 
-reservedBalance = 100
+withdrawalId,
 
-Disponible = 400
+amount,
 
-Si retrait = 300 :
+referenceId,
 
-reservedBalance devient 400
+moncashNumber
 
-Disponible = 100
+}=input;
 
-Le montant n'est PAS encore définitivement retiré.
 
-Il est seulement réservé.
 
+if(
+!isValidUid(uid)
+){
+
+return {
+
+success:false,
+
+reason:"user_not_found"
+
+};
+
+}
+
+
+
+if(
+!isValidAmount(amount)
+){
+
+return {
+
+success:false,
+
+reason:"invalid_amount"
+
+};
+
+}
+
+
+
+if(
+!isValidId(withdrawalId)
+||
+!isValidId(referenceId)
+){
+
+return {
+
+success:false,
+
+reason:"database_error"
+
+};
+
+}
+
+
+
+if(
+!moncashNumber ||
+moncashNumber.trim().length < 8
+){
+
+return {
+
+success:false,
+
+reason:"invalid_amount"
+
+};
+
+}
+
+
+
+const db =
+getDatabase();
+
+
+
+/*
+====================================================
+1. Vérifier retrait existant
 ====================================================
 */
 
-export async function reserveWithdrawal(
-  input: ReserveWithdrawalInput,
-): Promise<ReserveWithdrawalResult> {
 
-  const {
+const existing =
 
-    uid,
+await db
+.ref(
+`withdrawals/${withdrawalId}`
+)
+.get();
 
-    withdrawalId,
 
-    amount,
 
-    referenceId,
+if(
+existing.exists()
+){
 
-    moncashNumber,
+return {
 
-  } = input;
+success:false,
 
+reason:"already_reserved"
 
-  /*
-  --------------------------------------------------
-  1. VALIDATION
-  --------------------------------------------------
-  */
+};
 
-  if (
-    !isValidUid(uid)
-  ) {
+}
 
-    return {
 
-      success: false,
 
-      reason: "user_not_found",
+/*
+====================================================
+2. Vérifier retrait actif
+====================================================
+*/
 
-    };
 
-  }
+const activeSnapshot =
 
+await db
+.ref("withdrawals")
+.orderByChild("uid")
+.equalTo(uid)
+.get();
 
-  if (
-    !isValidId(withdrawalId) ||
-    !isValidId(referenceId)
-  ) {
 
-    return {
 
-      success: false,
+if(
+activeSnapshot.exists()
+){
 
-      reason: "database_error",
+const list =
+activeSnapshot.val();
 
-    };
 
-  }
+for(
+const item of Object.values(list)
+){
 
+if(
+item &&
+typeof item==="object" &&
+ACTIVE_WITHDRAWAL_STATUSES.has(
+(item as any).status
+)
+){
 
-  if (
-    !isValidAmount(amount)
-  ) {
+return {
 
-    return {
+success:false,
 
-      success: false,
+reason:"active_withdrawal"
 
-      reason: "invalid_amount",
+};
 
-    };
+}
 
-  }
+}
 
+}
 
-  if (
-    typeof moncashNumber !== "string" ||
-    moncashNumber.trim().length < 8
-  ) {
 
-    return {
 
-      success: false,
+/*
+====================================================
+3. RÉSERVATION ATOMIQUE CORRIGÉE
+====================================================
+*/
 
-      reason: "invalid_amount",
 
-    };
+let failureReason:
+WithdrawalReservationReason |
+null = null;
 
-  }
 
 
-  const db =
-    getDatabase();
+const userRef =
 
+db.ref(
+`users/${uid}`
+);
 
-  /*
-  --------------------------------------------------
-  2. VÉRIFIER SI LE RETRAIT EXISTE DÉJÀ
-  --------------------------------------------------
-  */
 
-  const existingWithdrawalSnapshot =
 
-    await db
+const transactionResult =
 
-      .ref(
-        `withdrawals/${withdrawalId}`,
-      )
+await userRef.transaction(
 
-      .get();
+(currentUser)=>{
 
 
-  if (
-    existingWithdrawalSnapshot.exists()
-  ) {
+if(
+!currentUser
+){
 
-    return {
+failureReason =
+"user_not_found";
 
-      success: false,
 
-      reason: "already_reserved",
+return;
 
-    };
+}
 
-  }
 
 
-  /*
-  --------------------------------------------------
-  3. VÉRIFIER LES RETRAITS ACTIFS
-  --------------------------------------------------
-  */
+const balance =
 
-  const activeWithdrawalsSnapshot =
+Number(
+currentUser.balance ?? 0
+);
 
-    await db
 
-      .ref(
-        "withdrawals",
-      )
 
-      .orderByChild(
-        "uid",
-      )
+const reservedBalance =
 
-      .equalTo(
-        uid,
-      )
+Number(
+currentUser.reservedBalance ?? 0
+);
 
-      .get();
 
 
-  if (
-    activeWithdrawalsSnapshot.exists()
-  ) {
+if(
+!Number.isFinite(balance)
+){
 
-    const withdrawals =
+failureReason =
+"database_error";
 
-      activeWithdrawalsSnapshot.val() as Record<
-        string,
-        any
-      >;
 
+return;
 
-    for (
-      const withdrawal
-      of Object.values(
-        withdrawals,
-      )
-    ) {
+}
 
-      if (
-        !withdrawal ||
-        typeof withdrawal !== "object"
-      ) {
 
-        continue;
 
-      }
+if(
+!Number.isFinite(reservedBalance)
+){
 
+failureReason =
+"database_error";
 
-      if (
-        ACTIVE_WITHDRAWAL_STATUSES.has(
-          withdrawal.status,
-        )
-      ) {
 
-        return {
+return;
 
-          success: false,
+}
 
-          reason: "active_withdrawal",
 
-        };
 
-      }
+const availableBalance =
 
-    }
+balance -
+reservedBalance;
 
-  }
 
 
-  /*
-  --------------------------------------------------
-  4. TRANSACTION ATOMIQUE SUR LE SOLDE
-  --------------------------------------------------
-  */
+if(
+availableBalance < amount
+){
 
-  const balanceRef =
+failureReason =
+"insufficient_balance";
 
-    db.ref(
-      `users/${uid}/balance`,
-    );
 
+return;
 
-  const reservedBalanceRef =
+}
 
-    db.ref(
-      `users/${uid}/reservedBalance`,
-    );
 
 
-  /*
-  --------------------------------------------------
-  5. RÉSERVER LE SOLDE
-  --------------------------------------------------
-  */
+return {
 
-  let reservationSucceeded = false;
+...currentUser,
 
 
-  const balanceTransaction =
+reservedBalance:
 
-    await balanceRef.transaction(
+reservedBalance + amount
 
-      (
-        currentBalance,
-      ) => {
 
-        /*
-        --------------------------------------------
-        UTILISATEUR SANS SOLDE
-        --------------------------------------------
-        */
+};
 
-        if (
-          currentBalance === null ||
-          currentBalance === undefined
-        ) {
 
-          return;
+}
 
-        }
+);
 
 
-        const balance =
 
-          Number(
-            currentBalance,
-          );
+if(
+!transactionResult.committed
+){
 
+return {
 
-        if (
-          !Number.isFinite(balance)
-        ) {
+success:false,
 
-          return;
+reason:
+failureReason ??
+"database_error"
 
-        }
-
-
-        /*
-        --------------------------------------------
-        RÉCUPÉRER LE SOLDE RÉSERVÉ
-        --------------------------------------------
-        */
-
-        /*
-        IMPORTANT :
-
-        La transaction du balance ne peut pas
-        lire de manière fiable reservedBalance
-        en même temps.
-
-        La vérification finale est donc effectuée
-        avant et après avec une seconde protection.
-
-        --------------------------------------------
-        */
-
-        reservationSucceeded = true;
-
-
-        return balance;
-
-      },
-
-    );
-
-
-  /*
-  --------------------------------------------------
-  ATTENTION
-  --------------------------------------------------
-
-  La transaction ci-dessus vérifie uniquement
-  que le solde existe.
-
-  La réservation réelle doit maintenant être
-  effectuée avec une transaction sur
-  reservedBalance.
-
-  --------------------------------------------------
-  */
-
-
-  if (
-    !balanceTransaction.committed
-  ) {
-
-    return {
-
-      success: false,
-
-      reason: "user_not_found",
-
-    };
-
-  }
-
-
-  /*
-  --------------------------------------------------
-  6. TRANSACTION SUR RESERVED BALANCE
-  --------------------------------------------------
-  */
-
-  let reservationRejectedReason:
-    WithdrawalReservationReason | null =
-      null;
-
-
-  const reservedTransaction =
-
-    await reservedBalanceRef.transaction(
-
-      (
-        currentReservedBalance,
-      ) => {
-
-        const balanceValue =
-
-          balanceTransaction.snapshot.val();
-
-
-        const balance =
-
-          Number(
-            balanceValue || 0,
-          );
-
-
-        const reservedBalance =
-
-          Number(
-            currentReservedBalance || 0,
-          );
-
-
-        if (
-          !Number.isFinite(balance)
-        ) {
-
-          reservationRejectedReason =
-            "user_not_found";
-
-
-          return;
-
-        }
-
-
-        if (
-          !Number.isFinite(
-            reservedBalance,
-          )
-        ) {
-
-          reservationRejectedReason =
-            "database_error";
-
-
-          return;
-
-        }
-
-
-        /*
-        ------------------------------------------
-        DISPONIBLE
-        ------------------------------------------
-        */
-
-        const availableBalance =
-
-          balance -
-          reservedBalance;
-
-
-        /*
-        ------------------------------------------
-        SOLDE INSUFFISANT
-        ------------------------------------------
-        */
-
-        if (
-          availableBalance < amount
-        ) {
-
-          reservationRejectedReason =
-            "insufficient_balance";
-
-
-          return;
-
-        }
-
-
-        /*
-        ------------------------------------------
-        NOUVELLE RÉSERVATION
-        ------------------------------------------
-        */
-
-        return (
-
-          reservedBalance +
-          amount
-
-        );
-
-      },
-
-    );
-
-
-  /*
-  --------------------------------------------------
-  7. RÉSERVATION REFUSÉE
-  --------------------------------------------------
-  */
-
-  if (
-    !reservedTransaction.committed
-  ) {
-
-    return {
-
-      success: false,
-
-      reason:
-
-        reservationRejectedReason ??
-        "database_error",
-
-    };
-
-  }
-
-
-  /*
-  --------------------------------------------------
-  8. CRÉER LE RETRAIT
-  --------------------------------------------------
-  */
-
-  const withdrawalRef =
-
-    db.ref(
-      `withdrawals/${withdrawalId}`,
-    );
-
-
-  const now =
-    Date.now();
-
-
-  const withdrawalData = {
-
-    id:
-      withdrawalId,
-
-    uid,
-
-    amount,
-
-    referenceId,
-
-    moncashNumber,
-
-    status:
-      "pending",
-
-    providerStatus:
-      "pending",
-
-    payoutId:
-      null,
-
-    feeHtg:
-      0,
-
-    totalCostHtg:
-      amount,
-
-    createdAt:
-      now,
-
-    updatedAt:
-      now,
-
-    reservedAt:
-      now,
-
-    refundedAt:
-      null,
-
-    completedAt:
-      null,
-
-    errorMessage:
-      null,
-
-  };
-
-
-  try {
-
-    await withdrawalRef.set(
-      withdrawalData,
-    );
-
-  } catch (
-    error
-  ) {
-
-    /*
-    ------------------------------------------------
-    ÉCHEC CRÉATION RETRAIT
-    ------------------------------------------------
-
-    Si le retrait n'a pas pu être créé,
-    il faut immédiatement libérer
-    la réservation.
-
-    ------------------------------------------------
-    */
-
-    console.error(
-      "[WITHDRAWAL_CREATE_RECORD_ERROR]",
-      {
-
-        uid,
-
-        withdrawalId,
-
-        error,
-
-      },
-    );
-
-
-    await releaseReservedWithdrawalAmount(
-
-      uid,
-
-      amount,
-
-    );
-
-
-    return {
-
-      success: false,
-
-      reason: "database_error",
-
-    };
-
-  }
-
-
-  /*
-  --------------------------------------------------
-  9. SUCCÈS
-  --------------------------------------------------
-  */
-
-  return {
-
-    success: true,
-
-    withdrawalId,
-
-  };
+};
 
 }
 
 
 /*
 ====================================================
-FINALISER UN RETRAIT RÉUSSI
+4. CRÉATION DU RETRAIT
 ====================================================
+*/
 
-Cette fonction est appelée par le webhook
-lorsque MonCashConnect confirme que le payout
-est completed.
 
-Elle :
+const now =
+Date.now();
 
-1. Marque le retrait comme completed
-2. Libère le solde réservé
-3. Enregistre le payoutId et les frais
 
-IMPORTANT :
 
-Cette fonction est idempotente.
+try{
 
-Si le webhook est reçu deux fois :
 
-Premier appel :
+await db
+.ref(
+`withdrawals/${withdrawalId}`
+)
+.set({
 
-processing → completed
-reservedBalance libéré
+id:withdrawalId,
 
-Deuxième appel :
+uid,
 
-déjà completed → aucune modification
+amount,
 
+referenceId,
+
+moncashNumber,
+
+
+status:"pending",
+
+providerStatus:"pending",
+
+
+feeHtg:0,
+
+totalCostHtg:amount,
+
+
+createdAt:now,
+
+updatedAt:now,
+
+reservedAt:now,
+
+
+payoutId:null,
+
+completedAt:null,
+
+refundedAt:null,
+
+errorMessage:null
+
+
+});
+
+
+
+}catch(error){
+
+
+console.error(
+"[WITHDRAWAL_CREATE_ERROR]",
+error
+);
+
+
+
+await releaseReservedWithdrawalAmount(
+
+uid,
+
+amount
+
+);
+
+
+
+return {
+
+success:false,
+
+reason:"database_error"
+
+};
+
+
+}
+
+
+
+return {
+
+success:true,
+
+withdrawalId
+
+};
+
+
+}/*
+====================================================
+FINALISER UN RETRAIT RÉUSSI
 ====================================================
 */
 
@@ -879,312 +599,140 @@ export async function completeWithdrawal(
   feeHtg?: number,
 ): Promise<boolean> {
 
-  if (
-    !isValidId(
-      withdrawalId,
-    )
-  ) {
-
-    return false;
-
-  }
-
-
-  const db =
-    getDatabase();
+  const db = getDatabase();
 
 
   const withdrawalRef =
-
     db.ref(
       `withdrawals/${withdrawalId}`,
     );
 
 
-  /*
-  --------------------------------------------------
-  1. RÉCUPÉRER LE RETRAIT
-  --------------------------------------------------
-  */
-
   const snapshot =
-
     await withdrawalRef.get();
 
 
-  if (
-    !snapshot.exists()
-  ) {
-
-    console.error(
-      "[COMPLETE_WITHDRAWAL_NOT_FOUND]",
-      {
-        withdrawalId,
-      },
-    );
-
-
+  if (!snapshot.exists()) {
     return false;
-
   }
 
 
   const withdrawal =
+    snapshot.val();
 
-    snapshot.val() as {
-
-      uid?: string;
-
-      amount?: number;
-
-      status?: string;
-
-      moncashNumber?: string;
-
-    };
-
-
-  /*
-  --------------------------------------------------
-  2. VALIDATION
-  --------------------------------------------------
-  */
 
   if (
-    typeof withdrawal.uid !==
-    "string"
+    !withdrawal.uid ||
+    !withdrawal.amount
   ) {
-
     return false;
-
   }
 
 
   if (
-    typeof withdrawal.amount !==
-      "number" ||
-    !Number.isFinite(
-      withdrawal.amount,
-    ) ||
-    withdrawal.amount <= 0
+    withdrawal.status === "completed"
   ) {
-
-    return false;
-
-  }
-
-
-  /*
-  --------------------------------------------------
-  3. DÉJÀ COMPLETED
-  --------------------------------------------------
-  */
-
-  if (
-    withdrawal.status ===
-    "completed"
-  ) {
-
     return true;
-
   }
 
 
   /*
-  --------------------------------------------------
-  4. TRANSACTION ATOMIQUE
-  --------------------------------------------------
+  Transaction retrait
   */
 
-  try {
+  const withdrawalResult =
+    await withdrawalRef.transaction(
+      (current) => {
 
-    const result =
-
-      await withdrawalRef.transaction(
-
-        (
-          currentWithdrawal,
-        ) => {
-
-          if (
-            !currentWithdrawal
-          ) {
-
-            return;
-
-          }
+        if (!current) {
+          return;
+        }
 
 
-          /*
-          ----------------------------------------
-          DÉJÀ COMPLETED
-          ----------------------------------------
-          */
-
-          if (
-            currentWithdrawal.status ===
-            "completed"
-          ) {
-
-            return currentWithdrawal;
-
-          }
+        if (
+          current.status === "completed"
+        ) {
+          return current;
+        }
 
 
-          /*
-          ----------------------------------------
-          SI DÉJÀ REMBOURSÉ
-          ----------------------------------------
-          */
-
-          if (
-            currentWithdrawal.status ===
-            "refunded"
-          ) {
-
-            return currentWithdrawal;
-
-          }
+        if (
+          current.status === "refunded"
+        ) {
+          return current;
+        }
 
 
-          /*
-          ----------------------------------------
-          MARQUER COMPLETED
-          ----------------------------------------
-          */
+        return {
 
-          return {
+          ...current,
 
-            ...currentWithdrawal,
+          status:
+            "completed",
 
-            status:
-              "completed",
+          providerStatus:
+            "completed",
 
-            providerStatus:
-              "completed",
+          payoutId:
+            payoutId ??
+            current.payoutId,
 
-            payoutId:
-              payoutId ??
-              currentWithdrawal.payoutId,
+          feeHtg:
+            feeHtg ??
+            current.feeHtg,
 
-            feeHtg:
-              feeHtg ??
-              currentWithdrawal.feeHtg,
+          completedAt:
+            Date.now(),
 
-            totalCostHtg:
-              (withdrawal.amount ?? 0) +
-              (feeHtg ?? 0),
+          updatedAt:
+            Date.now(),
 
-            completedAt:
-              Date.now(),
+        };
 
-            updatedAt:
-              Date.now(),
-
-          };
-
-        },
-
-      );
-
-
-    if (
-      !result.committed
-    ) {
-
-      return false;
-
-    }
-
-
-  } catch (
-    error
-  ) {
-
-    console.error(
-      "[COMPLETE_WITHDRAWAL_ERROR]",
-      {
-        withdrawalId,
-        error,
       },
     );
 
 
+  if (
+    !withdrawalResult.committed
+  ) {
     return false;
-
   }
 
 
+
   /*
-  --------------------------------------------------
-  5. DÉBITER LE SOLDE ET LIBÉRER LA RÉSERVATION
-  --------------------------------------------------
-
-  IMPORTANT CORRECTION :
-
-  Le modèle comptable correct exige :
-  - Completion: balance -= amount ET reservedBalance -= amount
-
-  Le montant était réservé mais PAS encore débité.
-  La completion doit donc :
-  1. Débiter le balance
-  2. Libérer la réservation
-  --------------------------------------------------
+  Débit réel du wallet
   */
 
   const balanceRef =
-
     db.ref(
       `users/${withdrawal.uid}/balance`,
     );
 
 
   const balanceResult =
-
     await balanceRef.transaction(
+      (balance) => {
 
-      (
-        currentBalance,
-      ) => {
-
-        const balance =
-
-          Number(
-            currentBalance || 0,
-          );
+        const current =
+          Number(balance || 0);
 
 
         if (
-          !Number.isFinite(balance)
+          current <
+          withdrawal.amount
         ) {
-
           return;
-
         }
 
 
-        /*
-        Débiter le montant du solde
-        */
-
-        const newBalance =
-          balance -
-          (withdrawal.amount ?? 0);
-
-
-        if (
-          newBalance < 0
-        ) {
-
-          return;
-
-        }
-
-
-        return newBalance;
+        return (
+          current -
+          withdrawal.amount
+        );
 
       },
-
     );
 
 
@@ -1193,1168 +741,415 @@ export async function completeWithdrawal(
   ) {
 
     console.error(
-      "[COMPLETE_WITHDRAWAL_DEBIT_ERROR]",
-      {
-        withdrawalId,
-        uid:
-          withdrawal.uid,
-        amount:
-          withdrawal.amount,
-      },
+      "[WITHDRAWAL_BALANCE_DEBIT_FAILED]",
+      withdrawalId,
     );
 
-
-    /*
-    ------------------------------------------------
-    IMPORTANT :
-
-    Le débit a échoué mais le retrait est marqué completed.
-    On retourne false pour indiquer l'échec au webhook.
-    Le webhook pourra être réessayé.
-    ------------------------------------------------
-    */
-
     return false;
-
   }
+
 
 
   /*
-  --------------------------------------------------
-  6. LIBÉRER LE SOLDE RÉSERVÉ
-  --------------------------------------------------
+  Libérer réservation
   */
 
-  const releaseResult =
+  await releaseReservedWithdrawalAmount(
 
-    await releaseReservedWithdrawalAmount(
+    withdrawal.uid,
 
-      withdrawal.uid,
+    withdrawal.amount,
 
-      withdrawal.amount,
-
-    );
-
-
-  if (
-    !releaseResult
-  ) {
-
-    console.error(
-      "[COMPLETE_WITHDRAWAL_RELEASE_ERROR]",
-      {
-        withdrawalId,
-        uid:
-          withdrawal.uid,
-        amount:
-          withdrawal.amount,
-      },
-    );
-
-
-    /*
-    ------------------------------------------------
-    IMPORTANT :
-
-    Le solde a été débité mais la réservation n'est pas libérée.
-    On retourne true pour ne pas bloquer le webhook,
-    mais on log l'erreur pour une réparation manuelle.
-    ------------------------------------------------
-    */
-
-    return true;
-
-  }
+  );
 
 
   return true;
-
 }
+
+
 
 
 /*
 ====================================================
-LIBÉRER UNE RÉSERVATION
-====================================================
-
-Utilisée si :
-
-- création du retrait échoue
-- rollback
-- annulation interne
-
-Cette fonction NE rembourse PAS le solde.
-
-Elle réduit seulement reservedBalance.
-
+LIBÉRER RESERVED BALANCE
 ====================================================
 */
 
+
 export async function releaseReservedWithdrawalAmount(
-  uid: string,
-  amount: number,
-): Promise<boolean> {
-
-  if (
-    !isValidUid(uid)
-  ) {
-
-    return false;
-
-  }
-
-
-  if (
-    !isValidAmount(amount)
-  ) {
-
-    return false;
-
-  }
+  uid:string,
+  amount:number,
+):Promise<boolean>{
 
 
   const db =
     getDatabase();
 
 
-  const reservedBalanceRef =
-
+  const ref =
     db.ref(
       `users/${uid}/reservedBalance`,
     );
 
 
-  try {
-
-    const result =
-
-      await reservedBalanceRef.transaction(
-
-        (
-          currentReservedBalance,
-        ) => {
-
-          const reservedBalance =
-
-            Number(
-              currentReservedBalance || 0,
-            );
+  const result =
+    await ref.transaction(
+      (current)=>{
 
 
-          if (
-            !Number.isFinite(
-              reservedBalance,
-            )
-          ) {
-
-            return;
-
-          }
+        const reserved =
+          Number(
+            current || 0,
+          );
 
 
-          /*
-          ----------------------------------------
-          PROTECTION CONTRE SOLDE RÉSERVÉ NÉGATIF
-          ----------------------------------------
-          */
-
-          const newReservedBalance =
-
-            Math.max(
-
-              0,
-
-              reservedBalance -
-              amount,
-
-            );
-
-
-          return newReservedBalance;
-
-        },
-
-      );
-
-
-    return result.committed;
-
-  } catch (
-    error
-  ) {
-
-    console.error(
-      "[RELEASE_RESERVED_BALANCE_ERROR]",
-      {
-
-        uid,
-
-        amount,
-
-        error,
+        return Math.max(
+          0,
+          reserved - amount,
+        );
 
       },
     );
 
 
-    return false;
-
-  }
+  return result.committed;
 
 }
 
 
+
+
+
 /*
 ====================================================
-MARQUER PROCESSING
-====================================================
-
-pending → processing
-
-Cette fonction NE touche PAS au solde.
-
-Le montant reste réservé.
-
+PASSER EN PROCESSING
 ====================================================
 */
+
 
 export async function markWithdrawalProcessing(
-  withdrawalId: string,
-): Promise<boolean> {
+ withdrawalId:string,
+):Promise<boolean>{
 
-  if (
-    !isValidId(
-      withdrawalId,
-    )
-  ) {
 
-    return false;
+ const db =
+   getDatabase();
 
-  }
 
+ const ref =
+   db.ref(
+    `withdrawals/${withdrawalId}`,
+   );
 
-  const db =
-    getDatabase();
 
+ const result =
+ await ref.transaction(
+  (withdrawal)=>{
 
-  const withdrawalRef =
 
-    db.ref(
-      `withdrawals/${withdrawalId}`,
-    );
+    if(
+      !withdrawal
+    ){
+      return;
+    }
 
 
-  try {
-
-    const result =
-
-      await withdrawalRef.transaction(
-
-        (
-          currentWithdrawal,
-        ) => {
-
-          if (
-            !currentWithdrawal
-          ) {
-
-            return;
-
-          }
-
-
-          /*
-          ----------------------------------------
-          SI DÉJÀ PROCESSING
-          ----------------------------------------
-          */
-
-          if (
-            currentWithdrawal.status ===
-            "processing"
-          ) {
-
-            return currentWithdrawal;
-
-          }
-
-
-          /*
-          ----------------------------------------
-          SI DÉJÀ COMPLETED
-          ----------------------------------------
-          */
-
-          if (
-            currentWithdrawal.status ===
-            "completed"
-          ) {
-
-            return currentWithdrawal;
-
-          }
-
-
-          /*
-          ----------------------------------------
-          SI REMBOURSÉ
-          ----------------------------------------
-          */
-
-          if (
-            currentWithdrawal.status ===
-            "refunded"
-          ) {
-
-            return currentWithdrawal;
-
-          }
-
-
-          return {
-
-            ...currentWithdrawal,
-
-            status:
-              "processing",
-
-            updatedAt:
-              Date.now(),
-
-          };
-
-        },
-
-      );
-
-
-    return result.committed;
-
-  } catch (
-    error
-  ) {
-
-    console.error(
-      "[MARK_WITHDRAWAL_PROCESSING_ERROR]",
-      {
-
-        withdrawalId,
-
-        error,
-
-      },
-    );
-
-
-    return false;
-
-  }
-
-}
-
-
-/*
-====================================================
-MARQUER RETRAIT ÉCHOUÉ
-====================================================
-
-Le statut devient :
-
-failed
-
-Le montant reste réservé.
-
-Le remboursement doit ensuite être effectué
-avec refundFailedWithdrawal().
-
-====================================================
-*/
-
-export async function markWithdrawalFailed(
-  withdrawalId: string,
-  errorMessage: string,
-): Promise<boolean> {
-
-  if (
-    !isValidId(
-      withdrawalId,
-    )
-  ) {
-
-    return false;
-
-  }
-
-
-  const db =
-    getDatabase();
-
-
-  const withdrawalRef =
-
-    db.ref(
-      `withdrawals/${withdrawalId}`,
-    );
-
-
-  try {
-
-    const result =
-
-      await withdrawalRef.transaction(
-
-        (
-          currentWithdrawal,
-        ) => {
-
-          if (
-            !currentWithdrawal
-          ) {
-
-            return;
-
-          }
-
-
-          /*
-          ----------------------------------------
-          NE PAS ÉCRASER UN RETRAIT TERMINÉ
-          ----------------------------------------
-          */
-
-          if (
-            currentWithdrawal.status ===
-            "completed"
-          ) {
-
-            return currentWithdrawal;
-
-          }
-
-
-          /*
-          ----------------------------------------
-          DÉJÀ REMBOURSÉ
-          ----------------------------------------
-          */
-
-          if (
-            currentWithdrawal.status ===
-            "refunded"
-          ) {
-
-            return currentWithdrawal;
-
-          }
-
-
-          /*
-          ----------------------------------------
-          RETRAIT ÉCHOUÉ
-          ----------------------------------------
-          */
-
-          return {
-
-            ...currentWithdrawal,
-
-            status:
-              "failed",
-
-            providerStatus:
-              "failed",
-
-            errorMessage:
-
-              typeof errorMessage ===
-              "string"
-
-                ? errorMessage
-
-                : "Retrait échoué.",
-
-            updatedAt:
-              Date.now(),
-
-          };
-
-        },
-
-      );
-
-
-    return result.committed;
-
-  } catch (
-    error
-  ) {
-
-    console.error(
-      "[MARK_WITHDRAWAL_FAILED_ERROR]",
-      {
-
-        withdrawalId,
-
-        error,
-
-      },
-    );
-
-
-    return false;
-
-  }
-
-}
-
-
-/*
-====================================================
-REMBOURSEMENT D'UN RETRAIT ÉCHOUÉ
-====================================================
-
-IMPORTANT :
-
-Cette fonction est idempotente.
-
-Si le webhook est reçu deux fois :
-
-Premier appel :
-
-failed
-↓
-refund_pending
-↓
-remboursement
-↓
-refunded
-
-Deuxième appel :
-
-refunded
-↓
-aucune modification
-
-Donc le joueur ne reçoit jamais
-deux fois le remboursement.
-
-====================================================
-*/
-
-export async function refundFailedWithdrawal(
-  withdrawalId: string,
-): Promise<{
-
-  success: boolean;
-
-  status:
-    | "refunded"
-
-    | "refund_pending"
-
-    | "already_refunded"
-
-    | "not_found"
-
-    | "invalid_state"
-
-    | "error";
-
-}> {
-
-  if (
-    !isValidId(
-      withdrawalId,
-    )
-  ) {
-
-    return {
-
-      success: false,
-
-      status:
-        "error",
-
-    };
-
-  }
-
-
-  const db =
-    getDatabase();
-
-
-  const withdrawalRef =
-
-    db.ref(
-      `withdrawals/${withdrawalId}`,
-    );
-
-
-  /*
-  --------------------------------------------------
-  1. RÉCUPÉRER LE RETRAIT
-  --------------------------------------------------
-  */
-
-  const snapshot =
-
-    await withdrawalRef.get();
-
-
-  if (
-    !snapshot.exists()
-  ) {
-
-    return {
-
-      success: false,
-
-      status:
-        "not_found",
-
-    };
-
-  }
-
-
-  const withdrawal =
-
-    snapshot.val() as {
-
-      uid?: string;
-
-      amount?: number;
-
-      status?: string;
-
-      refundedAt?: number | null;
-
-      refundTransactionId?:
-        string | null;
-
-    };
-
-
-  /*
-  --------------------------------------------------
-  2. DÉJÀ REMBOURSÉ
-  --------------------------------------------------
-  */
-
-  if (
-    withdrawal.status ===
-    "refunded"
-  ) {
-
-    return {
-
-      success: true,
-
-      status:
-        "already_refunded",
-
-    };
-
-  }
-
-
-  /*
-  --------------------------------------------------
-  3. VALIDATION
-  --------------------------------------------------
-  */
-
-  if (
-    typeof withdrawal.uid !==
-    "string"
-  ) {
-
-    return {
-
-      success: false,
-
-      status:
-        "error",
-
-    };
-
-  }
-
-
-  if (
-    typeof withdrawal.amount !==
-      "number" ||
-    !Number.isFinite(
-      withdrawal.amount,
-    ) ||
-    withdrawal.amount <= 0
-  ) {
-
-    return {
-
-      success: false,
-
-      status:
-        "error",
-
-    };
-
-  }
-
-
-  /*
-  --------------------------------------------------
-  4. SEULS LES RETRAITS ÉCHOUÉS
-  --------------------------------------------------
-  */
-
-  if (
-    withdrawal.status !==
-    "failed" &&
-    withdrawal.status !==
-    "refund_pending"
-  ) {
-
-    return {
-
-      success: false,
-
-      status:
-        "invalid_state",
-
-    };
-
-  }
-
-
-  /*
-  --------------------------------------------------
-  5. PASSER À REFUND_PENDING
-  --------------------------------------------------
-  */
-
-  const refundPendingResult =
-
-    await withdrawalRef.transaction(
-
-      (
-        currentWithdrawal,
-      ) => {
-
-        if (
-          !currentWithdrawal
-        ) {
-
-          return;
-
-        }
-
-
-        if (
-          currentWithdrawal.status ===
-          "refunded"
-        ) {
-
-          return currentWithdrawal;
-
-        }
-
-
-        if (
-          currentWithdrawal.status !==
-            "failed" &&
-          currentWithdrawal.status !==
-            "refund_pending"
-        ) {
-
-          return;
-
-        }
-
-
-        return {
-
-          ...currentWithdrawal,
-
-          status:
-            "refund_pending",
-
-          updatedAt:
-            Date.now(),
-
-        };
-
-      },
-
-    );
-
-
-  if (
-    !refundPendingResult.committed
-  ) {
-
-    /*
-    ------------------------------------------------
-    RECHERCHER L'ÉTAT ACTUEL
-    ------------------------------------------------
-    */
-
-    const currentSnapshot =
-
-      await withdrawalRef.get();
-
-
-    if (
-      currentSnapshot.exists() &&
-      currentSnapshot.val()?.status ===
-        "refunded"
-    ) {
-
-      return {
-
-        success: true,
-
-        status:
-          "already_refunded",
-
-      };
-
+    if(
+      withdrawal.status === "completed"
+    ){
+      return withdrawal;
     }
 
 
     return {
 
-      success: false,
+      ...withdrawal,
 
       status:
-        "refund_pending",
-
-    };
-
-  }
-
-
-  /*
-  --------------------------------------------------
-  6. TRANSACTION ATOMIQUE DU REMBOURSEMENT
-  --------------------------------------------------
-
-  IMPORTANT :
-
-  On utilise une transaction sur le retrait
-  pour garantir qu'un seul processus puisse
-  effectuer le remboursement.
-
-  --------------------------------------------------
-  */
-
-  let shouldRefund = false;
-
-
-  const claimResult =
-
-    await withdrawalRef.transaction(
-
-      (
-        currentWithdrawal,
-      ) => {
-
-        if (
-          !currentWithdrawal
-        ) {
-
-          return;
-
-        }
-
-
-        /*
-        --------------------------------------------
-        SI DÉJÀ REMBOURSÉ
-        --------------------------------------------
-        */
-
-        if (
-          currentWithdrawal.status ===
-          "refunded"
-        ) {
-
-          return currentWithdrawal;
-
-        }
-
-
-        /*
-        --------------------------------------------
-        SEUL REFUND_PENDING EST ACCEPTÉ
-        --------------------------------------------
-        */
-
-        if (
-          currentWithdrawal.status !==
-          "refund_pending"
-        ) {
-
-          return;
-
-        }
-
-
-        /*
-        --------------------------------------------
-        CLAIM DU REMBOURSEMENT
-        --------------------------------------------
-        */
-
-        shouldRefund = true;
-
-
-        return {
-
-          ...currentWithdrawal,
-
-          refundProcessing:
-            true,
-
-          refundStartedAt:
-            Date.now(),
-
-          updatedAt:
-            Date.now(),
-
-        };
-
-      },
-
-    );
-
-
-  if (
-    !claimResult.committed
-  ) {
-
-    const currentSnapshot =
-
-      await withdrawalRef.get();
-
-
-    if (
-      currentSnapshot.exists() &&
-      currentSnapshot.val()?.status ===
-        "refunded"
-    ) {
-
-      return {
-
-        success: true,
-
-        status:
-          "already_refunded",
-
-      };
-
-    }
-
-
-    return {
-
-      success: false,
-
-      status:
-        "refund_pending",
-
-    };
-
-  }
-
-
-  if (
-    !shouldRefund
-  ) {
-
-    return {
-
-      success: true,
-
-      status:
-        "already_refunded",
-
-    };
-
-  }
-
-
-  /*
-  --------------------------------------------------
-  7. LIBÉRER LE SOLDE RÉSERVÉ UNIQUEMENT
-  --------------------------------------------------
-
-  IMPORTANT CORRECTION :
-
-  Le modèle comptable correct est :
-  - Réservation: reservedBalance += amount (balance inchangé)
-  - Completion: balance -= amount ET reservedBalance -= amount
-  - Échec: reservedBalance -= amount (balance inchangé)
-
-  Le montant n'a JAMAIS été débité du balance lors de la réservation.
-  Donc le remboursement doit SEULEMENT libérer reservedBalance,
-  PAS modifier le balance.
-
-  Modifier le balance ici créerait de l'argent artificielle.
-  --------------------------------------------------
-  */
-
-
-  /*
-  --------------------------------------------------
-  8. LIBÉRER LE SOLDE RÉSERVÉ
-  --------------------------------------------------
-  */
-
-  const reservedReleaseResult =
-
-    await releaseReservedWithdrawalAmount(
-
-      withdrawal.uid,
-
-      withdrawal.amount,
-
-    );
-
-
-  if (
-    !reservedReleaseResult
-  ) {
-
-    /*
-    ------------------------------------------------
-    IMPORTANT :
-
-    La libération de reservedBalance a échoué.
-    On garde refund_pending pour permettre
-    une réparation manuelle.
-
-    ------------------------------------------------
-    */
-
-    await withdrawalRef.update({
-
-      status:
-        "refund_pending",
-
-      refundProcessing:
-        false,
-
-      reservedBalanceReleasePending:
-        true,
+        "processing",
 
       updatedAt:
         Date.now(),
 
-      errorMessage:
-        "Réservation encore à libérer.",
+    };
 
-    });
+  });
+
+
+ return result.committed;
+
+}
+
+
+
+
+
+/*
+====================================================
+MARQUER FAILED
+====================================================
+*/
+
+
+export async function markWithdrawalFailed(
+ withdrawalId:string,
+ errorMessage:string,
+):Promise<boolean>{
+
+
+ const db =
+   getDatabase();
+
+
+ const ref =
+   db.ref(
+    `withdrawals/${withdrawalId}`,
+   );
+
+
+ const result =
+ await ref.transaction(
+  (withdrawal)=>{
+
+
+    if(
+      !withdrawal
+    ){
+      return;
+    }
+
+
+    if(
+      withdrawal.status === "completed"
+    ){
+      return withdrawal;
+    }
 
 
     return {
 
-      success: false,
+      ...withdrawal,
 
       status:
-        "refund_pending",
-
-    };
-
-  }
-
-
-  /*
-  --------------------------------------------------
-  9. FINALISER LE REMBOURSEMENT
-  --------------------------------------------------
-  */
-
-  try {
-
-    await withdrawalRef.update({
-
-      status:
-        "refunded",
+        "failed",
 
       providerStatus:
         "failed",
 
-      refundProcessing:
-        false,
-
-      reservedBalanceReleased:
-        true,
-
-      refundedAt:
-        Date.now(),
+      errorMessage,
 
       updatedAt:
         Date.now(),
 
-      errorMessage:
-        null,
-
-    });
-
-
-  } catch (
-    error
-  ) {
-
-    /*
-    ------------------------------------------------
-    IMPORTANT :
-
-    La libération de reservedBalance est déjà effectuée.
-    Le statut pourra être réparé manuellement.
-
-    ------------------------------------------------
-    */
-
-    console.error(
-      "[WITHDRAWAL_REFUND_FINALIZE_ERROR]",
-      {
-
-        withdrawalId,
-
-        error,
-
-      },
-    );
-
-
-    return {
-
-      success: false,
-
-      status:
-        "refund_pending",
-
     };
 
-  }
+  });
 
 
-  /*
-  --------------------------------------------------
-  10. SUCCÈS
-  --------------------------------------------------
-  */
+ return result.committed;
 
-  return {
+}
 
-    success: true,
 
-    status:
-      "refunded",
 
-  };
+
+
+/*
+====================================================
+REMBOURSEMENT RETRAIT ÉCHOUÉ
+====================================================
+*/
+
+
+export async function refundFailedWithdrawal(
+withdrawalId:string,
+){
+
+const db =
+ getDatabase();
+
+
+const withdrawalRef =
+ db.ref(
+  `withdrawals/${withdrawalId}`,
+ );
+
+
+const snapshot =
+ await withdrawalRef.get();
+
+
+if(
+ !snapshot.exists()
+){
+
+ return {
+
+  success:false,
+
+  status:"not_found",
+
+ };
+
+}
+
+
+const withdrawal =
+ snapshot.val();
+
+
+
+if(
+ withdrawal.status === "refunded"
+){
+
+ return {
+
+  success:true,
+
+  status:"already_refunded",
+
+ };
+
+}
+
+
+
+if(
+ withdrawal.status !== "failed" &&
+ withdrawal.status !== "refund_pending"
+){
+
+ return {
+
+  success:false,
+
+  status:"invalid_state",
+
+ };
+
+}
+
+
+
+/*
+Protection transaction
+*/
+
+const claim =
+await withdrawalRef.transaction(
+(current)=>{
+
+
+ if(
+  !current
+ ){
+  return;
+ }
+
+
+ if(
+  current.refundProcessing
+ ){
+
+  return current;
+
+ }
+
+
+
+ return {
+
+  ...current,
+
+  refundProcessing:true,
+
+  updatedAt:
+   Date.now(),
+
+ };
+
+});
+
+
+
+if(
+ !claim.committed
+){
+
+ return {
+
+  success:false,
+
+  status:"error",
+
+ };
+
+}
+
+
+
+/*
+Restituer réservation uniquement
+
+PAS de création d'argent
+*/
+
+const released =
+await releaseReservedWithdrawalAmount(
+
+ withdrawal.uid,
+
+ withdrawal.amount,
+
+);
+
+
+
+if(
+ !released
+){
+
+ return {
+
+  success:false,
+
+  status:"refund_pending",
+
+ };
+
+}
+
+
+
+/*
+Finalisation
+*/
+
+await withdrawalRef.update({
+
+ status:
+  "refunded",
+
+ refundProcessing:
+  false,
+
+ refundedAt:
+  Date.now(),
+
+ updatedAt:
+  Date.now(),
+
+});
+
+
+
+return {
+
+ success:true,
+
+ status:"refunded",
+
+};
 
 }

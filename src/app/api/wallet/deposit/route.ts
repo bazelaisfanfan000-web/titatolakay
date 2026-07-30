@@ -1,11 +1,7 @@
 import {
-  NextRequest,
   NextResponse,
 } from "next/server";
 
-import {
-  randomUUID,
-} from "crypto";
 
 import {
   adminAuth,
@@ -13,1093 +9,510 @@ import {
 } from "@/lib/firebaseAdmin";
 
 
-/*
-====================================================
-CONFIGURATION NEXT.JS
-====================================================
-*/
+import {
+  createMonCashPayment,
+} from "@/lib/moncash";
 
-export const runtime =
-  "nodejs";
 
-export const dynamic =
-  "force-dynamic";
+
+export const runtime = "nodejs";
+
 
 
 /*
 ====================================================
-CONSTANTES
+TiTaTo - CREATE DEPOSIT MONCASH
+====================================================
+
+POST /api/wallet/deposit
+
+Headers:
+
+Authorization: Bearer Firebase_ID_TOKEN
+
+
+Body:
+
+{
+ amount: 50
+}
+
+
+Flux:
+
+Client
+ ↓
+Firebase Auth
+ ↓
+Créer transaction pending
+ ↓
+MonCash pay-create
+ ↓
+Retour paymentUrl
+ ↓
+Client paie
+ ↓
+Webhook
+ ↓
+Crédit wallet
+
 ====================================================
 */
 
-const MONCASH_CREATE_URL =
-  "https://api.moncashconnect.com/v1/pay-create";
+
+
+export async function POST(
+request:Request
+){
+
+
+try {
+
 
 
 /*
 ====================================================
-DÉPÔT MINIMUM
+AUTH FIREBASE
 ====================================================
 */
 
-const MIN_DEPOSIT_AMOUNT =
-  25;
+
+const authorization =
+request.headers.get(
+"Authorization"
+);
 
 
-/*
-====================================================
-DÉPÔT MAXIMUM
-====================================================
-*/
 
-const MAX_DEPOSIT_AMOUNT =
-  100000;
-
-
-/*
-====================================================
-MULTIPLICATEUR DE MISE
-====================================================
-
-Pour un dépôt de :
-
-100 HTG
-
-Le joueur devra générer :
-
-100 × 2 = 200 HTG
-
-de mise avant de pouvoir retirer.
-
-====================================================
-*/
-
-const DEPOSIT_TURNOVER_MULTIPLIER =
-  2;
+if(
+!authorization ||
+!authorization.startsWith(
+"Bearer "
+)
+){
 
 
-/*
-====================================================
-TYPES
-====================================================
-*/
+return NextResponse.json(
 
-type DepositStatus =
-  | "pending"
-  | "failed";
+{
 
+success:false,
 
-type DepositRecord = {
+error:
+"Authentification requise."
 
-  uid:
-    string;
+},
 
-  amount:
-    number;
+{
+status:401
+}
 
-  currency:
-    "HTG";
+);
 
-  status:
-    DepositStatus;
-
-  provider:
-    "moncashconnect";
-
-  referenceId:
-    string;
-
-  idempotencyKey:
-    string;
-
-  paymentUrl:
-    string |
-    null;
-
-  createdAt:
-    number;
-
-  updatedAt:
-    number;
-
-  failedAt?:
-    number;
-
-  errorCode?:
-    string;
-
-  /*
-  ================================================
-  RÈGLE DE MISE
-  ================================================
-  */
-
-  turnoverMultiplier?:
-    number;
-
-  turnoverRequired?:
-    number;
-
-};
-
-
-/*
-====================================================
-RÉPONSE MONCASHCONNECT
-====================================================
-*/
-
-type MonCashCreateResponse = {
-
-  success?:
-    boolean;
-
-  paymentUrl?:
-    string;
-
-  referenceId?:
-    string;
-
-  transactionId?:
-    string;
-
-  id?:
-    string;
-
-  error?:
-    string;
-
-  message?:
-    string;
-
-};
-
-
-/*
-====================================================
-UTILITAIRE RÉPONSE ERREUR
-====================================================
-*/
-
-function errorResponse(
-  message: string,
-  status: number
-) {
-
-  return NextResponse.json(
-    {
-      success:
-        false,
-
-      error:
-        message,
-    },
-    {
-      status,
-    }
-  );
 
 }
 
 
+
+const token =
+authorization.substring(7);
+
+
+
+const decoded =
+await adminAuth.verifyIdToken(
+token
+);
+
+
+
+const uid =
+decoded.uid;
+
+
+
+
 /*
 ====================================================
-POST /api/wallet/deposit
+BODY
 ====================================================
 */
 
-export async function POST(
-  request: NextRequest
-) {
 
-  /*
-  ==================================================
-  1. CLÉ MONCASHCONNECT
-  ==================================================
-  */
+const body =
+await request.json();
 
-  const moncashApiKey =
-    process.env.MCC_KEY;
 
 
-  if (
-    !moncashApiKey
-  ) {
+const amount =
+Number(
+body.amount
+);
 
-    console.error(
-      "[DEPOSIT] MCC_KEY manquante."
-    );
 
 
-    return errorResponse(
-      "Configuration du paiement manquante.",
-      500
-    );
 
-  }
+/*
+====================================================
+VALIDATION MONTANT
+====================================================
+*/
 
 
-  /*
-  ==================================================
-  2. URL APPLICATION
-  ==================================================
-  */
+if(
 
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL;
+!Number.isInteger(amount)
 
+||
 
-  if (
-    !appUrl
-  ) {
+amount < 25
 
-    console.error(
-      "[DEPOSIT] NEXT_PUBLIC_APP_URL manquante."
-    );
+){
 
 
-    return errorResponse(
-      "Configuration de l'application manquante.",
-      500
-    );
+return NextResponse.json(
 
-  }
+{
 
+success:false,
 
-  /*
-  ==================================================
-  3. VÉRIFIER AUTHORIZATION
-  ==================================================
-  */
+error:
+"Le dépôt minimum est de 25 HTG."
 
-  const authorization =
-    request.headers.get(
-      "authorization"
-    );
+},
 
+{
+status:400
+}
 
-  if (
-    !authorization ||
-    !authorization
-      .toLowerCase()
-      .startsWith(
-        "bearer "
-      )
-  ) {
+);
 
-    return errorResponse(
-      "Authentification requise.",
-      401
-    );
 
-  }
+}
 
 
-  /*
-  ==================================================
-  4. RÉCUPÉRER TOKEN FIREBASE
-  ==================================================
-  */
 
-  const idToken =
-    authorization
-      .substring(
-        7
-      )
-      .trim();
+if(
+amount > 100000
+){
 
 
-  if (
-    !idToken
-  ) {
+return NextResponse.json(
 
-    return errorResponse(
-      "Token d'authentification invalide.",
-      401
-    );
+{
 
-  }
+success:false,
 
+error:
+"Le dépôt maximum est de 100000 HTG."
 
-  /*
-  ==================================================
-  5. VÉRIFIER TOKEN FIREBASE CÔTÉ SERVEUR
-  ==================================================
-  */
+},
 
-  let decodedToken;
+{
+status:400
+}
 
+);
 
-  try {
 
-    decodedToken =
-      await adminAuth.verifyIdToken(
-        idToken
-      );
+}
 
-  } catch (
-    authError
-  ) {
 
-    console.error(
-      "[DEPOSIT] Token Firebase invalide :",
-      authError
-    );
 
 
-    return errorResponse(
-      "Session invalide ou expirée. Reconnectez-vous.",
-      401
-    );
+/*
+====================================================
+REFERENCE UNIQUE
+====================================================
+*/
 
-  }
 
+const referenceId =
 
-  /*
-  ==================================================
-  6. UID SERVEUR
-  ==================================================
+`TT_DEP_${Date.now()}_${uid.slice(0,8)}`;
 
-  IMPORTANT :
 
-  Le UID ne vient jamais du frontend.
 
-  Il vient du token Firebase vérifié.
-  */
 
-  const uid =
-    decodedToken.uid;
+/*
+====================================================
+CREER TRANSACTION PENDING
+====================================================
+*/
 
 
-  if (
-    !uid
-  ) {
+await adminDB
+.ref(
+`transactions/${uid}/${referenceId}`
+)
+.set({
 
-    return errorResponse(
-      "Utilisateur invalide.",
-      401
-    );
+id:
+referenceId,
 
-  }
 
+uid,
 
-  /*
-  ==================================================
-  7. LIRE BODY
-  ==================================================
-  */
 
-  let body:
-    unknown;
+type:
+"deposit",
 
 
-  try {
+amount,
 
-    body =
-      await request.json();
 
-  } catch {
+status:
+"pending",
 
-    return errorResponse(
-      "Requête JSON invalide.",
-      400
-    );
 
-  }
+provider:
+"moncashconnect",
 
 
-  /*
-  ==================================================
-  8. EXTRAIRE BODY
-  ==================================================
-  */
+createdAt:
+Date.now()
 
-  const bodyObject =
-    body &&
-    typeof body ===
-      "object"
-      ? body as Record<
-          string,
-          unknown
-        >
-      : null;
+});
 
 
-  /*
-  ==================================================
-  9. EXTRAIRE MONTANT
-  ==================================================
-  */
 
-  const amount =
-    Number(
-      bodyObject?.amount
-    );
 
 
-  /*
-  ==================================================
-  10. VALIDATION MONTANT
-  ==================================================
-  */
+/*
+====================================================
+CREATION PAIEMENT MONCASH
+====================================================
+*/
 
-  if (
-    !Number.isFinite(
-      amount
-    )
-  ) {
 
-    return errorResponse(
-      "Montant invalide.",
-      400
-    );
+let payment;
 
-  }
 
 
-  /*
-  ==================================================
-  11. ENTIER UNIQUEMENT
-  ==================================================
-  */
+try {
 
-  if (
-    !Number.isInteger(
-      amount
-    )
-  ) {
 
-    return errorResponse(
-      "Le montant doit être un nombre entier en HTG.",
-      400
-    );
+payment =
+await createMonCashPayment(
 
-  }
+amount,
 
+referenceId,
 
-  /*
-  ==================================================
-  12. MINIMUM 25 HTG
-  ==================================================
-  */
+"TiTaTo Wallet"
 
-  if (
-    amount <
-    MIN_DEPOSIT_AMOUNT
-  ) {
+);
 
-    return errorResponse(
-      `Le dépôt minimum est de ${MIN_DEPOSIT_AMOUNT} HTG.`,
-      400
-    );
 
-  }
 
+}
 
-  /*
-  ==================================================
-  13. MAXIMUM
-  ==================================================
-  */
+catch(error:any){
 
-  if (
-    amount >
-    MAX_DEPOSIT_AMOUNT
-  ) {
 
-    return errorResponse(
-      `Le dépôt maximum est de ${MAX_DEPOSIT_AMOUNT.toLocaleString(
-        "fr-FR"
-      )} HTG.`,
-      400
-    );
 
-  }
+console.error(
 
+"[MONCASH_CREATE_ERROR]",
 
-  /*
-  ==================================================
-  14. CALCUL OBLIGATION DE MISE
-  ==================================================
-  */
+error
 
-  const turnoverRequired =
-    amount *
-    DEPOSIT_TURNOVER_MULTIPLIER;
+);
 
 
-  /*
-  ==================================================
-  15. ID DÉPÔT
-  ==================================================
-  */
 
-  const depositId =
-    randomUUID();
+await adminDB
+.ref(
+`transactions/${uid}/${referenceId}`
+)
+.update({
 
+status:
+"failed",
 
-  /*
-  ==================================================
-  16. REFERENCE UNIQUE
-  ==================================================
-  */
+error:
+String(
+error.message || error
+)
 
-  const referenceId =
-    `titato_deposit_${depositId}`;
+});
 
 
-  /*
-  ==================================================
-  17. CLÉ IDEMPOTENCE
-  ==================================================
-  */
 
-  const idempotencyKey =
-    `deposit_${uid}_${depositId}`;
+return NextResponse.json(
 
+{
 
-  /*
-  ==================================================
-  18. TIMESTAMP
-  ==================================================
-  */
+success:false,
 
-  const now =
-    Date.now();
+error:
+"Impossible de créer le paiement MonCash.",
 
 
-  /*
-  ==================================================
-  19. CRÉER DÉPÔT PENDING
-  ==================================================
+details:
+error.message
 
-  IMPORTANT :
+},
 
-  Aucun crédit wallet ici.
+{
+status:500
+}
 
-  Le joueur n'est crédité qu'après confirmation
-  du webhook MonCashConnect.
+);
 
-  */
 
-  const deposit:
-    DepositRecord = {
 
-      uid,
+}
 
-      amount,
 
-      currency:
-        "HTG",
 
-      status:
-        "pending",
 
-      provider:
-        "moncashconnect",
 
-      referenceId,
+/*
+====================================================
+VERIFIER URL PAIEMENT
+====================================================
+*/
 
-      idempotencyKey,
 
-      paymentUrl:
-        null,
+if(
+!payment.paymentUrl
+){
 
-      createdAt:
-        now,
 
-      updatedAt:
-        now,
+await adminDB
+.ref(
+`transactions/${uid}/${referenceId}`
+)
+.update({
 
-      turnoverMultiplier:
-        DEPOSIT_TURNOVER_MULTIPLIER,
+status:
+"failed",
 
-      turnoverRequired,
+error:
+"paymentUrl absent"
 
-    };
+});
 
 
-  /*
-  ==================================================
-  20. RÉFÉRENCE FIREBASE
-  ==================================================
-  */
 
-  const depositRef =
-    adminDB.ref(
-      `deposits/${depositId}`
-    );
+return NextResponse.json(
 
+{
 
-  /*
-  ==================================================
-  21. CRÉATION ATOMIQUE DU DÉPÔT
-  ==================================================
+success:false,
 
-  Le depositId est unique.
+error:
+"MonCash n'a pas retourné de lien paiement."
 
-  Si Firebase détecte une donnée existante,
-  la transaction n'écrase jamais le dépôt.
-  */
+},
 
-  const depositTransaction =
-    await depositRef.transaction(
-      (
-        currentData
-      ) => {
+{
+status:500
+}
 
-        if (
-          currentData !==
-          null
-        ) {
+);
 
-          return;
 
-        }
+}
 
 
-        return deposit;
 
-      }
-    );
 
+/*
+====================================================
+SUCCES
+====================================================
+*/
 
-  /*
-  ==================================================
-  22. VÉRIFIER CRÉATION
-  ==================================================
-  */
 
-  if (
-    !depositTransaction.committed
-  ) {
+console.log(
 
-    console.error(
-      "[DEPOSIT] Impossible de créer le dépôt.",
-      {
-        depositId,
+"[DEPOSIT_CREATED]",
 
-        uid,
-      }
-    );
+{
 
+uid,
 
-    return errorResponse(
-      "Impossible de créer le dépôt.",
-      500
-    );
+amount,
 
-  }
+referenceId,
 
+paymentUrl:
+payment.paymentUrl
 
-  /*
-  ==================================================
-  23. CRÉER PAIEMENT MONCASHCONNECT
-  ==================================================
-  */
+}
 
-  let moncashResponse:
-    Response;
+);
 
 
-  try {
 
-    moncashResponse =
-      await fetch(
-        MONCASH_CREATE_URL,
-        {
 
-          method:
-            "POST",
+return NextResponse.json(
 
-          headers: {
+{
 
-            "Authorization":
-              `Bearer ${moncashApiKey}`,
+success:true,
 
-            "Content-Type":
-              "application/json",
 
-            "Idempotency-Key":
-              idempotencyKey,
+paymentUrl:
+payment.paymentUrl,
 
-          },
 
-          body:
-            JSON.stringify(
-              {
+referenceId,
 
-                amount,
 
-                referenceId,
+amount,
 
-                returnUrl:
-                  `${appUrl}/wallet`,
 
-              }
-            ),
+message:
+"Paiement MonCash créé avec succès."
 
-          signal:
-            AbortSignal.timeout(
-              15000
-            ),
+},
 
-        }
-      );
+{
+status:200
+}
 
-  } catch (
-    moncashError
-  ) {
+);
 
-    console.error(
-      "[DEPOSIT] Erreur MonCashConnect :",
-      moncashError
-    );
 
 
-    /*
-    ================================================
-    LE DÉPÔT RESTE EXISTANT MAIS EST FAILED
-    ================================================
-    */
+}
+catch(error){
 
-    await depositRef.update(
-      {
 
-        status:
-          "failed",
 
-        updatedAt:
-          Date.now(),
+console.error(
 
-        failedAt:
-          Date.now(),
+"[DEPOSIT_SERVER_ERROR]",
 
-        errorCode:
-          "MONCASH_REQUEST_FAILED",
+error
 
-      }
-    );
+);
 
 
-    return errorResponse(
-      "Impossible de démarrer le paiement MonCash.",
-      502
-    );
 
-  }
+return NextResponse.json(
 
+{
 
-  /*
-  ==================================================
-  24. PARSER RÉPONSE MONCASH
-  ==================================================
-  */
+success:false,
 
-  let moncashData:
-    MonCashCreateResponse;
+error:
+"Erreur serveur dépôt."
 
+},
 
-  try {
+{
+status:500
+}
 
-    moncashData =
-      await moncashResponse.json();
+);
 
-  } catch {
 
-    console.error(
-      "[DEPOSIT] Réponse MonCashConnect invalide."
-    );
 
+}
 
-    await depositRef.update(
-      {
-
-        status:
-          "failed",
-
-        updatedAt:
-          Date.now(),
-
-        failedAt:
-          Date.now(),
-
-        errorCode:
-          "INVALID_MONCASH_RESPONSE",
-
-      }
-    );
-
-
-    return errorResponse(
-      "Réponse invalide du service de paiement.",
-      502
-    );
-
-  }
-
-
-  /*
-  ==================================================
-  25. VÉRIFIER RÉPONSE HTTP
-  ==================================================
-  */
-
-  if (
-    !moncashResponse.ok
-  ) {
-
-    console.error(
-      "[DEPOSIT] MonCashConnect a refusé le paiement.",
-      {
-
-        status:
-          moncashResponse.status,
-
-        response:
-          moncashData,
-
-      }
-    );
-
-
-    await depositRef.update(
-      {
-
-        status:
-          "failed",
-
-        updatedAt:
-          Date.now(),
-
-        failedAt:
-          Date.now(),
-
-        errorCode:
-          moncashData.error ||
-          "MONCASH_CREATE_FAILED",
-
-      }
-    );
-
-
-    return errorResponse(
-      moncashData.error ||
-        moncashData.message ||
-        "MonCashConnect n'a pas pu créer le paiement.",
-      502
-    );
-
-  }
-
-
-  /*
-  ==================================================
-  26. PAYMENT URL
-  ==================================================
-  */
-
-  const paymentUrl =
-    typeof moncashData.paymentUrl ===
-    "string"
-      ? moncashData.paymentUrl.trim()
-      : "";
-
-
-  if (
-    !paymentUrl
-  ) {
-
-    console.error(
-      "[DEPOSIT] paymentUrl absente."
-    );
-
-
-    await depositRef.update(
-      {
-
-        status:
-          "failed",
-
-        updatedAt:
-          Date.now(),
-
-        failedAt:
-          Date.now(),
-
-        errorCode:
-          "PAYMENT_URL_MISSING",
-
-      }
-    );
-
-
-    return errorResponse(
-      "URL de paiement MonCash introuvable.",
-      502
-    );
-
-  }
-
-
-  /*
-  ==================================================
-  27. VALIDER URL
-  ==================================================
-  */
-
-  let paymentUrlObject:
-    URL;
-
-
-  try {
-
-    paymentUrlObject =
-      new URL(
-        paymentUrl
-      );
-
-  } catch {
-
-    await depositRef.update(
-      {
-
-        status:
-          "failed",
-
-        updatedAt:
-          Date.now(),
-
-        failedAt:
-          Date.now(),
-
-        errorCode:
-          "INVALID_PAYMENT_URL",
-
-      }
-    );
-
-
-    return errorResponse(
-      "URL de paiement invalide.",
-      502
-    );
-
-  }
-
-
-  /*
-  ==================================================
-  28. HTTPS OBLIGATOIRE
-  ==================================================
-  */
-
-  if (
-    paymentUrlObject.protocol !==
-    "https:"
-  ) {
-
-    await depositRef.update(
-      {
-
-        status:
-          "failed",
-
-        updatedAt:
-          Date.now(),
-
-        failedAt:
-          Date.now(),
-
-        errorCode:
-          "PAYMENT_URL_NOT_HTTPS",
-
-      }
-    );
-
-
-    return errorResponse(
-      "URL de paiement non sécurisée.",
-      502
-    );
-
-  }
-
-
-  /*
-  ==================================================
-  29. METTRE PAYMENT URL
-  ==================================================
-  */
-
-  await depositRef.update(
-    {
-
-      paymentUrl,
-
-      updatedAt:
-        Date.now(),
-
-      moncashTransactionId:
-        moncashData.transactionId ||
-        moncashData.id ||
-        null,
-
-    }
-  );
-
-
-  /*
-  ==================================================
-  30. LOG
-  ==================================================
-  */
-
-  console.log(
-    "[DEPOSIT] Paiement créé.",
-    {
-
-      depositId,
-
-      uid,
-
-      amount,
-
-      turnoverRequired,
-
-      referenceId,
-
-    }
-  );
-
-
-  /*
-  ==================================================
-  31. RÉPONSE
-  ==================================================
-  */
-
-  return NextResponse.json(
-    {
-
-      success:
-        true,
-
-      depositId,
-
-      referenceId,
-
-      paymentUrl,
-
-      amount,
-
-      turnoverRequired,
-
-    },
-    {
-      status:
-        200,
-    }
-  );
 
 }

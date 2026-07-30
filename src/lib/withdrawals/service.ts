@@ -1022,6 +1022,32 @@ export async function createWithdrawal(
         };
 
 
+      case "user_not_found":
+
+        return {
+
+          success:
+            false,
+
+          error:
+            "Compte utilisateur introuvable.",
+
+        };
+
+
+      case "database_error":
+
+        return {
+
+          success:
+            false,
+
+          error:
+            "Erreur de base de données lors de la réservation.",
+
+        };
+
+
       default:
 
         return {

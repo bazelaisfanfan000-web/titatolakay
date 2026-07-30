@@ -1046,7 +1046,7 @@ export default function WalletPage() {
 
         const response =
           await fetch(
-            "/api/wallet/withdraw",
+            "/api/webhooks/moncash/withdrawal/create",
             {
               method:
                 "POST",
@@ -1063,8 +1063,9 @@ export default function WalletPage() {
               body:
                 JSON.stringify(
                   {
+                    uid: currentUser.uid,
                     amount,
-                    moncashNumber: phoneNumber,
+                    moncashNumber: localPhone,
                   }
                 ),
 
@@ -1118,15 +1119,8 @@ export default function WalletPage() {
 
           console.error(
             "Erreur API retrait :",
-            {
-              status:
-                response.status,
-
-              statusText:
-                response.statusText,
-
-              result,
-            }
+            `Status: ${response.status} ${response.statusText}`,
+            `Result: ${JSON.stringify(result)}`
           );
 
 
@@ -1706,7 +1700,7 @@ export default function WalletPage() {
                 <div className="grid grid-cols-5 gap-2">
 
                   {[
-                    50,
+                    25,
                     100,
                     250,
                     500,
