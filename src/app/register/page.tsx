@@ -16,7 +16,6 @@ import {
 import {
   ref,
   set,
-  push,
 } from "firebase/database";
 
 import {
@@ -34,6 +33,7 @@ export default function Register() {
 
   const router = useRouter();
 
+
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,38 +44,58 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
 
 
+
   async function register() {
 
-    if (!username.trim() || !email.trim() || !password) {
+
+    if (
+      !username.trim() ||
+      !email.trim() ||
+      !password
+    ) {
+
       return setError(
         "Tous les champs sont obligatoires"
       );
+
     }
 
+
+
     if (password.length < 6) {
+
       return setError(
         "Le mot de passe doit avoir au moins 6 caractères"
       );
+
     }
 
+
+
     if (!accepted) {
+
       return setError(
         "Tu dois accepter les conditions d'utilisation"
       );
+
     }
 
 
+
     try {
+
 
       setLoading(true);
       setError("");
 
 
+
       /*
       ========================================
-      CRÉATION DU COMPTE FIREBASE AUTH
+      CRÉATION COMPTE FIREBASE AUTH
       ========================================
       */
+
 
       const { user } =
         await createUserWithEmailAndPassword(
@@ -85,119 +105,63 @@ export default function Register() {
         );
 
 
+
       const now = Date.now();
 
 
-      /*
-      ========================================
-      CRÉATION DU PROFIL UTILISATEUR
-      ========================================
-      */
-
-      try {
-
-        await set(
-          ref(
-            database,
-            `users/${user.uid}`
-          ),
-          {
-            uid: user.uid,
-
-            username: username.trim(),
-
-            email: user.email || email.trim(),
-
-            balance: 25,
-
-            currency: "HTG",
-
-            bonusReceived: true,
-
-            createdAt: now,
-
-            acceptedTerms: true,
-
-            acceptedTermsAt: now,
-
-            balanceUpdatedAt: now,
-
-            lastReward: 25,
-          }
-        );
-
-      } catch (profileError: any) {
-
-        console.error(
-          "ERREUR CRÉATION PROFIL FIREBASE:",
-          profileError
-        );
-
-        throw new Error(
-          `Erreur création profil: ${
-            profileError?.code ||
-            profileError?.message ||
-            "PERMISSION_DENIED"
-          }`
-        );
-
-      }
-
 
       /*
       ========================================
-      NOTIFICATION BONUS DE BIENVENUE
+      CRÉATION PROFIL UTILISATEUR
       ========================================
       */
 
-      try {
 
-        const notificationRef =
-          push(
-            ref(
-              database,
-              `notifications/${user.uid}`
-            )
-          );
+      await set(
+        ref(
+          database,
+          `users/${user.uid}`
+        ),
+        {
+
+          uid: user.uid,
 
 
-        await set(
-          notificationRef,
-          {
-            receiverId: user.uid,
+          username:
+            username.trim(),
 
-            title:
-              "🎁 Bonus de bienvenue",
 
-            message:
-              "Tu as reçu +25 HTG de bonus de bienvenue pour commencer à jouer.",
+          email:
+            user.email ||
+            email.trim(),
 
-            amount: 25,
 
-            type: "bonus",
+          // Nouveau compte sans bonus
+          balance: 0,
 
-            read: false,
 
-            createdAt: now,
-          }
-        );
+          currency:
+            "HTG",
 
-      } catch (notificationError: any) {
 
-        console.error(
-          "ERREUR CRÉATION NOTIFICATION FIREBASE:",
-          notificationError
-        );
+          createdAt:
+            now,
 
-        throw new Error(
-          `Erreur notification: ${
-            notificationError?.code ||
-            notificationError?.message ||
-            "PERMISSION_DENIED"
-          }`
-        );
 
-      }
+          acceptedTerms:
+            true,
+
+
+          acceptedTermsAt:
+            now,
+
+
+          balanceUpdatedAt:
+            now,
+
+        }
+      );
+
 
 
       /*
@@ -206,12 +170,15 @@ export default function Register() {
       ========================================
       */
 
+
       router.push(
         "/dashboard"
       );
 
 
-    } catch (err: any) {
+
+    } catch (err:any) {
+
 
       console.error(
         "ERREUR INSCRIPTION:",
@@ -219,8 +186,10 @@ export default function Register() {
       );
 
 
+
       const errorCode =
         err?.code || "";
+
 
 
       if (
@@ -228,44 +197,58 @@ export default function Register() {
         "auth/email-already-in-use"
       ) {
 
+
         setError(
           "Cet email existe déjà"
         );
+
 
       } else if (
         errorCode ===
         "auth/invalid-email"
       ) {
 
+
         setError(
           "Email invalide"
         );
+
 
       } else if (
         errorCode ===
         "auth/weak-password"
       ) {
 
+
         setError(
           "Le mot de passe est trop faible"
         );
 
+
       } else {
+
 
         setError(
           err?.message ||
           "Une erreur est survenue pendant la création du compte"
         );
 
+
       }
+
+
 
     } finally {
 
+
       setLoading(false);
+
 
     }
 
+
   }
+
 
 
   return (
@@ -284,11 +267,6 @@ export default function Register() {
       "
     >
 
-
-      {/* ========================================
-          BACKGROUND
-      ======================================== */}
-
       <div
         className="
           pointer-events-none
@@ -305,46 +283,27 @@ export default function Register() {
       />
 
 
-      <div
-        className="
-          pointer-events-none
-          absolute
-          bottom-[-150px]
-          right-[-100px]
-          h-[280px]
-          w-[280px]
-          rounded-full
-          bg-blue-500/[0.06]
-          blur-[110px]
-        "
-      />
-
-
-      {/* ========================================
-          CONTENU
-      ======================================== */}
-
       <motion.section
+
         initial={{
-          opacity: 0,
-          y: 15,
+          opacity:0,
+          y:15,
         }}
+
         animate={{
-          opacity: 1,
-          y: 0,
+          opacity:1,
+          y:0,
         }}
+
         className="
           relative
           z-10
           w-full
           max-w-[300px]
         "
+
       >
 
-
-        {/* ========================================
-            HEADER
-        ======================================== */}
 
         <div
           className="
@@ -388,14 +347,15 @@ export default function Register() {
                 className="
                   text-[10px]
                   font-black
-                  tracking-tight
                   text-blue-400
                 "
               >
                 XO
               </span>
 
+
             </div>
+
 
 
             <div>
@@ -410,6 +370,7 @@ export default function Register() {
                 TI TA TO
               </p>
 
+
               <p
                 className="
                   text-[7px]
@@ -420,6 +381,7 @@ export default function Register() {
               </p>
 
             </div>
+
 
           </div>
 
@@ -440,14 +402,8 @@ export default function Register() {
             ● BETA
           </span>
 
-        </div>
 
-
-        {/* ========================================
-            GRANDE CARTE
-        ======================================== */}
-
-        <div
+        </div>        <div
           className="
             rounded-2xl
             border
@@ -459,8 +415,6 @@ export default function Register() {
           "
         >
 
-
-          {/* TITRE */}
 
           <p
             className="
@@ -476,6 +430,7 @@ export default function Register() {
           </p>
 
 
+
           <h1
             className="
               mt-1
@@ -486,6 +441,7 @@ export default function Register() {
           >
             Crée ton compte 👋
           </h1>
+
 
 
           <p
@@ -501,13 +457,11 @@ export default function Register() {
           </p>
 
 
-          {/* ========================================
-              NOM JOUEUR
-          ======================================== */}
+
 
           <Input
             icon={
-              <User size={13} />
+              <User size={13}/>
             }
             placeholder="Nom joueur"
             value={username}
@@ -515,13 +469,10 @@ export default function Register() {
           />
 
 
-          {/* ========================================
-              EMAIL
-          ======================================== */}
 
           <Input
             icon={
-              <Mail size={13} />
+              <Mail size={13}/>
             }
             placeholder="Email"
             type="email"
@@ -530,13 +481,10 @@ export default function Register() {
           />
 
 
-          {/* ========================================
-              MOT DE PASSE
-          ======================================== */}
 
           <Input
             icon={
-              <Lock size={13} />
+              <Lock size={13}/>
             }
             placeholder="Mot de passe"
             type="password"
@@ -545,9 +493,7 @@ export default function Register() {
           />
 
 
-          {/* ========================================
-              ERREUR
-          ======================================== */}
+
 
           {error && (
 
@@ -570,9 +516,8 @@ export default function Register() {
           )}
 
 
-          {/* ========================================
-              CONDITIONS
-          ======================================== */}
+
+
 
           <label
             className="
@@ -587,14 +532,16 @@ export default function Register() {
             "
           >
 
+
             <input
               type="checkbox"
               checked={accepted}
-              onChange={(e) =>
+              onChange={(e)=>
                 setAccepted(
                   e.target.checked
                 )
               }
+
               className="
                 mt-0.5
                 h-3
@@ -618,7 +565,9 @@ export default function Register() {
                 conditions d'utilisation
               </Link>
 
+
               {" "}et la{" "}
+
 
               <Link
                 href="/politique-confidentialite"
@@ -630,24 +579,30 @@ export default function Register() {
                 politique de confidentialité
               </Link>
 
+
             </span>
+
 
           </label>
 
 
-          {/* ========================================
-              BOUTON CRÉER
-          ======================================== */}
+
+
 
           <motion.button
+
             type="button"
+
             onClick={register}
+
             disabled={loading}
 
+
             whileTap={{
-              scale: 0.97,
-              y: 3,
+              scale:0.97,
+              y:3,
             }}
+
 
             className="
               mt-3
@@ -668,42 +623,25 @@ export default function Register() {
               transition-all
               hover:border-blue-300/60
               hover:bg-blue-500/30
-              hover:shadow-[0_4px_0_rgba(30,64,175,0.8),0_0_25px_rgba(37,99,235,0.2)]
               active:translate-y-[3px]
               active:shadow-none
-              disabled:cursor-not-allowed
               disabled:opacity-50
             "
           >
 
-            {loading
+            {
+              loading
               ? "Création..."
               : "🚀 Créer mon compte"
             }
 
+
           </motion.button>
 
 
-          {/* ========================================
-              BONUS
-          ======================================== */}
-
-          <p
-            className="
-              mt-2
-              text-center
-              text-[8px]
-              font-bold
-              text-yellow-300/80
-            "
-          >
-            🎁 Nouveau joueur : +25 HTG offert
-          </p>
 
 
-          {/* ========================================
-              CONNEXION
-          ======================================== */}
+
 
           <div
             className="
@@ -722,8 +660,11 @@ export default function Register() {
             </p>
 
 
+
             <Link
+
               href="/login"
+
               className="
                 mt-2
                 flex
@@ -738,27 +679,29 @@ export default function Register() {
                 text-[9px]
                 font-black
                 text-blue-100
-                shadow-[0_3px_0_rgba(30,64,175,0.65),0_0_15px_rgba(37,99,235,0.08)]
+                shadow-[0_3px_0_rgba(30,64,175,0.65)]
                 backdrop-blur-md
                 transition-all
-                hover:border-blue-300/50
                 hover:bg-blue-500/[0.15]
-                hover:shadow-[0_4px_0_rgba(30,64,175,0.7),0_0_22px_rgba(37,99,235,0.15)]
                 active:translate-y-[3px]
-                active:shadow-none
               "
+
             >
+
               🔐 Se connecter
+
+
             </Link>
 
+
           </div>
+
+
 
         </div>
 
 
-        {/* ========================================
-            VERSION
-        ======================================== */}
+
 
         <p
           className="
@@ -771,13 +714,20 @@ export default function Register() {
           TiTaTo • Version Beta
         </p>
 
+
+
       </motion.section>
+
 
     </main>
 
   );
 
+
 }
+
+
+
 
 
 /*
@@ -786,21 +736,33 @@ INPUT
 ========================================
 */
 
+
 function Input({
+
   icon,
+
   placeholder,
-  type = "text",
+
+  type="text",
+
   value,
+
   onChange,
-}: {
-  icon: React.ReactNode;
-  placeholder: string;
-  type?: string;
-  value: string;
-  onChange: (
-    value: string
-  ) => void;
-}) {
+
+}:{
+
+  icon:React.ReactNode;
+
+  placeholder:string;
+
+  type?:string;
+
+  value:string;
+
+  onChange:(value:string)=>void;
+
+}){
+
 
   return (
 
@@ -810,6 +772,7 @@ function Input({
         mt-2
       "
     >
+
 
       <div
         className="
@@ -821,20 +784,31 @@ function Input({
           text-blue-400
         "
       >
+
         {icon}
+
       </div>
 
 
+
+
       <input
+
         type={type}
+
         value={value}
+
         placeholder={placeholder}
 
-        onChange={(e) =>
+
+        onChange={(e)=>
+
           onChange(
             e.target.value
           )
+
         }
+
 
         className="
           h-8
@@ -853,10 +827,13 @@ function Input({
           focus:border-blue-500/40
           focus:bg-blue-500/[0.04]
         "
+
       />
+
 
     </div>
 
   );
+
 
 }
