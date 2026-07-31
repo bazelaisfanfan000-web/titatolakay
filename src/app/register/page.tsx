@@ -674,22 +674,13 @@ export default function Register() {
 
 
 
-          <motion.button
+          <button
 
             type="button"
 
-            onClick={() => {
-              console.log("[REGISTER_BUTTON] Button clicked", { loading, username, email, password: password.length, accepted });
-              register();
-            }}
+            onClick={register}
 
             disabled={loading}
-
-
-            whileTap={{
-              scale:0.97,
-              y:3,
-            }}
 
 
             className="
@@ -724,7 +715,7 @@ export default function Register() {
             }
 
 
-          </motion.button>
+          </button>
 
 
 
