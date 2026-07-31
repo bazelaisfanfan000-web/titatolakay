@@ -14,6 +14,16 @@ import { createDepositLedgerEntry, createWithdrawalLedgerEntry, updateLedgerStat
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Handler GET pour tester l'accessibilité de l'endpoint
+export async function GET(request: Request) {
+  return NextResponse.json({
+    message: "Webhook endpoint is accessible",
+    method: "GET",
+    note: "MonCashConnect should send POST requests to this endpoint",
+    timestamp: new Date().toISOString()
+  });
+}
+
 export async function POST(request: Request) {
   try {
     // 1. Lire le corps brut pour vérifier la signature
