@@ -34,11 +34,11 @@ const SECRET_URLS = {
   // Dashboard admin (accueil)
   dashboard: "F8kP2mQ9xL7vR4aZ6nT3sW5dY1uH0cB8gV9pX2qM7rK4eN6tA3wS5yD1fG0hJ8lP2oI9uU6zE4iO7aC5vB3nM1xQ8sR6dF2gH9jK4lZ7pW5yT3mN8bV0cX2qA7sD9fG1hJ6kL4zP8oI3uY5wE7rT2mK9xV4aN6qS1dF8gH3jL0pR5tW7yU2iO9cB4vM8nM4qW6eR0tY5uI1oP9aL3sD7fG2hJ8kN4mQ6wX0cV5bZ1",
   // Gestion utilisateurs
-  users: "F8kP2mQ9xL7vR4aZ6nT3sW5dY1uH0cB8gV9pX2qM7rK4eN6tA3wS5yD1fG0hJ8lP2oI9uU6zE4iO7aC5vB3nM1xQ8sR6dF2gH9jK4lZ7pW5yT3mN8bV0cX2qA7sD9fG1hJ6kL4zP8oI3uY5wE7rT2mK9xV4aN6qS1dF8gH3jL0pR5tW7yU2iO9cB4vM8nM4qW6eR0tY5uI1oP9aL3sD7fG2hJ8kN4mQ6wX0cV5bA1",
+  users: "Z8mQ2xLp9VaR7nKc4TyW1HsDf6BjNe0PuGi3XqMz8LaEr5",
   // Gestion parties
-  games: "F8kP2mQ9xL7vR4aZ6nT3sW5dY1uH0cB8gV9pX2qM7rK4eN6tA3wS5yD1fG0hJ8lP2oI9uU6zE4iO7aC5vB3nM1xQ8sR6dF2gH9jK4lZ7pW5yT3mN8bV0cX2qA7sD9fG1hJ6kL4zP8oI3uY5wE7rT2mK9xV4aN6qS1dF8gH3jL0pR5tW7yU2iO9cB4vM8nM4qW6eR0tY5uI1oP9aL3sD7fG2hJ8kN4mQ6wX0cV5bB2",
+  games: "K7pXn4LcQ9mVa2HzTf8RwBs1YeDu6GjNk3PoAiMx5SrCt0",
   // Transactions
-  transactions: "F8kP2mQ9xL7vR4aZ6nT3sW5dY1uH0cB8gV9pX2qM7rK4eN6tA3wS5yD1fG0hJ8lP2oI9uU6zE4iO7aC5vB3nM1xQ8sR6dF2gH9jK4lZ7pW5yT3mN8bV0cX2qA7sD9fG1hJ6kL4zP8oI3uY5wE7rT2mK9xV4aN6qS1dF8gH3jL0pR5tW7yU2iO9cB4vM8nM4qW6eR0tY5uI1oP9aL3sD7fG2hJ8kN4mQ6wX0cV5bC3",
+  transactions: "R5vNq8ZaX2LmWp9HtKc7DfEy1GsBu4JiPo6MrTxQn3VaY0",
 };
 
 // Déterminer la page cible selon le code
@@ -94,11 +94,11 @@ localStorage.setItem(
 if (targetPage === "dashboard") {
   router.push("/admin");
 } else if (targetPage === "users") {
-  router.push("/admin/users");
+  router.push("/admin/Z8mQ2xLp9VaR7nKc4TyW1HsDf6BjNe0PuGi3XqMz8LaEr5");
 } else if (targetPage === "games") {
-  router.push("/admin/games");
+  router.push("/admin/K7pXn4LcQ9mVa2HzTf8RwBs1YeDu6GjNk3PoAiMx5SrCt0");
 } else if (targetPage === "transactions") {
-  router.push("/admin/transactions");
+  router.push("/admin/R5vNq8ZaX2LmWp9HtKc7DfEy1GsBu4JiPo6MrTxQn3VaY0");
 } else {
   router.push("/admin");
 }
