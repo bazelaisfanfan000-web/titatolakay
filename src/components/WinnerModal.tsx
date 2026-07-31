@@ -22,17 +22,7 @@ type Props = {
 
   onAddFriend: () => void;
 
-  onRequestRevenge: () => void;
-
   onClose: () => void;
-  
-  roomId?: string;
-  
-  gameId?: string;
-  
-  opponentId?: string;
-  
-  userId?: string;
 };
 
 export default function WinnerModal({
@@ -44,12 +34,7 @@ export default function WinnerModal({
   commission,
   friendStatus,
   onAddFriend,
-  onRequestRevenge,
   onClose,
-  roomId,
-  gameId,
-  opponentId,
-  userId,
 }: Props) {
   const isWinner =
     winner === mySymbol;
@@ -492,56 +477,6 @@ export default function WinnerModal({
           </div>
         )}
 
-        {/* ========================================
-            DEMANDER UNE REVANCHE
-            BOUTON 3D TRANSPARENT ORANGE
-        ======================================== */}
-
-        {roomId && gameId && opponentId && userId && (
-          <button
-            type="button"
-            onClick={onRequestRevenge}
-            className="
-              group
-              relative
-              mb-2.5
-              flex
-              min-h-[50px]
-              w-full
-              items-center
-              justify-center
-              gap-2
-              overflow-hidden
-              rounded-2xl
-              border
-              border-orange-300/40
-              bg-gradient-to-br
-              from-orange-400/30
-              via-orange-500/20
-              to-orange-700/30
-              px-4
-              py-3
-              text-sm
-              font-black
-              text-white
-              shadow-[inset_0_1px_1px_rgba(255,255,255,0.12),inset_0_-3px_6px_rgba(120,30,0,0.35),0_5px_0_rgba(150,55,10,0.85),0_8px_20px_rgba(255,80,0,0.18)]
-              backdrop-blur-xl
-              transition-all
-              duration-150
-              hover:border-orange-200/60
-              hover:bg-orange-400/30
-              hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.18),inset_0_-3px_8px_rgba(120,30,0,0.4),0_5px_0_rgba(150,55,10,0.9),0_10px_25px_rgba(255,100,0,0.3)]
-              active:translate-y-[4px]
-              active:shadow-[inset_0_2px_5px_rgba(80,20,0,0.4),0_1px_0_rgba(150,55,10,0.8)]
-              sm:mb-3
-            "
-          >
-            ⚔️
-            <span>
-              Demander une revanche
-            </span>
-          </button>
-        )}
 
         {/* ========================================
             RETOUR AU TABLEAU DE BORD

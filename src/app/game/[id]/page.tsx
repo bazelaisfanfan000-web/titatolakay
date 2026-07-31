@@ -36,13 +36,11 @@ import {
   sendVyloFriendRequest,
 } from "@/lib/vylo/vyloFriends";
 
-import { useRevenge } from "@/hooks/useRevenge";
 
 import TiTaToBoard from "@/components/TiTaToBoard";
 import GameTimer from "@/components/GameTimer";
 import WinnerModal from "@/components/WinnerModal";
 import GameChat from "@/components/GameChat";
-import RevengeRequestModal from "@/components/RevengeRequestModal";
 
 
 type FriendStatus =
@@ -61,8 +59,6 @@ export default function GamePage() {
 
   const id =
     params.id as string;
-
-  const { requestRevenge, acceptRevenge, rejectRevenge } = useRevenge();
 
 
   const [
@@ -954,84 +950,6 @@ export default function GamePage() {
   }
 
 
-  /*
-  ========================================
-  DEMANDER UNE REVANCHE
-  ========================================
-  */
-
-  async function handleRequestRevenge() {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        setGameMessage("❌ Utilisateur non connecté");
-        setTimeout(() => setGameMessage(""), 3000);
-        return;
-      }
-
-      const opponentId = getOpponentId();
-      if (!opponentId) {
-        setGameMessage("❌ Adversaire introuvable");
-        setTimeout(() => setGameMessage(""), 3000);
-        return;
-      }
-
-      const bet = Number(room?.bet || 0);
-      const gameId = id;
-      const roomId = id;
-
-      await requestRevenge(
-        opponentId,
-        gameId,
-        roomId,
-        bet
-      );
-
-      setGameMessage("⚔️ Demande de revanche envoyée");
-      setTimeout(() => setGameMessage(""), 3000);
-
-    } catch (error: any) {
-      setGameMessage("❌ " + (error?.message || "Erreur lors de la demande"));
-      setTimeout(() => setGameMessage(""), 3000);
-    }
-  }
-
-
-  /*
-  ========================================
-  ACCEPTER UNE REVANCHE
-  ========================================
-  */
-
-  async function handleAcceptRevenge(requestId: string) {
-    try {
-      const result = await acceptRevenge(requestId);
-      if (result.success && result.newRoomId) {
-        router.push(`/game/waiting/${result.newRoomId}`);
-      }
-    } catch (error: any) {
-      setGameMessage("❌ " + (error?.message || "Erreur lors de l'acceptation"));
-      setTimeout(() => setGameMessage(""), 3000);
-    }
-  }
-
-
-  /*
-  ========================================
-  REFUSER UNE REVANCHE
-  ========================================
-  */
-
-  async function handleRejectRevenge(requestId: string) {
-    try {
-      await rejectRevenge(requestId);
-      setGameMessage("❌ Revanche refusée");
-      setTimeout(() => setGameMessage(""), 3000);
-    } catch (error: any) {
-      setGameMessage("❌ " + (error?.message || "Erreur lors du refus"));
-      setTimeout(() => setGameMessage(""), 3000);
-    }
-  }
 
 
   /*
@@ -1446,31 +1364,15 @@ export default function GamePage() {
               onAddFriend={
                 handleAddFriend
               }
-              onRequestRevenge={
-                handleRequestRevenge
-              }
               onClose={() => {
                 router.push(
                   "/dashboard"
                 );
               }}
-              roomId={id}
-              gameId={id}
-              opponentId={getOpponentId()}
-              userId={user?.uid || ""}
             />
 
           )
         }
-
-
-        {/* MODAL DEMANDE DE REVANCHE */}
-
-        <RevengeRequestModal
-          userId={user?.uid || ""}
-          onAccept={handleAcceptRevenge}
-          onReject={handleRejectRevenge}
-        />
 
 
         {/* MESSAGE AMI */}
