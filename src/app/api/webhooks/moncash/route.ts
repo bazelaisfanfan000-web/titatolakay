@@ -14,8 +14,23 @@ import { createDepositLedgerEntry, createWithdrawalLedgerEntry, updateLedgerStat
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Handler OPTIONS pour CORS preflight
+export async function OPTIONS(request: Request) {
+  console.log("[WEBHOOK] OPTIONS request received");
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, x-mcc-signature, x-mcc-timestamp',
+      'Access-Control-Max-Age': '86400',
+    }
+  });
+}
+
 // Handler GET pour tester l'accessibilité de l'endpoint
 export async function GET(request: Request) {
+  console.log("[WEBHOOK] GET request received");
   return NextResponse.json({
     message: "Webhook endpoint is accessible",
     method: "GET",
@@ -25,6 +40,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  console.log("[WEBHOOK] POST request received");
   try {
     // 1. Lire le corps brut pour vérifier la signature
     const body = await request.text();
