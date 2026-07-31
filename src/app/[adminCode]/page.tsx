@@ -29,7 +29,7 @@ const adminCode =
 params.adminCode as string;
 
 
-const SECRET_URL = "123456789";
+const SECRET_URL = "F8kP2mQ9xL7vR4aZ6nT3sW5dY1uH0cB8gV9pX2qM7rK4eN6tA3wS5yD1fG0hJ8lP2oI9uU6zE4iO7aC5vB3nM1xQ8sR6dF2gH9jK4lZ7pW5yT3mN8bV0cX2qA7sD9fG1hJ6kL4zP8oI3uY5wE7rT2mK9xV4aN6qS1dF8gH3jL0pR5tW7yU2iO9cB4vM8nM4qW6eR0tY5uI1oP9aL3sD7fG2hJ8kN4mQ6wX0cV5bZ1";
 
 
 const [password,setPassword] =
