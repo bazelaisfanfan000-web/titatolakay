@@ -24,6 +24,10 @@ const privateKey =
 const databaseURL =
   process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL?.trim();
 
+// Pour Firebase Admin, on peut aussi utiliser FIREBASE_DATABASE_URL s'il est défini
+const adminDatabaseURL =
+  process.env.FIREBASE_DATABASE_URL?.trim() || databaseURL;
+
 
 /*
 ====================================================
@@ -35,7 +39,7 @@ if (
   !projectId ||
   !clientEmail ||
   !privateKey ||
-  !databaseURL
+  !adminDatabaseURL
 ) {
 
   console.error(
@@ -51,7 +55,7 @@ if (
         Boolean(privateKey),
 
       hasDatabaseURL:
-        Boolean(databaseURL),
+        Boolean(adminDatabaseURL),
     }
   );
 
@@ -83,7 +87,7 @@ if (
 
         }),
 
-      databaseURL,
+      databaseURL: adminDatabaseURL,
 
     });
 
@@ -93,7 +97,7 @@ if (
       {
         projectId,
 
-        databaseURL,
+        databaseURL: adminDatabaseURL,
       }
     );
 

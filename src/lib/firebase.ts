@@ -21,6 +21,12 @@ import {
   getFirestore,
 } from "firebase/firestore";
 
+import {
+  getMessaging,
+  getToken,
+  onMessage,
+} from "firebase/messaging";
+
 
 const firebaseConfig = {
 
@@ -111,3 +117,18 @@ export const db =
 
 export const firestore =
   getFirestore(app);
+
+
+// =========================================
+// MESSAGING
+// =========================================
+
+export const messaging =
+  typeof window !== "undefined"
+    ? getMessaging(app)
+    : null;
+
+export {
+  getToken,
+  onMessage,
+};

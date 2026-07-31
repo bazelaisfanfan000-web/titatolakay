@@ -6,9 +6,16 @@ import { motion } from "framer-motion";
 import { Trophy, Zap, Gamepad2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { useNotifications } from "@/hooks/useNotifications";
+import { useForegroundNotifications } from "@/hooks/useForegroundNotifications";
+
 export default function Home() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+
+  // Initialiser les notifications
+  useNotifications();
+  useForegroundNotifications();
 
   useEffect(() => {
     setMounted(true);

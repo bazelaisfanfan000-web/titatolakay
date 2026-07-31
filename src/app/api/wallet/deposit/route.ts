@@ -1,518 +1,110 @@
-import {
-  NextResponse,
-} from "next/server";
+/**
+ * API Route: Création de dépôt
+ * POST /api/wallet/deposit
+ */
 
-
-import {
-  adminAuth,
-  adminDB,
-} from "@/lib/firebaseAdmin";
-
-
-import {
-  createMonCashPayment,
-} from "@/lib/moncash";
-
-
+import { NextResponse } from "next/server";
+import { adminAuth, adminDB } from "@/lib/firebaseAdmin";
+import { createMonCashPayment, generateReferenceId, generateIdempotencyKey } from "@/lib/moncash";
+import { atomicDeposit } from "@/lib/atomicTransaction";
+import { transactionExists } from "@/lib/ledger";
 
 export const runtime = "nodejs";
-
-
-
-/*
-====================================================
-TiTaTo - CREATE DEPOSIT MONCASH
-====================================================
-
-POST /api/wallet/deposit
-
-Headers:
-
-Authorization: Bearer Firebase_ID_TOKEN
-
-
-Body:
-
-{
- amount: 50
-}
-
-
-Flux:
-
-Client
- ↓
-Firebase Auth
- ↓
-Créer transaction pending
- ↓
-MonCash pay-create
- ↓
-Retour paymentUrl
- ↓
-Client paie
- ↓
-Webhook
- ↓
-Crédit wallet
-
-====================================================
-*/
-
-
-
-export async function POST(
-request:Request
-){
-
-
-try {
-
-
-
-/*
-====================================================
-AUTH FIREBASE
-====================================================
-*/
-
-
-const authorization =
-request.headers.get(
-"Authorization"
-);
-
-
-
-if(
-!authorization ||
-!authorization.startsWith(
-"Bearer "
-)
-){
-
-
-return NextResponse.json(
-
-{
-
-success:false,
-
-error:
-"Authentification requise."
-
-},
-
-{
-status:401
-}
-
-);
-
-
-}
-
-
-
-const token =
-authorization.substring(7);
-
-
-
-const decoded =
-await adminAuth.verifyIdToken(
-token
-);
-
-
-
-const uid =
-decoded.uid;
-
-
-
-
-/*
-====================================================
-BODY
-====================================================
-*/
-
-
-const body =
-await request.json();
-
-
-
-const amount =
-Number(
-body.amount
-);
-
-
-
-
-/*
-====================================================
-VALIDATION MONTANT
-====================================================
-*/
-
-
-if(
-
-!Number.isInteger(amount)
-
-||
-
-amount < 25
-
-){
-
-
-return NextResponse.json(
-
-{
-
-success:false,
-
-error:
-"Le dépôt minimum est de 25 HTG."
-
-},
-
-{
-status:400
-}
-
-);
-
-
-}
-
-
-
-if(
-amount > 100000
-){
-
-
-return NextResponse.json(
-
-{
-
-success:false,
-
-error:
-"Le dépôt maximum est de 100000 HTG."
-
-},
-
-{
-status:400
-}
-
-);
-
-
-}
-
-
-
-
-/*
-====================================================
-REFERENCE UNIQUE
-====================================================
-*/
-
-
-const referenceId =
-
-`TT_DEP_${Date.now()}_${uid.slice(0,8)}`;
-
-
-
-
-/*
-====================================================
-CREER TRANSACTION PENDING
-====================================================
-*/
-
-
-await adminDB
-.ref(
-`transactions/${uid}/${referenceId}`
-)
-.set({
-
-id:
-referenceId,
-
-
-uid,
-
-
-type:
-"deposit",
-
-
-amount,
-
-
-status:
-"pending",
-
-
-provider:
-"moncashconnect",
-
-
-createdAt:
-Date.now()
-
-});
-
-
-
-
-
-/*
-====================================================
-CREATION PAIEMENT MONCASH
-====================================================
-*/
-
-
-let payment;
-
-
-
-try {
-
-
-payment =
-await createMonCashPayment(
-
-amount,
-
-referenceId,
-
-"TiTaTo Wallet"
-
-);
-
-
-
-}
-
-catch(error:any){
-
-
-
-console.error(
-
-"[MONCASH_CREATE_ERROR]",
-
-error
-
-);
-
-
-
-await adminDB
-.ref(
-`transactions/${uid}/${referenceId}`
-)
-.update({
-
-status:
-"failed",
-
-error:
-String(
-error.message || error
-)
-
-});
-
-
-
-return NextResponse.json(
-
-{
-
-success:false,
-
-error:
-"Impossible de créer le paiement MonCash.",
-
-
-details:
-error.message
-
-},
-
-{
-status:500
-}
-
-);
-
-
-
-}
-
-
-
-
-
-/*
-====================================================
-VERIFIER URL PAIEMENT
-====================================================
-*/
-
-
-if(
-!payment.paymentUrl
-){
-
-
-await adminDB
-.ref(
-`transactions/${uid}/${referenceId}`
-)
-.update({
-
-status:
-"failed",
-
-error:
-"paymentUrl absent"
-
-});
-
-
-
-return NextResponse.json(
-
-{
-
-success:false,
-
-error:
-"MonCash n'a pas retourné de lien paiement."
-
-},
-
-{
-status:500
-}
-
-);
-
-
-}
-
-
-
-
-/*
-====================================================
-SUCCES
-====================================================
-*/
-
-
-console.log(
-
-"[DEPOSIT_CREATED]",
-
-{
-
-uid,
-
-amount,
-
-referenceId,
-
-paymentUrl:
-payment.paymentUrl
-
-}
-
-);
-
-
-
-
-return NextResponse.json(
-
-{
-
-success:true,
-
-
-paymentUrl:
-payment.paymentUrl,
-
-
-referenceId,
-
-
-amount,
-
-
-message:
-"Paiement MonCash créé avec succès."
-
-},
-
-{
-status:200
-}
-
-);
-
-
-
-}
-catch(error){
-
-
-
-console.error(
-
-"[DEPOSIT_SERVER_ERROR]",
-
-error
-
-);
-
-
-
-return NextResponse.json(
-
-{
-
-success:false,
-
-error:
-"Erreur serveur dépôt."
-
-},
-
-{
-status:500
-}
-
-);
-
-
-
-}
-
-
+export const dynamic = "force-dynamic";
+
+const MIN_DEPOSIT = 25;
+const MAX_DEPOSIT = 10000;
+
+export async function POST(request: Request) {
+  try {
+    // 1. Authentification Firebase
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "Non autorisé" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    const userId = decodedToken.uid;
+
+    // 2. Validation du corps de la requête
+    const body = await request.json();
+    const { amount, returnUrl, customerName, customerEmail } = body;
+
+    if (typeof amount !== "number" || amount < MIN_DEPOSIT || amount > MAX_DEPOSIT) {
+      return NextResponse.json(
+        { error: `Le montant doit être entre ${MIN_DEPOSIT} et ${MAX_DEPOSIT} HTG` },
+        { status: 400 }
+      );
+    }
+
+    // 3. Générer les identifiants uniques
+    const referenceId = generateReferenceId("deposit");
+    const idempotencyKey = generateIdempotencyKey();
+
+    console.log("[DEPOSIT_API] Création dépôt:", { userId, amount, referenceId });
+
+    // 4. Vérifier la déduplication
+    const exists = await transactionExists(userId, referenceId);
+    if (exists) {
+      return NextResponse.json(
+        { error: "Transaction déjà existante" },
+        { status: 409 }
+      );
+    }
+
+    // 5. Créer le paiement MonCash
+    const moncashResponse = await createMonCashPayment(
+      {
+        amount,
+        referenceId,
+        returnUrl: returnUrl || `${process.env.NEXT_PUBLIC_APP_URL}/wallet`,
+        customerName,
+        customerEmail
+      },
+      idempotencyKey
+    );
+
+    // 6. Créer le dépôt en pending dans Firebase
+    const depositRef = adminDB.ref(`deposits/${userId}/${referenceId}`);
+    await depositRef.set({
+      id: referenceId,
+      userId,
+      amount,
+      status: "pending",
+      paymentUrl: moncashResponse.paymentUrl,
+      expiresAt: new Date(moncashResponse.expiresAt).getTime(),
+      moncashReference: moncashResponse.reference,
+      idempotencyKey,
+      createdAt: Date.now()
+    });
+
+    console.log("[DEPOSIT_API] Paiement créé:", {
+      referenceId,
+      paymentUrl: moncashResponse.paymentUrl
+    });
+
+    // 7. Retourner l'URL de paiement
+    return NextResponse.json({
+      success: true,
+      depositId: referenceId,
+      paymentUrl: moncashResponse.paymentUrl,
+      referenceId: moncashResponse.reference,
+      expiresAt: moncashResponse.expiresAt
+    });
+
+  } catch (error) {
+    console.error("[DEPOSIT_API] Erreur:", error);
+
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Erreur lors de la création du dépôt",
+        success: false
+      },
+      { status: 500 }
+    );
+  }
 }

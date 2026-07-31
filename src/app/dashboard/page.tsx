@@ -23,7 +23,8 @@ import {
   ref,
 } from "firebase/database";
 
-import RewardAdButton from "@/components/RewardAdButton";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useForegroundNotifications } from "@/hooks/useForegroundNotifications";
 
 
 /*
@@ -35,6 +36,10 @@ DASHBOARD TITATO
 export default function Dashboard() {
 
   const router = useRouter();
+
+  // Initialiser les notifications
+  useNotifications();
+  useForegroundNotifications();
 
 
   /*
@@ -61,10 +66,6 @@ export default function Dashboard() {
   ] = useState("Joueur");
 
 
-  const [
-    notificationCount,
-    setNotificationCount,
-  ] = useState(0);
 
 
   const [
@@ -99,12 +100,6 @@ export default function Dashboard() {
   useEffect(() => {
 
     let unsubscribeUser:
-      (() => void) | null = null;
-
-    let unsubscribeNotif:
-      (() => void) | null = null;
-
-    let unsubscribeFriendRequests:
       (() => void) | null = null;
 
 
@@ -229,99 +224,6 @@ export default function Dashboard() {
             );
 
 
-          /*
-          ==========================================
-          NOTIFICATIONS
-          ==========================================
-          */
-
-          const notifRef =
-            ref(
-              database,
-              `notifications/${user.uid}`
-            );
-
-
-          unsubscribeNotif =
-            onValue(
-              notifRef,
-              (snapshot) => {
-
-                const data =
-                  snapshot.val();
-
-
-                let unreadNotifications =
-                  0;
-
-
-                if (data) {
-
-                  unreadNotifications =
-                    Object.values(data)
-                      .filter(
-                        (item: any) =>
-                          item &&
-                          item.read !== true
-                      )
-                      .length;
-
-                }
-
-
-                /*
-                ==================================
-                DEMANDES D'AMIS
-                ==================================
-                */
-
-                const friendRequestRef =
-                  ref(
-                    database,
-                    "friendRequests"
-                  );
-
-
-                unsubscribeFriendRequests =
-                  onValue(
-                    friendRequestRef,
-                    (friendSnapshot) => {
-
-                      const requests =
-                        friendSnapshot.val();
-
-
-                      let friendRequestsCount =
-                        0;
-
-
-                      if (requests) {
-
-                        friendRequestsCount =
-                          Object.values(requests)
-                            .filter(
-                              (item: any) =>
-                                item &&
-                                item.to ===
-                                  user.uid &&
-                                item.status ===
-                                  "pending"
-                            )
-                            .length;
-
-                      }
-
-
-                      setNotificationCount(
-                        unreadNotifications +
-                        friendRequestsCount
-                      );
-
-                    }
-                  );
-
-              }
-            );
 
         }
       );
@@ -343,24 +245,6 @@ export default function Dashboard() {
       ) {
 
         unsubscribeUser();
-
-      }
-
-
-      if (
-        unsubscribeNotif
-      ) {
-
-        unsubscribeNotif();
-
-      }
-
-
-      if (
-        unsubscribeFriendRequests
-      ) {
-
-        unsubscribeFriendRequests();
 
       }
 
@@ -1053,105 +937,6 @@ export default function Dashboard() {
           </section>
 
 
-          {/* ======================================
-              BONUS
-          ====================================== */}
-
-          <section
-            className="
-              mt-6
-            "
-          >
-
-            <div
-              className="
-                overflow-hidden
-                rounded-2xl
-                border
-                border-yellow-500/15
-                bg-yellow-500/[0.04]
-                p-4
-              "
-            >
-
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-3
-                "
-              >
-
-                <div
-                  className="
-                    flex
-                    h-10
-                    w-10
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    bg-yellow-500/10
-                    text-lg
-                  "
-                >
-
-                  🎁
-
-                </div>
-
-
-                <div
-                  className="
-                    min-w-0
-                    flex-1
-                  "
-                >
-
-                  <h4
-                    className="
-                      text-[12px]
-                      font-black
-                    "
-                  >
-
-                    Bonus
-
-                  </h4>
-
-
-                  <p
-                    className="
-                      mt-1
-                      text-[9px]
-                      text-white/30
-                    "
-                  >
-
-                    Regardez une publicité et recevez votre récompense.
-
-                  </p>
-
-                </div>
-
-              </div>
-
-
-              <div
-                className="
-                  mt-4
-                "
-              >
-
-                <RewardAdButton />
-
-              </div>
-
-            </div>
-
-          </section>
-
-
         </div>
 
 
@@ -1209,84 +994,6 @@ export default function Dashboard() {
           />
 
 
-          {/* NOTIFICATIONS */}
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push(
-                "/notifications"
-              )
-            }
-            className="
-              relative
-              flex
-              min-w-[60px]
-              flex-col
-              items-center
-              justify-center
-              gap-1
-              rounded-xl
-              py-1.5
-              text-[8px]
-              text-white/35
-              transition
-              active:translate-y-[2px]
-            "
-          >
-
-            <span
-              className="
-                relative
-                flex
-                h-8
-                w-8
-                items-center
-                justify-center
-                rounded-xl
-                text-[19px]
-              "
-            >
-
-              🔔
-
-
-              {notificationCount > 0 && (
-
-                <span
-                  className="
-                    absolute
-                    -right-2
-                    -top-2
-                    flex
-                    h-4
-                    min-w-4
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-red-500
-                    px-1
-                    text-[8px]
-                    font-black
-                    text-white
-                  "
-                >
-
-                  {notificationCount > 9
-                    ? "9+"
-                    : notificationCount
-                  }
-
-                </span>
-
-              )}
-
-            </span>
-
-
-            Notifications
-
-          </button>
 
 
           {/* VYLO */}

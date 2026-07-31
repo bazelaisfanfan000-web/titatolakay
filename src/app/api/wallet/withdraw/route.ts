@@ -1,638 +1,151 @@
-/*
-====================================================
-TiTaTo - Create Withdrawal API Route
-====================================================
+/**
+ * API Route: Création de retrait
+ * POST /api/wallet/withdraw
+ */
 
-Endpoint :
+import { NextResponse } from "next/server";
+import { adminAuth, adminDB } from "@/lib/firebaseAdmin";
+import { createMonCashPayout, generateReferenceId, generateIdempotencyKey } from "@/lib/moncash";
+import { atomicWithdrawal } from "@/lib/atomicTransaction";
+import { hasAvailableBalance, getWallet } from "@/lib/wallet";
+import { transactionExists } from "@/lib/ledger";
 
-POST /api/withdrawals
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-Headers :
+const MIN_WITHDRAW = 100;
+const MAX_WITHDRAW = 10000;
 
-Authorization: Bearer <Firebase ID Token>
-
-Body :
-
-{
-  "amount": 1000,
-  "moncashNumber": "509xxxxxxxx"
-}
-
-IMPORTANT :
-
-Le UID n'est JAMAIS accepté depuis le body.
-
-Le UID est récupéré depuis le token Firebase
-vérifié côté serveur.
-
-====================================================
-*/
-
-
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
-
-
-import {
-  adminAuth,
-  adminDB,
-} from "@/lib/firebaseAdmin";
-
-
-import {
-  createWithdrawal,
-} from "@/lib/withdrawals/service";
-
-
-/*
-====================================================
-TYPES
-====================================================
-*/
-
-
-interface AuthenticatedUser {
-
-  uid: string;
-
-  email?: string;
-
-  phoneNumber?: string;
-}
-
-
-/*
-====================================================
-EXTRAIRE LE TOKEN FIREBASE
-====================================================
-*/
-
-
-function extractBearerToken(
-  request: NextRequest,
-): string | null {
-
-  /*
-  Récupère le header Authorization.
-  */
-
-  const authorization =
-    request.headers.get(
-      "authorization",
-    );
-
-
-  /*
-  Aucun header.
-  */
-
-  if (
-    !authorization
-  ) {
-    return null;
-  }
-
-
-  /*
-  Vérifie le format :
-
-  Bearer TOKEN
-  */
-
-  if (
-    !authorization.startsWith(
-      "Bearer ",
-    )
-  ) {
-    return null;
-  }
-
-
-  /*
-  Extrait uniquement le token.
-  */
-
-  const token =
-    authorization
-      .slice(
-        7,
-      )
-      .trim();
-
-
-  if (
-    token.length === 0
-  ) {
-    return null;
-  }
-
-
-  return token;
-}
-
-
-/*
-====================================================
-AUTHENTIFIER L'UTILISATEUR
-====================================================
-*/
-
-
-async function authenticateRequest(
-  request: NextRequest,
-): Promise<AuthenticatedUser | null> {
-
-  /*
-  Extrait le token.
-  */
-
-  const token =
-    extractBearerToken(
-      request,
-    );
-
-
-  if (
-    !token
-  ) {
-    return null;
-  }
-
-
+export async function POST(request: Request) {
   try {
-
-    /*
-    Vérification du token Firebase
-    côté serveur.
-
-    IMPORTANT :
-
-    Cette fonction utilise Firebase Admin.
-    */
-
-    const decodedToken =
-      await adminAuth
-        .verifyIdToken(
-          token,
-        );
-
-
-    /*
-    Retourne uniquement les informations
-    nécessaires.
-    */
-
-    return {
-
-      uid:
-        decodedToken.uid,
-
-      email:
-        decodedToken.email,
-
-      phoneNumber:
-        decodedToken.phone_number,
-    };
-
-
-  } catch (
-    error
-  ) {
-
-    console.error(
-      "[WITHDRAWAL_AUTH_ERROR]",
-      error,
-    );
-
-
-    return null;
-  }
-}
-
-
-/*
-====================================================
-VÉRIFIER LE COMPTE UTILISATEUR
-====================================================
-
-Cette fonction vérifie que le compte existe
-toujours dans Firebase.
-
-Elle permet également de vérifier si le compte
-est bloqué ou désactivé.
-
-====================================================
-*/
-
-
-async function verifyUserAccount(
-  uid: string,
-): Promise<boolean> {
-
-  const db =
-    adminDB;
-
-
-  try {
-
-    const snapshot =
-      await db
-        .ref(
-          `users/${uid}`,
-        )
-        .get();
-
-
-    /*
-    L'utilisateur doit exister.
-    */
-
-    if (
-      !snapshot.exists()
-    ) {
-      return false;
-    }
-
-
-    const user =
-      snapshot.val() as Record<
-        string,
-        unknown
-      >;
-
-
-    /*
-    Vérification optionnelle du statut.
-
-    Si ton système utilise :
-
-    status: "active"
-
-    alors on bloque les comptes
-    dont le statut n'est pas actif.
-
-    Si aucun champ status n'existe,
-    on autorise par défaut.
-
-    */
-
-    if (
-      typeof user.status ===
-      "string"
-    ) {
-
-      if (
-        user.status !==
-        "active"
-      ) {
-
-        return false;
-      }
-    }
-
-
-    /*
-    Vérification d'un éventuel compte
-    explicitement désactivé.
-    */
-
-    if (
-      user.disabled ===
-      true
-    ) {
-
-      return false;
-    }
-
-
-    return true;
-
-
-  } catch (
-    error
-  ) {
-
-    console.error(
-      "[WITHDRAWAL_USER_CHECK_ERROR]",
-      error,
-    );
-
-
-    return false;
-  }
-}
-
-
-/*
-====================================================
-POST
-====================================================
-*/
-
-
-export async function POST(
-  request: NextRequest,
-) {
-
-  /*
-  --------------------------------------------------
-  ÉTAPE 1
-  AUTHENTIFICATION
-  --------------------------------------------------
-  */
-
-  const user =
-    await authenticateRequest(
-      request,
-    );
-
-
-  if (
-    !user
-  ) {
-
-    return NextResponse.json(
-
-      {
-        success:
-          false,
-
-        error:
-          "Authentification requise.",
-      },
-
-      {
-        status:
-          401,
-      },
-
-    );
-  }
-
-
-  /*
-  --------------------------------------------------
-  ÉTAPE 2
-  VÉRIFIER LE COMPTE
-  --------------------------------------------------
-  */
-
-  const accountIsValid =
-    await verifyUserAccount(
-      user.uid,
-    );
-
-
-  if (
-    !accountIsValid
-  ) {
-
-    return NextResponse.json(
-
-      {
-        success:
-          false,
-
-        error:
-          "Votre compte n'est pas autorisé à effectuer un retrait.",
-      },
-
-      {
-        status:
-          403,
-      },
-
-    );
-  }
-
-
-  /*
-  --------------------------------------------------
-  ÉTAPE 3
-  LIRE LE BODY
-  --------------------------------------------------
-  */
-
-  let body: unknown;
-
-
-  try {
-
-    body =
-      await request.json();
-
-  } catch (
-    error
-  ) {
-
-    console.error(
-      "[WITHDRAWAL_BODY_ERROR]",
-      error,
-    );
-
-
-    return NextResponse.json(
-
-      {
-        success:
-          false,
-
-        error:
-          "Le corps de la requête est invalide.",
-      },
-
-      {
-        status:
-          400,
-      },
-
-    );
-  }
-
-
-  /*
-  --------------------------------------------------
-  ÉTAPE 4
-  CRÉER LE RETRAIT
-  --------------------------------------------------
-
-  IMPORTANT :
-
-  On ne passe PAS le UID du body.
-
-  Le UID vient exclusivement
-  du token Firebase vérifié.
-
-  --------------------------------------------------
-  */
-
-  try {
-
-    const result =
-      await createWithdrawal(
-
-        user.uid,
-
-        body,
-
-      );
-
-
-    /*
-    ------------------------------------------------
-    SUCCÈS
-    ------------------------------------------------
-    */
-
-    if (
-      result.success
-    ) {
-
+    // 1. Authentification Firebase
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json(
-
-        {
-          success:
-            true,
-
-          withdrawalId:
-            result.withdrawalId,
-
-          status:
-            result.status,
-
-          message:
-            result.message ??
-            "Votre demande de retrait a été créée.",
-        },
-
-        {
-          status:
-            201,
-        },
-
+        { error: "Non autorisé" },
+        { status: 401 }
       );
     }
 
+    const token = authHeader.substring(7);
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    const userId = decodedToken.uid;
 
-    /*
-    ------------------------------------------------
-    ÉCHEC MÉTIER
-    ------------------------------------------------
+    // 2. Validation du corps de la requête
+    const body = await request.json();
+    const { amount, moncashNumber } = body;
 
-    Exemple :
+    if (typeof amount !== "number" || amount < MIN_WITHDRAW || amount > MAX_WITHDRAW) {
+      return NextResponse.json(
+        { error: `Le montant doit être entre ${MIN_WITHDRAW} et ${MAX_WITHDRAW} HTG` },
+        { status: 400 }
+      );
+    }
 
-    Solde insuffisant
-    Retrait déjà en cours
-    Limite atteinte
-    Numéro invalide
+    // 3. Validation du numéro MonCash
+    const cleanNumber = moncashNumber.replace(/\D/g, "");
+    if (!/^\d{8}$/.test(cleanNumber)) {
+      return NextResponse.json(
+        { error: "Numéro MonCash invalide (8 chiffres requis)" },
+        { status: 400 }
+      );
+    }
 
-    ------------------------------------------------
-    */
+    // 4. Vérifier le solde disponible
+    const hasBalance = await hasAvailableBalance(userId, amount);
+    if (!hasBalance) {
+      return NextResponse.json(
+        { error: "Solde insuffisant" },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json(
+    // 5. Vérifier s'il y a déjà un retrait en cours
+    const wallet = await getWallet(userId);
+    if (wallet && wallet.lockedBalance > 0) {
+      return NextResponse.json(
+        { error: "Un retrait est déjà en cours" },
+        { status: 400 }
+      );
+    }
 
+    // 6. Générer les identifiants uniques
+    const referenceId = generateReferenceId("withdraw");
+    const idempotencyKey = generateIdempotencyKey();
+
+    console.log("[WITHDRAW_API] Création retrait:", { userId, amount, referenceId });
+
+    // 7. Vérifier la déduplication
+    const exists = await transactionExists(userId, referenceId);
+    if (exists) {
+      return NextResponse.json(
+        { error: "Transaction déjà existante" },
+        { status: 409 }
+      );
+    }
+
+    // 8. Verrouiller le montant et créer le retrait en pending
+    const atomicResult = await atomicWithdrawal({
+      userId,
+      amount,
+      moncashNumber: cleanNumber,
+      referenceId,
+      idempotencyKey
+    });
+
+    if (!atomicResult.success) {
+      return NextResponse.json(
+        { error: atomicResult.error || "Erreur lors de la création du retrait" },
+        { status: 400 }
+      );
+    }
+
+    // 9. Créer le payout MonCash
+    const moncashResponse = await createMonCashPayout(
       {
-        success:
-          false,
-
-        withdrawalId:
-          result.withdrawalId,
-
-        status:
-          result.status,
-
-        error:
-          result.error ??
-          "Impossible de créer le retrait.",
+        amount,
+        moncashNumber: cleanNumber,
+        referenceId
       },
-
-      {
-        status:
-          400,
-      },
-
+      idempotencyKey
     );
 
+    // 10. Mettre à jour le retrait avec les infos MonCash
+    const withdrawalRef = adminDB.ref(`withdrawals/${userId}/${referenceId}`);
+    await withdrawalRef.update({
+      moncashReference: moncashResponse.payout.reference,
+      fee: moncashResponse.payout.fee_htg,
+      netAmount: moncashResponse.payout.net_htg,
+      recipientAccountMasked: moncashResponse.payout.recipient_account_masked,
+      status: "queued"
+    });
 
-  } catch (
-    error
-  ) {
+    console.log("[WITHDRAW_API] Retrait créé:", {
+      referenceId,
+      moncashReference: moncashResponse.payout.reference,
+      status: moncashResponse.payout.status
+    });
 
-    /*
-    ------------------------------------------------
-    ERREUR SERVEUR
-    ------------------------------------------------
-    */
+    // 11. Retourner le résultat
+    return NextResponse.json({
+      success: true,
+      withdrawalId: referenceId,
+      referenceId: moncashResponse.payout.reference,
+      status: moncashResponse.payout.status,
+      amount: moncashResponse.payout.amount_htg,
+      fee: moncashResponse.payout.fee_htg,
+      recipientAccountMasked: moncashResponse.payout.recipient_account_masked
+    });
 
-    console.error(
-      "[WITHDRAWAL_CREATE_ERROR]",
-      {
-        uid:
-          user.uid,
-
-        error,
-      },
-    );
-
+  } catch (error) {
+    console.error("[WITHDRAW_API] Erreur:", error);
 
     return NextResponse.json(
-
       {
-        success:
-          false,
-
-        error:
-          "Une erreur interne est survenue lors de la création du retrait.",
+        error: error instanceof Error ? error.message : "Erreur lors de la création du retrait",
+        success: false
       },
-
-      {
-        status:
-          500,
-      },
-
+      { status: 500 }
     );
   }
-}
-
-
-/*
-====================================================
-MÉTHODE GET
-====================================================
-
-Cette route ne crée pas de retrait.
-
-Elle retourne simplement une information
-indiquant que l'endpoint existe.
-
-Le frontend ne doit pas utiliser GET
-pour effectuer un retrait.
-
-====================================================
-*/
-
-
-export async function GET() {
-
-  return NextResponse.json(
-
-    {
-      success:
-        true,
-
-      service:
-        "TiTaTo Withdrawals",
-
-      message:
-        "Utilisez POST /api/withdrawals pour créer une demande de retrait.",
-    },
-
-    {
-      status:
-        200,
-    },
-
-  );
 }

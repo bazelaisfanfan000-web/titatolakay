@@ -9,8 +9,8 @@ import {
 } from "@/lib/firebaseAdmin";
 
 import {
-  sendNotification,
-} from "@/lib/notifications";
+  sendPushNotification,
+} from "@/lib/broadcastNotification";
 
 import {
   addMonthlyPoints,
@@ -527,17 +527,12 @@ export async function POST(
 
       try {
 
-        await sendNotification(
+        await sendPushNotification(
           uid,
+          "🏆 Partie gagnée !",
+          "Félicitations ! Tu as remporté la partie.",
           {
-            title:
-              "🏆 Partie gagnée !",
-
-            message:
-              "Félicitations ! Tu as remporté la partie.",
-
-            type:
-              "win",
+            type: "win",
           }
         );
 
@@ -574,17 +569,12 @@ export async function POST(
 
           try {
 
-            await sendNotification(
+            await sendPushNotification(
               playerUid,
+              "😢 Partie perdue",
+              "La partie est terminée. Ton adversaire a gagné...",
               {
-                title:
-                  "😢 Partie perdue",
-
-                message:
-                  "La partie est terminée. Ton adversaire a gagné.",
-
-                type:
-                  "lose",
+                type: "lose",
               }
             );
 
@@ -627,17 +617,12 @@ export async function POST(
 
         try {
 
-          await sendNotification(
+          await sendPushNotification(
             playerUid,
+            "🤝 Match nul",
+            "La partie est terminée sur un match nul.",
             {
-              title:
-                "🤝 Match nul",
-
-              message:
-                "La partie est terminée sur un match nul.",
-
-              type:
-                "draw",
+              type: "draw",
             }
           );
 

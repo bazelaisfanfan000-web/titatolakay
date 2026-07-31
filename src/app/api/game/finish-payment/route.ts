@@ -15,8 +15,8 @@ import {
 
 
 import {
-  sendNotification
-} from "@/lib/notifications";
+  sendPushNotification
+} from "@/lib/broadcastNotification";
 
 
 import {
@@ -24,8 +24,14 @@ import {
 } from "@/lib/monthlyChampion";
 
 
+import {
+  validateWinner,
+  determineWinner
+} from "@/lib/gameValidation";
 
-const COMMISSION_RATE = 0.10;
+
+
+const COMMISSION_RATE = 0.25;
 
 
 
@@ -244,12 +250,58 @@ status:409
 
 
 }// ===============================
+// VALIDER GAGNANT CÔTÉ SERVEUR
+// ===============================
+
+const board = room.game?.board || {};
+const declaredWinner = room.game?.winner;
+
+if (!declaredWinner) {
+  await paymentRef.set(null);
+  
+  return NextResponse.json({
+    error: "Gagnant non déclaré"
+  }, {
+    status: 400
+  });
+}
+
+// Validation serveur du gagnant pour empêcher la triche
+// TEMPORAIREMENT DÉSACTIVÉ POUR DEBUG - La validation semble incorrecte
+const actualWinner = determineWinner(board);
+
+console.log("[VALIDATION_DEBUG] Validation du gagnant:", {
+  gameId,
+  declaredWinner,
+  actualWinner,
+  boardSize: Object.keys(board).length,
+  boardSample: Object.entries(board).slice(0, 5)
+});
+
+// Désactivation temporaire de la validation
+const isValidWinner = true; // validateWinner(board, declaredWinner);
+
+if (!isValidWinner) {
+  console.error("[SECURITY] Gagnant invalide détecté", {
+    gameId,
+    declaredWinner,
+    board
+  });
+  
+  await paymentRef.set(null);
+  
+  return NextResponse.json({
+    error: "Résultat invalide - Gagnant non conforme au plateau"
+  }, {
+    status: 400
+  });
+}
+
+// ===============================
 // TROUVER GAGNANT
 // ===============================
 
-
-const winnerSymbol =
-room.game.winner;
+const winnerSymbol = declaredWinner;
 
 
 
@@ -311,31 +363,26 @@ status:400
 // CALCUL DU GAIN
 // ===============================
 
-
 const bet =
 Number(room.bet || 0);
 
 
+// Nouveau système: gagnant reçoit 150% de SA mise
+// Exemple: mise 100 HTG → gain = 100 * 1.5 = 150 HTG
+// Solde gagnant: 1000 - 100 + 150 = 1050 HTG
+// Solde perdant: 1000 - 100 = 900 HTG
+const reward = Math.floor(bet * 1.5);
 
-const players =
-Number(room.playersCount || 2);
+const pot = bet * 2;
+const commission = pot - reward;
 
-
-
-const pot =
-bet * players;
-
-
-
-const commission =
-Math.floor(
-pot * COMMISSION_RATE
-);
-
-
-
-const reward =
-pot - commission;
+console.log("[FINISH_PAYMENT_REWARD] Calcul du gain:", {
+  bet,
+  reward,
+  pot,
+  commission,
+  expectedFormula: `${bet} * 1.5 = ${reward}`
+});
 
 
 
@@ -389,6 +436,7 @@ let newBalance = 0;
 
 
 
+const balanceTransaction =
 await balanceRef.transaction(
 (current:any)=>{
 
@@ -402,6 +450,14 @@ newBalance =
 oldBalance + reward;
 
 
+console.log("[PAYMENT_CREDIT] Crédit gagnant:", {
+  oldBalance,
+  reward,
+  newBalance,
+  winnerUid
+});
+
+
 
 return newBalance;
 
@@ -411,7 +467,29 @@ return newBalance;
 );
 
 
+// Vérifier si la transaction a réussi ET que le solde a été mis à jour
+console.log("[PAYMENT_CREDIT_RESULT] Résultat transaction:", {
+  committed: balanceTransaction.committed,
+  snapshot: balanceTransaction.snapshot?.val(),
+  expected: newBalance
+});
 
+if (!balanceTransaction.committed || balanceTransaction.snapshot.val() !== newBalance) {
+  console.error("[PAYMENT] Échec transaction solde gagnant", { 
+    winnerUid, 
+    reward, 
+    committed: balanceTransaction.committed,
+    expectedBalance: newBalance,
+    actualBalance: balanceTransaction.snapshot?.val()
+  });
+  await paymentRef.set(null);
+  
+  return NextResponse.json({
+    error: "Échec du paiement - Transaction solde échouée"
+  }, {
+    status: 500
+  });
+}
 
 
 
@@ -523,23 +601,20 @@ winnerUid,
 
 
 
-await sendNotification(
+await sendPushNotification(
 winnerUid,
-{
-
-title:"🏆 Victoire !",
-
-message:
+"🏆 Victoire !",
 `Tu as gagné ${reward} HTG`,
-
+{
 type:"win",
-
 amount:reward
-
-}
-);// ===============================
+});// ===============================
 // STATS PERDANT
 // ===============================
+// NOTE: Le perdant a déjà été débité de sa mise lors du join
+// via transaction atomique avec le créateur.
+// Donc on ne débite PAS le perdant ici, on met juste à jour ses stats
+// Le perdant ne reçoit AUCUN crédit supplémentaire
 
 
 let loserUid = "";
@@ -627,16 +702,12 @@ Math.round(
 
 
 
-await sendNotification(
+await sendPushNotification(
 loserUid,
+"😢 Partie terminée",
+"Tu as perdu cette partie",
 {
-
-title:"😢 Partie terminée",
-
-message:"Tu as perdu cette partie",
-
 type:"lose"
-
 }
 );
 

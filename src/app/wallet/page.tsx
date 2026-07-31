@@ -511,11 +511,11 @@ export default function WalletPage() {
 
 
       if (
-        amount > 100000
+        amount > 10000
       ) {
 
         setDepositMessage(
-          "Le montant maximum de dépôt est de 100 000 HTG."
+          "Le montant maximum de dépôt est de 10 000 HTG."
         );
 
         setDepositMessageType(
@@ -906,6 +906,23 @@ export default function WalletPage() {
       }
 
 
+      if (
+        amount > 10000
+      ) {
+
+        setWithdrawMessage(
+          "Le montant maximum de retrait est de 10 000 HTG."
+        );
+
+        setWithdrawMessageType(
+          "error"
+        );
+
+        return;
+
+      }
+
+
       /*
       ==============================================
       VÉRIFICATION UX DU SOLDE
@@ -1046,7 +1063,7 @@ export default function WalletPage() {
 
         const response =
           await fetch(
-            "/api/webhooks/moncash/withdrawal/create",
+            "/api/wallet/withdraw",
             {
               method:
                 "POST",
@@ -1063,7 +1080,6 @@ export default function WalletPage() {
               body:
                 JSON.stringify(
                   {
-                    uid: currentUser.uid,
                     amount,
                     moncashNumber: localPhone,
                   }
@@ -1465,7 +1481,7 @@ export default function WalletPage() {
 
             <button
               type="button"
-              onClick={openDeposit}
+              onClick={() => setDepositOpen(true)}
               className="group relative overflow-hidden rounded-xl border border-blue-400/30 bg-blue-600/15 px-3 py-3 text-left shadow-[0_4px_0_rgba(20,80,200,0.35),0_8px_20px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-200 hover:border-blue-400/50 hover:bg-blue-600/20 active:translate-y-[2px] active:shadow-[0_2px_0_rgba(20,80,200,0.35),0_4px_12px_rgba(0,0,0,0.35)]"
             >
 
@@ -1502,7 +1518,7 @@ export default function WalletPage() {
 
             <button
               type="button"
-              onClick={openWithdraw}
+              onClick={() => setWithdrawOpen(true)}
               disabled={balanceLoading}
               className="group relative overflow-hidden rounded-xl border border-blue-400/20 bg-white/[0.035] px-3 py-3 text-left shadow-[0_4px_0_rgba(20,60,140,0.25),0_8px_20px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-200 hover:border-blue-400/40 hover:bg-blue-600/10 active:translate-y-[2px] active:shadow-[0_2px_0_rgba(20,60,140,0.25),0_4px_12px_rgba(0,0,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -1515,15 +1531,15 @@ export default function WalletPage() {
                   💸
                 </div>
 
-                <div>
+                <div className="flex flex-col">
 
-                  <p className="text-[11px] font-black">
+                  <div className="text-[11px] font-black text-white">
                     Retirer
-                  </p>
+                  </div>
 
-                  <p className="mt-0.5 text-[8px] leading-3 text-white/35">
+                  <div className="text-[8px] text-white/50">
                     Retirer de l'argent
-                  </p>
+                  </div>
 
                 </div>
 
@@ -2084,11 +2100,9 @@ export default function WalletPage() {
 
                 </button>
 
-
                 <p className="mt-3 text-center text-[8px] leading-4 text-white/20">
 
                   Votre demande est vérifiée côté serveur.
-                  <br />
                   Le transfert est traité automatiquement par MonCashConnect.
 
                 </p>

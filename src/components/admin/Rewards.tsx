@@ -453,11 +453,6 @@ p-4
 >
 
 
-<option value="bonus">
-🎁 Bonus
-</option>
-
-
 <option value="cashback">
 💰 Cashback
 </option>

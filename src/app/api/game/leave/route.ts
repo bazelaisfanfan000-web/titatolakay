@@ -201,89 +201,12 @@ status:400
 
 
 // ===============================
-// REMBOURSEMENT
+// SUPPRIMER ROOM (SANS REMBOURSEMENT)
 // ===============================
-
-
-const bet =
-Number(room.bet || 0);
-
-
-
-
-if(bet > 0){
-
-
-const userRef =
-adminDB.ref(
-`users/${uid}/balance`
-);
-
-
-
-
-const balanceSnap =
-await userRef.get();
-
-
-
-
-const oldBalance =
-Number(
-balanceSnap.val() || 0
-);
-
-
-
-
-const newBalance =
-oldBalance + bet;
-
-
-
-
-await userRef.set(
-newBalance
-);
-
-
-
-
-
-
-await adminDB
-.ref(
-`transactions/${uid}`
-)
-.push({
-
-type:"room_refund",
-
-amount:bet,
-
-oldBalance,
-
-newBalance,
-
-roomId,
-
-createdAt:Date.now()
-
-});
-
-
-
-}
-
-
-
-
-
-
-
-// ===============================
-// SUPPRIMER ROOM
-// ===============================
+// NOTE: Avec le nouveau système, aucun débit lors de la création
+// Le débit se fait seulement quand le 2e joueur rejoint
+// Donc si le créateur quitte avant que quelqu'un rejoigne,
+// il n'a pas été débité, donc pas besoin de remboursement
 
 
 await roomRef.remove();
@@ -298,7 +221,7 @@ return NextResponse.json({
 success:true,
 
 message:
-"Partie supprimée et mise remboursée"
+"Partie supprimée"
 
 });
 

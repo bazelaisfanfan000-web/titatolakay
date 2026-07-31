@@ -26,7 +26,6 @@ import {
   database,
 } from "@/lib/firebase";
 
-import BackButton from "@/components/BackButton";
 
 
 /*
@@ -490,22 +489,6 @@ export default function RoomPage() {
           pb-8
         "
       >
-
-
-        {/* ========================================
-            BOUTON RETOUR
-            DESCENDU LÉGÈREMENT
-        ======================================== */}
-
-        <div
-          className="
-            pt-10
-          "
-        >
-
-          <BackButton />
-
-        </div>
 
 
         {/* ========================================

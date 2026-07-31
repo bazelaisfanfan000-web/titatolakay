@@ -1,593 +1,359 @@
 /**
- * Système Wallet HTG sécurisé
- * Utilise users/${uid}/balance et users/${uid}/reservedBalance
- *
- * MODIFIÉ POUR UNIFIER SUR reservedBalance
+ * Système Wallet Atomique - PlayToWin
+ * Gestion sécurisée et atomique des soldes avec Firebase Realtime Database
  */
 
-import {
-  adminDB
-} from "./firebaseAdmin";
+import { adminDB } from "./firebaseAdmin";
+import type { Wallet, BalanceResult } from "@/types/wallet";
 
+/**
+ * Crée un wallet pour un utilisateur (si inexistant)
+ * Transaction atomique
+ */
+export async function createWallet(uid: string): Promise<Wallet> {
+  const userRef = adminDB.ref(`users/${uid}`);
 
-export interface Wallet {
+  const result = await userRef.transaction((current: any) => {
+    if (current) {
+      // Le wallet existe déjà, le retourner inchangé
+      return current;
+    }
 
-  balance:number;
+    // Créer un nouveau wallet
+    return {
+      balance: 0,
+      lockedBalance: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+  });
 
-  reservedBalance:number;
+  if (!result.committed) {
+    throw new Error("Échec de la création du wallet");
+  }
 
-  createdAt:number;
-
-  updatedAt:number;
-
-}
-
-
-
-export interface Transaction {
-
-  id:string;
-
-  uid:string;
-
-  type:
-  | "deposit"
-  | "withdrawal"
-  | "bet"
-  | "reward"
-  | "refund";
-
-  amount:number;
-
-  status:
-  | "pending"
-  | "completed"
-  | "failed";
-
-  description?:string;
-
-  metadata?:{
-
-    gameId?:string;
-
-    roomId?:string;
-
-    reference?:string;
-
+  return {
+    balance: Number(result.snapshot.val()?.balance || 0),
+    lockedBalance: Number(result.snapshot.val()?.lockedBalance || 0),
+    createdAt: result.snapshot.val()?.createdAt || Date.now(),
+    updatedAt: result.snapshot.val()?.updatedAt || Date.now()
   };
-
-  createdAt:number;
-
-  completedAt?:number;
-
 }
 
-
-
-
-
 /**
- * Créer un wallet seulement si absent
+ * Lit le wallet d'un utilisateur
  */
-export async function createWallet(
-uid:string
-):Promise<Wallet>{
+export async function getWallet(uid: string): Promise<Wallet | null> {
+  const userRef = adminDB.ref(`users/${uid}`);
+  const snapshot = await userRef.once("value");
 
+  if (!snapshot.exists()) {
+    return null;
+  }
 
-const userRef =
-adminDB.ref(`users/${uid}`);
-
-
-
-const snap =
-await userRef.once("value");
-
-
-
-if(snap.exists()){
-
-
-const data =
-snap.val();
-
-
-return {
-
-balance:Number(data.balance || 0),
-
-reservedBalance:Number(data.reservedBalance || 0),
-
-createdAt:data.createdAt || Date.now(),
-
-updatedAt:data.updatedAt || Date.now()
-
-};
-
-
+  const data = snapshot.val();
+  return {
+    balance: Number(data.balance || 0),
+    lockedBalance: Number(data.lockedBalance || 0),
+    createdAt: data.createdAt || Date.now(),
+    updatedAt: data.updatedAt || Date.now()
+  };
 }
-
-
-
-
-
-const wallet:Wallet={
-
-
-balance:1000,
-
-reservedBalance:0,
-
-createdAt:Date.now(),
-
-updatedAt:Date.now()
-
-
-};
-
-
-
-await userRef.set(wallet);
-
-
-
-return wallet;
-
-
-}
-
-
-
-
-
-
 
 /**
- * Lire le wallet
+ * Récupère le solde disponible (balance - lockedBalance)
  */
-export async function getWallet(
-uid:string
-):Promise<Wallet|null>{
-
-
-
-const ref =
-adminDB.ref(`users/${uid}`);
-
-
-
-const snap =
-await ref.once("value");
-
-
-
-if(!snap.exists()){
-
-return null;
-
+export async function getAvailableBalance(uid: string): Promise<number> {
+  const wallet = await getWallet(uid);
+  if (!wallet) return 0;
+  return Math.max(0, wallet.balance - wallet.lockedBalance);
 }
-
-
-
-const data =
-snap.val();
-
-
-
-return {
-
-
-balance:Number(data.balance || 0),
-
-
-reservedBalance:Number(data.reservedBalance || 0),
-
-
-createdAt:data.createdAt || Date.now(),
-
-
-updatedAt:data.updatedAt || Date.now()
-
-
-};
-
-
-
-}
-
-
-
-
-
-
-
 
 /**
- * Solde disponible
+ * Vérifie si l'utilisateur a un solde suffisant
  */
-export async function getAvailableBalance(
-uid:string
-):Promise<number>{
-
-
-const wallet =
-await getWallet(uid);
-
-
-
-if(!wallet){
-
-return 0;
-
+export async function hasAvailableBalance(uid: string, amount: number): Promise<boolean> {
+  const available = await getAvailableBalance(uid);
+  return available >= amount;
 }
-
-
-
-return wallet.balance - wallet.reservedBalance;
-
-
-}
-
-
-
-
-
-
-
-
 
 /**
- * Vérifier solde
- */
-export async function hasAvailableBalance(
-uid:string,
-amount:number
-){
-
-
-const balance =
-await getAvailableBalance(uid);
-
-
-
-return balance >= amount;
-
-
-}
-
-
-
-
-
-
-
-
-
-/**
- * Bloquer une mise
- */
-export async function lockBalance(
-uid:string,
-amount:number,
-gameId:string
-){
-
-
-const ref =
-adminDB.ref(`users/${uid}`);
-
-
-
-const result =
-await ref.transaction(
-(current:any)=>{
-
-
-if(!current){
-
-return null;
-
-}
-
-
-
-const available =
-Number(current.balance || 0)
--
-Number(current.reservedBalance || 0);
-
-
-
-if(available < amount){
-
-return;
-
-}
-
-
-
-return {
-
-
-...current,
-
-
-reservedBalance:
-Number(current.reservedBalance || 0)
-+
-amount,
-
-
-updatedAt:Date.now()
-
-
-};
-
-
-
-}
-
-);
-
-
-
-return result.committed;
-
-
-}
-
-
-
-
-
-
-
-
-
-/**
- * Ajouter argent
+ * Crédite le wallet de manière atomique
+ * Utilisé pour les dépôts, gains de jeu, remboursements
  */
 export async function creditWallet(
-uid:string,
-amount:number,
-type:
-"deposit"
-|"reward"
-|"refund",
-description?:string,
-metadata?:any
-){
+  uid: string,
+  amount: number,
+  referenceId: string,
+  description?: string
+): Promise<BalanceResult> {
+  if (amount <= 0) {
+    return { success: false, error: "Le montant doit être positif" };
+  }
 
+  const userRef = adminDB.ref(`users/${uid}`);
 
+  const result = await userRef.transaction((current: any) => {
+    if (!current) {
+      // Créer le wallet s'il n'existe pas
+      return {
+        balance: amount,
+        lockedBalance: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+    }
 
-const ref =
-adminDB.ref(`users/${uid}`);
+    return {
+      ...current,
+      balance: Number(current.balance || 0) + amount,
+      updatedAt: Date.now()
+    };
+  });
 
+  if (!result.committed) {
+    return { success: false, error: "Transaction Firebase échouée" };
+  }
 
+  const newBalance = result.snapshot.val()?.balance || 0;
+  console.log("[WALLET] Crédit réussi:", { uid, amount, newBalance, referenceId });
 
-const result =
-await ref.transaction(
-(current:any)=>{
-
-
-if(!current){
-
-return {
-
-balance:amount,
-
-locked:0,
-
-createdAt:Date.now(),
-
-updatedAt:Date.now()
-
-};
-
-
+  return { success: true, balance: newBalance };
 }
-
-
-
-return {
-
-
-...current,
-
-
-balance:
-Number(current.balance || 0)
-+
-amount,
-
-
-updatedAt:Date.now()
-
-
-};
-
-
-
-}
-
-);
-
-
-
-if(!result.committed){
-
-return false;
-
-}
-
-
-
-
-const transactionRef =
-adminDB
-.ref(`transactions/${uid}`)
-.push();
-
-
-
-await transactionRef.set({
-
-
-id:transactionRef.key,
-
-uid,
-
-type,
-
-amount,
-
-status:"completed",
-
-description,
-
-metadata,
-
-createdAt:Date.now(),
-
-completedAt:Date.now()
-
-
-});
-
-
-
-return true;
-
-
-}
-
-
-
-
-
-
-
-
 
 /**
- * Retirer argent
+ * Débite le wallet de manière atomique
+ * Utilisé pour les retraits, mises de jeu
  */
 export async function debitWallet(
-uid:string,
-amount:number,
-description?:string,
-metadata?:any
-){
+  uid: string,
+  amount: number,
+  referenceId: string,
+  description?: string
+): Promise<BalanceResult> {
+  if (amount <= 0) {
+    return { success: false, error: "Le montant doit être positif" };
+  }
 
+  const userRef = adminDB.ref(`users/${uid}`);
 
-const ref =
-adminDB.ref(`users/${uid}`);
+  const result = await userRef.transaction((current: any) => {
+    if (!current) {
+      return; // Annuler si le wallet n'existe pas
+    }
 
+    const balance = Number(current.balance || 0);
+    const lockedBalance = Number(current.lockedBalance || 0);
+    const available = balance - lockedBalance;
 
+    if (available < amount) {
+      return; // Annuler si solde insuffisant
+    }
 
-const result =
-await ref.transaction(
-(current:any)=>{
+    return {
+      ...current,
+      balance: balance - amount,
+      updatedAt: Date.now()
+    };
+  });
 
+  if (!result.committed) {
+    return { success: false, error: "Solde insuffisant ou transaction échouée" };
+  }
 
-if(!current){
+  const newBalance = result.snapshot.val()?.balance || 0;
+  console.log("[WALLET] Débit réussi:", { uid, amount, newBalance, referenceId });
 
-return;
-
+  return { success: true, balance: newBalance };
 }
-
-
-
-const balance =
-Number(current.balance || 0);
-
-
-
-const reservedBalance =
-Number(current.reservedBalance || 0);
-
-
-
-if(balance - reservedBalance < amount){
-
-return;
-
-}
-
-
-
-return {
-
-
-...current,
-
-
-balance:
-balance - amount,
-
-
-updatedAt:Date.now()
-
-
-};
-
-
-
-}
-
-);
-
-
-
-return result.committed;
-
-
-}
-
-
-
-
-
-
-
-
 
 /**
- * Historique transactions
+ * Verrouille un montant pour un retrait en attente
+ * Le montant est déplacé de balance vers lockedBalance
  */
-export async function getTransactions(
-uid:string,
-limit:number=50
-){
+export async function lockBalance(
+  uid: string,
+  amount: number,
+  referenceId: string
+): Promise<BalanceResult> {
+  if (amount <= 0) {
+    return { success: false, error: "Le montant doit être positif" };
+  }
 
+  const userRef = adminDB.ref(`users/${uid}`);
 
-const ref =
-adminDB
-.ref(`transactions/${uid}`)
-.orderByChild("createdAt")
-.limitToLast(limit);
+  const result = await userRef.transaction((current: any) => {
+    if (!current) {
+      return; // Annuler si le wallet n'existe pas
+    }
 
+    const balance = Number(current.balance || 0);
+    const lockedBalance = Number(current.lockedBalance || 0);
+    const available = balance - lockedBalance;
 
+    if (available < amount) {
+      return; // Annuler si solde insuffisant
+    }
 
-const snap =
-await ref.once("value");
+    return {
+      ...current,
+      lockedBalance: lockedBalance + amount,
+      updatedAt: Date.now()
+    };
+  });
 
+  if (!result.committed) {
+    return { success: false, error: "Solde insuffisant ou transaction échouée" };
+  }
 
+  const data = result.snapshot.val();
+  console.log("[WALLET] Verrouillage réussi:", { uid, amount, referenceId });
 
-const list:any[]=[];
+  return {
+    success: true,
+    balance: Number(data?.balance || 0),
+    lockedBalance: Number(data?.lockedBalance || 0)
+  };
+}
 
+/**
+ * Déverrouille un montant (annulation de retrait)
+ * Le montant est remis de lockedBalance vers balance
+ */
+export async function unlockBalance(
+  uid: string,
+  amount: number,
+  referenceId: string
+): Promise<BalanceResult> {
+  if (amount <= 0) {
+    return { success: false, error: "Le montant doit être positif" };
+  }
 
+  const userRef = adminDB.ref(`users/${uid}`);
 
-snap.forEach((child: any)=>{
+  const result = await userRef.transaction((current: any) => {
+    if (!current) {
+      return; // Annuler si le wallet n'existe pas
+    }
 
+    const lockedBalance = Number(current.lockedBalance || 0);
 
-list.push(child.val());
+    if (lockedBalance < amount) {
+      return; // Annuler si montant verrouillé insuffisant
+    }
 
+    return {
+      ...current,
+      lockedBalance: lockedBalance - amount,
+      updatedAt: Date.now()
+    };
+  });
 
-});
+  if (!result.committed) {
+    return { success: false, error: "Transaction échouée" };
+  }
 
+  const data = result.snapshot.val();
+  console.log("[WALLET] Déverrouillage réussi:", { uid, amount, referenceId });
 
+  return {
+    success: true,
+    balance: Number(data?.balance || 0),
+    lockedBalance: Number(data?.lockedBalance || 0)
+  };
+}
 
-return list.reverse();
+/**
+ * Confirme un retrait en débitant le montant verrouillé
+ * Débite balance et déverrouille lockedBalance
+ */
+export async function confirmWithdrawal(
+  uid: string,
+  amount: number,
+  referenceId: string
+): Promise<BalanceResult> {
+  if (amount <= 0) {
+    return { success: false, error: "Le montant doit être positif" };
+  }
 
+  const userRef = adminDB.ref(`users/${uid}`);
 
+  const result = await userRef.transaction((current: any) => {
+    if (!current) {
+      return; // Annuler si le wallet n'existe pas
+    }
+
+    const balance = Number(current.balance || 0);
+    const lockedBalance = Number(current.lockedBalance || 0);
+
+    if (lockedBalance < amount) {
+      return; // Annuler si montant verrouillé insuffisant
+    }
+
+    if (balance < amount) {
+      return; // Annuler si balance insuffisante
+    }
+
+    return {
+      ...current,
+      balance: balance - amount,
+      lockedBalance: lockedBalance - amount,
+      updatedAt: Date.now()
+    };
+  });
+
+  if (!result.committed) {
+    return { success: false, error: "Transaction échouée" };
+  }
+
+  const data = result.snapshot.val();
+  console.log("[WALLET] Retrait confirmé:", { uid, amount, referenceId });
+
+  return {
+    success: true,
+    balance: Number(data?.balance || 0),
+    lockedBalance: Number(data?.lockedBalance || 0)
+  };
+}
+
+/**
+ * Ajustement administratif du solde (avec audit)
+ * À utiliser uniquement par les administrateurs
+ */
+export async function adminAdjustBalance(
+  uid: string,
+  amount: number,
+  reason: string,
+  adminId: string
+): Promise<BalanceResult> {
+  const userRef = adminDB.ref(`users/${uid}`);
+
+  const result = await userRef.transaction((current: any) => {
+    if (!current) {
+      return {
+        balance: Math.max(0, amount),
+        lockedBalance: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+    }
+
+    const currentBalance = Number(current.balance || 0);
+    const newBalance = Math.max(0, currentBalance + amount);
+
+    return {
+      ...current,
+      balance: newBalance,
+      updatedAt: Date.now()
+    };
+  });
+
+  if (!result.committed) {
+    return { success: false, error: "Transaction échouée" };
+  }
+
+  const newBalance = result.snapshot.val()?.balance || 0;
+  console.log("[WALLET] Ajustement admin:", { uid, amount, reason, adminId, newBalance });
+
+  return { success: true, balance: newBalance };
 }

@@ -1,5 +1,6 @@
 /* =====================================================
    TITATO - FIREBASE CLOUD MESSAGING SERVICE WORKER
+   Compatible: iOS Safari, Android Chrome, Desktop Chrome/Edge
    ===================================================== */
 
 
@@ -16,6 +17,16 @@ importScripts(
 importScripts(
   "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"
 );
+
+
+/*
+=========================================================
+DÉTECTION PLATEFORME
+=========================================================
+*/
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isAndroid = /android/i.test(navigator.userAgent);
 
 
 /*
@@ -116,12 +127,14 @@ messaging.onBackgroundMessage(
 
     /*
     =====================================================
-    ROOM ID
+    GAME ID / ROOM ID
     =====================================================
     */
 
-    const roomId =
-      data.roomId || "";
+    const gameId =
+      data.gameId ||
+      data.roomId ||
+      "";
 
 
     /*
@@ -133,8 +146,8 @@ messaging.onBackgroundMessage(
     const link =
       data.link ||
       (
-        roomId
-          ? `/game/${roomId}`
+        gameId
+          ? `/join/${gameId}`
           : "/dashboard"
       );
 
@@ -159,7 +172,7 @@ messaging.onBackgroundMessage(
 
         link,
 
-        roomId,
+        gameId,
 
         type:
           data.type ||
@@ -224,11 +237,17 @@ self.addEventListener(
       event.notification.data || {};
 
 
+    const gameId =
+      data.gameId ||
+      data.roomId ||
+      "";
+
+
     const link =
       data.link ||
       (
-        data.roomId
-          ? `/game/${data.roomId}`
+        gameId
+          ? `/join/${gameId}`
           : "/dashboard"
       );
 

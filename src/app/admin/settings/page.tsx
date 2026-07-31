@@ -79,7 +79,7 @@ championReward:1000,
 
 adReward:50,
 
-minBet:10,
+minBet:25,
 
 gameActive:true
 

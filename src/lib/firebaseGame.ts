@@ -104,6 +104,60 @@ export async function playGameMove(
     );
 
 
+  /*
+  ================================================
+  MATCH NUL: EFFACER LE PLATEAU SEULEMENT
+  ================================================
+  */
+
+  if (draw) {
+
+    // Créer un nouveau plateau vide
+    const emptyBoard = Array.from(
+      {
+        length: 10,
+      },
+      () =>
+        Array(10).fill("")
+    );
+
+
+    await update(
+
+      gameRef,
+
+      {
+
+        board: emptyBoard,
+
+        turn: "X", // X commence toujours après un match nul
+
+        winner: null,
+
+        status: "playing", // Continuer la partie
+
+        turnStartedAt: Date.now(),
+
+        drawCount: (game.drawCount || 0) + 1, // Compter les matchs nuls
+
+      }
+
+    );
+
+
+    return {
+
+      success: true,
+
+      winner: null,
+
+      draw: true,
+
+    };
+
+  }
+
+
 
   const nextTurn =
     symbol === "X"

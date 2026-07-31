@@ -130,11 +130,22 @@ export default function CreateRoomPage() {
 
       if (
         !bet ||
-        Number(bet) <= 0
+        Number(bet) < 25
       ) {
 
         throw new Error(
-          "Entre une mise valide."
+          "La mise minimum est de 25 HTG."
+        );
+
+      }
+
+
+      if (
+        Number(bet) > 10000
+      ) {
+
+        throw new Error(
+          "La mise maximum est de 10 000 HTG."
         );
 
       }

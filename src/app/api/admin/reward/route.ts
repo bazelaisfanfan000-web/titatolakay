@@ -13,10 +13,18 @@ import {
 } from "@/lib/checkAdmin";
 
 import {
-  sendNotification
-} from "@/lib/notifications";
+  sendPushNotification
+} from "@/lib/broadcastNotification";
 
+import {
+  createLedgerEntry,
+  recalculateBalanceFromLedger
+} from "@/lib/financialLedger";
 
+import {
+  createAuditLog,
+  AuditActions
+} from "@/lib/auditLogger";
 
 
 export async function POST(
@@ -34,7 +42,8 @@ await request.json();
 const {
 adminUid,
 amount,
-message
+message,
+mfaCode
 }=body;
 
 
@@ -67,6 +76,18 @@ status:400
 
 
 
+// Vérifier MFA pour admin
+if (!mfaCode || mfaCode.length < 6) {
+  return NextResponse.json(
+    {
+      error: "Code MFA requis"
+    },
+    {
+      status: 400
+    }
+  );
+}
+
 // Vérifier que c'est un admin
 
 await checkAdmin(
@@ -98,6 +119,8 @@ const updates:any = {};
 
 
 const notificationPromises:any[] = [];
+const ledgerPromises:any[] = [];
+const auditPromises:any[] = [];
 
 
 
@@ -113,6 +136,8 @@ const oldBalance =
 Number(
 user.balance || 0
 );
+const newBalance = Math.floor(oldBalance + Number(amount));
+
 
 
 
@@ -125,23 +150,54 @@ updates[
 
 =
 
-Math.floor(
-oldBalance + Number(amount)
-);
+newBalance;
 
 
 
 
 notificationPromises.push(
-sendNotification(
+sendPushNotification(
 uid,
+"📢 Message Titato",
+message || "Bienvenue dans la nouvelle version",
 {
-title:"📢 Message Titato",
-message:message || "Bienvenue dans la nouvelle version",
 type:"system",
 amount:Number(amount)
 }
-)
+));
+
+// Créer entrée ledger pour ce reward
+const ledgerRef = adminDB.ref(`ledger/${uid}`).push();
+ledgerPromises.push(
+  ledgerRef.set({
+    id: ledgerRef.key,
+    uid,
+    type: "reward",
+    amount: Number(amount),
+    balanceBefore: oldBalance,
+    balanceAfter: newBalance,
+    reference: `admin_reward_${Date.now()}`,
+    status: "completed",
+    metadata: { adminUid, message },
+    createdAt: Date.now(),
+    completedAt: Date.now()
+  })
+);
+
+// Log d'audit admin
+auditPromises.push(
+  createAuditLog(
+    adminUid,
+    AuditActions.BALANCE_MODIFIED,
+    {
+      targetUid: uid,
+      amount: Number(amount),
+      oldBalance,
+      newBalance,
+      reason: "admin_reward"
+    },
+    "success"
+  )
 );
 
 
@@ -161,16 +217,11 @@ await adminDB
 updates
 );
 
-
-
-
 await Promise.all(notificationPromises);
-
-
-
+await Promise.all(ledgerPromises);
+await Promise.all(auditPromises);
 
 return NextResponse.json({
-
 success:true,
 
 

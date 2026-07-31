@@ -16,13 +16,25 @@ import {
 
 import {
   checkUserBalance,
-  deductBet,
 } from "@/lib/firebaseEconomyAdmin";
 
 
 import {
-  sendNotification,
-} from "@/lib/notifications";
+  sendPushNotification,
+} from "@/lib/broadcastNotification";
+
+
+import {
+  notifyNewGame,
+} from "@/lib/broadcastNotification";
+
+
+import {
+  rateLimitMiddleware,
+  RATE_LIMIT_CONFIGS
+} from "@/lib/rateLimit";
+
+
 
 
 /*
@@ -52,9 +64,35 @@ export async function POST(
 
     /*
     ================================================
-    0. VÉRIFIER FIREBASE ADMIN
+    0. RATE LIMITING
     ================================================
     */
+
+    const rateLimitResult = await rateLimitMiddleware(
+      request,
+      "gameCreate",
+      RATE_LIMIT_CONFIGS.gameCreate
+    );
+
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Trop de requêtes. Réessayez plus tard."
+        },
+        {
+          status: 429,
+        }
+      );
+    }
+
+    /*
+    ================================================
+    1. VÉRIFIER FIREBASE ADMIN
+    ================================================
+    */
+
+    const body = await request.json();
 
     if (!adminAuth || !adminDB) {
 
@@ -86,10 +124,6 @@ export async function POST(
     ================================================
     */
 
-    const body =
-      await request.json();
-
-
     const {
       name,
       bet,
@@ -111,22 +145,36 @@ export async function POST(
 
     if (
       !Number.isFinite(amount) ||
-      amount <= 0
+      amount < 25
     ) {
 
       return NextResponse.json(
-
         {
           success: false,
-
           error:
-            "Mise invalide",
+            "La mise minimum est de 25 HTG",
         },
-
         {
           status: 400,
         }
+      );
 
+    }
+
+
+    if (
+      amount > 10000
+    ) {
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "La mise maximum est de 10 000 HTG",
+        },
+        {
+          status: 400,
+        }
       );
 
     }
@@ -277,7 +325,7 @@ export async function POST(
           success: false,
 
           error:
-            `Solde insuffisant (${balance} HTG)`,
+            "Solde insuffisant",
         },
 
         {
@@ -291,15 +339,41 @@ export async function POST(
 
     /*
     ================================================
-    6. DÉDUIRE LA MISE
+    6. DÉDUIRE LA MISE DU CRÉATEUR
     ================================================
     */
 
-    await deductBet(
-      uid,
-      amount,
-      "create-room"
-    );
+    let creatorOldBalance = 0;
+    let creatorNewBalance = 0;
+
+    const creatorBalanceRef = adminDB.ref(`users/${uid}/balance`);
+    const creatorTransaction = await creatorBalanceRef.transaction((current: any) => {
+      creatorOldBalance = Number(current || 0);
+
+      if (creatorOldBalance < amount) {
+        console.log("[CREATE_DEBIT_CREATOR] Solde insuffisant:", creatorOldBalance, amount);
+        return current;
+      }
+
+      creatorNewBalance = creatorOldBalance - amount;
+      console.log("[CREATE_DEBIT_CREATOR] Débit créateur:", creatorOldBalance, "->", creatorNewBalance);
+      return creatorNewBalance;
+    });
+
+    console.log("[CREATE_DEBIT_CREATOR] Résultat transaction:", {
+      committed: creatorTransaction.committed,
+      snapshot: creatorTransaction.snapshot?.val(),
+      expected: creatorNewBalance
+    });
+
+    if (!creatorTransaction.committed) {
+      return NextResponse.json({
+        success: false,
+        error: "Échec du débit du créateur - transaction non committed"
+      }, {
+        status: 500
+      });
+    }
 
 
     /*
@@ -457,6 +531,17 @@ export async function POST(
       roomId
     );
 
+    // Créer transaction pour le créateur après avoir le roomId
+    await adminDB.ref(`transactions/${uid}`).push({
+      type: "bet",
+      reason: roomId,
+      amount: -amount,
+      oldBalance: creatorOldBalance,
+      newBalance: creatorNewBalance,
+      status: "completed",
+      createdAt: Date.now()
+    });
+
 
     /*
     ================================================
@@ -567,6 +652,22 @@ export async function POST(
     const notificationPromises:
       Promise<any>[] = [];
 
+    /*
+    ================================================
+    NOTIFICATION BROADCAST À TOUS LES UTILISATEURS
+    ================================================
+    */
+
+    // Envoyer une notification à tous les utilisateurs inscrits
+    notificationPromises.push(
+      notifyNewGame(roomId, amount, playerName)
+        .then(result => {
+          console.log("[BROADCAST] Notification envoyée:", result);
+        })
+        .catch(error => {
+          console.error("[BROADCAST] Erreur notification:", error);
+        })
+    );
 
     /*
     ================================================
@@ -593,8 +694,8 @@ export async function POST(
 
       const notificationMessage =
         friendId
-          ? `${playerName} t'invite à rejoindre une partie.`
-          : `${playerName} a créé une partie. Rejoins-la maintenant !`;
+          ? `${playerName} t'invite à rejoindre une partie de ${amount} HTG.`
+          : `${playerName} a créé une partie de ${amount} HTG. Rejoins-la maintenant !`;
 
 
       /*
@@ -605,18 +706,15 @@ export async function POST(
 
       notificationPromises.push(
 
-        sendNotification(
+        sendPushNotification(
 
           userId,
 
+          notificationTitle,
+
+          notificationMessage,
+
           {
-
-            title:
-              notificationTitle,
-
-            message:
-              notificationMessage,
-
             type:
               "game",
 
@@ -731,10 +829,12 @@ export async function POST(
                 type:
                   "game",
 
+                gameId: roomId,
+
                 roomId,
 
                 link:
-                  `/game/${roomId}`,
+                  `/join/${roomId}`,
 
               },
 
@@ -744,7 +844,7 @@ export async function POST(
                 fcmOptions: {
 
                   link:
-                    `/game/${roomId}`,
+                    `/join/${roomId}`,
 
                 },
 

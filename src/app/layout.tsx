@@ -8,6 +8,8 @@ import { LanguageProvider } from "@/context/LanguageContext";
 
 import Script from "next/script";
 
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+
 
 export const metadata: Metadata = {
 
@@ -19,6 +21,32 @@ export const metadata: Metadata = {
     icon: "/titato-logo.svg",
     apple: "/titato-logo.svg",
   },
+
+  manifest: "/manifest.json",
+
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Titato",
+  },
+
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+
+  themeColor: [
+    {
+      media: "(prefers-color-scheme: light)",
+      color: "#2563eb",
+    },
+    {
+      media: "(prefers-color-scheme: dark)",
+      color: "#020617",
+    },
+  ],
 
 };
 
@@ -47,6 +75,8 @@ return (
 
 
 <OnlineTracker />
+
+<ServiceWorkerRegistration />
 
 
 

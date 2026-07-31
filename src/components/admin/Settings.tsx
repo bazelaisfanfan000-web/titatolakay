@@ -31,9 +31,9 @@ useState<any>({
 
 commission:10,
 
-minBet:50,
+minBet:25,
 
-maxBet:1000,
+maxBet:10000,
 
 maintenance:false,
 

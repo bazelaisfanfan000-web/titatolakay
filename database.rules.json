@@ -1,0 +1,64 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": false,
+        "balance": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": false
+        },
+        "reservedBalance": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": false
+        }
+      }
+    },
+    "transactions": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": false
+      }
+    },
+    "deposits": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": false
+      }
+    },
+    "withdrawals": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": false
+      }
+    },
+    "ledger": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": false
+      }
+    },
+    "auditLogs": {
+      ".read": false,
+      ".write": false
+    },
+    "webhookIdempotency": {
+      ".read": false,
+      ".write": false
+    },
+    "withdrawalRateLimit": {
+      ".read": false,
+      ".write": false
+    },
+    "rooms": {
+      ".read": true,
+      ".write": false
+    },
+    "settings": {
+      ".read": true,
+      ".write": false
+    }
+  }
+}
