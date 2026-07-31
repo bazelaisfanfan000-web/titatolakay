@@ -557,11 +557,11 @@ function WalletContent() {
         !Number.isInteger(
           amount
         ) ||
-        amount < 25
+        amount < 10
       ) {
 
         setDepositMessage(
-          "Le montant minimum de dépôt est de 25 HTG."
+          "Le montant minimum de dépôt est de 10 HTG."
         );
 
         setDepositMessageType(

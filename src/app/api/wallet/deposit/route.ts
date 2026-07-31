@@ -12,7 +12,7 @@ import { transactionExists } from "@/lib/ledger";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MIN_DEPOSIT = 25;
+const MIN_DEPOSIT = 10;
 const MAX_DEPOSIT = 10000;
 
 export async function POST(request: Request) {
