@@ -138,38 +138,49 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: "Déjà traité" });
     }
 
-    // 4. Marquer l'événement comme traité (avant le traitement pour éviter les doublons)
-    await processedEventRef.set({
-      eventId,
-      eventType: event.event,
-      reference: event.reference,
-      timestamp,
-      processedAt: Date.now()
-    });
-
-    // 5. Traiter l'événement selon son type
+    // 4. Traiter l'événement selon son type
     const eventType = event.event as string;
-    switch (eventType) {
-      case "payment.completed":
-        await handlePaymentCompleted(event);
-        break;
+    let processingSuccess = false;
+    
+    try {
+      switch (eventType) {
+        case "payment.completed":
+          await handlePaymentCompleted(event);
+          processingSuccess = true;
+          break;
 
-      case "payment.failed":
-        await handlePaymentFailed(event);
-        break;
+        case "payment.failed":
+          await handlePaymentFailed(event);
+          processingSuccess = true;
+          break;
 
-      case "payout.completed":
-        await handlePayoutCompleted(event);
-        break;
+        case "payout.completed":
+          await handlePayoutCompleted(event);
+          processingSuccess = true;
+          break;
 
-      case "payout.failed":
-        await handlePayoutFailed(event);
-        break;
+        case "payout.failed":
+          await handlePayoutFailed(event);
+          processingSuccess = true;
+          break;
 
-      default:
-        console.warn("[WEBHOOK] Type d'événement inconnu:", eventType);
-        break;
+        default:
+          console.warn("[WEBHOOK] Type d'événement inconnu:", eventType);
+          break;
+      }
+    } finally {
+      // 5. Marquer l'événement comme traité APRÈS le traitement (évite race condition)
+      if (processingSuccess) {
+        await processedEventRef.set({
+          eventId,
+          eventType: event.event,
+          reference: event.reference,
+          timestamp,
+          processedAt: Date.now()
+        });
+      }
     }
+    
     return NextResponse.json({ success: true });
 
   } catch (error) {
@@ -233,30 +244,8 @@ async function handlePaymentCompleted(event: any) {
       }
     }
 
-    // Méthode 3: Si toujours non trouvé, parcourir tous les dépôts (dernier recours)
     if (!depositData) {
-      console.log("[WEBHOOK] Recherche exhaustive (dernier recours)");
-      const allDepositsSnapshot = await depositsRef.once("value");
-      
-      if (allDepositsSnapshot.exists()) {
-        allDepositsSnapshot.forEach((userSnapshot: any) => {
-          const userId = userSnapshot.key;
-          const userDeposits = userSnapshot.val();
-          
-          Object.entries(userDeposits).forEach(([depId, depData]: [string, any]) => {
-            if (!depositData && (depData.moncashReference === reference || depData.id === reference)) {
-              depositData = depData;
-              depositKey = depId;
-              depositUserId = userId;
-              console.log("[WEBHOOK] Dépôt trouvé via recherche exhaustive:", { depositKey, depositUserId });
-            }
-          });
-        });
-      }
-    }
-
-    if (!depositData) {
-      console.log("[WEBHOOK] Dépôt non trouvé après toutes les méthodes (normal en mode test):", reference);
+      console.log("[WEBHOOK] Dépôt non trouvé (normal en mode test):", reference);
       return;
     }
 
@@ -278,9 +267,9 @@ async function handlePaymentCompleted(event: any) {
       return;
     }
 
-    // Si le dépôt est déjà complété, ne rien faire
-    if (depositData.status === "completed") {
-      console.log("[WEBHOOK] Dépôt déjà complété:", reference);
+    // Vérifier que le dépôt est en pending (sécurité)
+    if (depositData.status !== "pending") {
+      console.log("[WEBHOOK] Dépôt n'est pas en pending (déjà traité):", { reference, status: depositData.status });
       return;
     }
 
@@ -296,23 +285,29 @@ async function handlePaymentCompleted(event: any) {
 
     console.log("[WEBHOOK] Tentative de crédit wallet:", { depositUserId, amount, reference });
 
-    // Créditer le wallet
-    const creditResult = await creditWallet(
-      depositUserId,
-      amount,
-      reference,
-      "Dépôt MonCash complété"
-    );
+    // Transaction atomique: crédit wallet + update dépôt
+    const depositRef = adminDB.ref(`deposits/${depositUserId}/${depositData.id}`);
+    
+    const result = await adminDB.ref(`users/${depositUserId}`).transaction((current: any) => {
+      if (!current) {
+        return; // Annuler si wallet n'existe pas
+      }
+      return {
+        ...current,
+        balance: Number(current.balance || 0) + amount,
+        updatedAt: Date.now()
+      };
+    });
 
-    console.log("[WEBHOOK] Résultat crédit wallet:", creditResult);
-
-    if (!creditResult.success) {
-      console.error("[WEBHOOK] Erreur crédit wallet:", creditResult.error);
+    if (!result.committed) {
+      console.error("[WEBHOOK] Transaction atomique échouée");
       return;
     }
 
-    // Mettre à jour le dépôt
-    const depositRef = adminDB.ref(`deposits/${depositUserId}/${depositData.id}`);
+    const newBalance = result.snapshot.val()?.balance || 0;
+    console.log("[WEBHOOK] Crédit atomique réussi:", { depositUserId, amount, newBalance });
+
+    // Mettre à jour le dépôt (après transaction réussie)
     await depositRef.update({
       status: "completed",
       moncashTransactionId: reference,
@@ -324,13 +319,13 @@ async function handlePaymentCompleted(event: any) {
     await createDepositLedgerEntry(
       depositUserId,
       amount,
-      creditResult.balance! - amount,
-      creditResult.balance!,
+      newBalance - amount,
+      newBalance,
       reference,
       depositData.id
     );
 
-    console.log("[WEBHOOK] Payment complété avec succès:", { reference, userId: depositUserId, newBalance: creditResult.balance });
+    console.log("[WEBHOOK] Payment complété avec succès:", { reference, userId: depositUserId, newBalance });
   } catch (error) {
     console.error("[WEBHOOK] Erreur dans handlePaymentCompleted:", error);
     throw error;
@@ -381,28 +376,14 @@ async function handlePaymentFailed(event: any) {
       }
     }
 
-    // Méthode 3: Recherche exhaustive
-    if (!depositData) {
-      const allDepositsSnapshot = await depositsRef.once("value");
-      
-      if (allDepositsSnapshot.exists()) {
-        allDepositsSnapshot.forEach((userSnapshot: any) => {
-          const userId = userSnapshot.key;
-          const userDeposits = userSnapshot.val();
-          
-          Object.entries(userDeposits).forEach(([depId, depData]: [string, any]) => {
-            if (!depositData && (depData.moncashReference === reference || depData.id === reference)) {
-              depositData = depData;
-              depositKey = depId;
-              depositUserId = userId;
-            }
-          });
-        });
-      }
-    }
-
     if (!depositData) {
       console.log("[WEBHOOK] Dépôt non trouvé (normal en mode test):", reference);
+      return;
+    }
+
+    // Vérifier que le dépôt est en pending (sécurité)
+    if (depositData.status !== "pending") {
+      console.log("[WEBHOOK] Dépôt n'est pas en pending (déjà traité):", { reference, status: depositData.status });
       return;
     }
 
@@ -455,6 +436,12 @@ async function handlePayoutCompleted(event: any) {
       withdrawalData = child.val();
       withdrawalUserId = child.ref.parent.key; // L'userId (parent du retrait)
     });
+
+    // Vérifier que le retrait est en pending (sécurité)
+    if (withdrawalData.status !== "pending") {
+      console.log("[WEBHOOK] Retrait n'est pas en pending (déjà traité):", { reference, status: withdrawalData.status });
+      return;
+    }
 
     // Si le retrait est déjà complété, ne rien faire
     if (withdrawalData.status === "completed") {
@@ -537,6 +524,12 @@ async function handlePayoutFailed(event: any) {
       withdrawalData = child.val();
       withdrawalUserId = child.ref.parent.key; // L'userId (parent du retrait)
     });
+
+    // Vérifier que le retrait est en pending (sécurité)
+    if (withdrawalData.status !== "pending") {
+      console.log("[WEBHOOK] Retrait n'est pas en pending (déjà traité):", { reference, status: withdrawalData.status });
+      return;
+    }
 
     // Si le retrait est déjà échoué, ne rien faire
     if (withdrawalData.status === "failed") {
