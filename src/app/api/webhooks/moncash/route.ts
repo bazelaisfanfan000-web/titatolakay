@@ -65,50 +65,13 @@ export async function POST(request: Request) {
                        !signature;
     
     if (isTestMode) {
-      console.log("[WEBHOOK] Mode test détecté, validation signature contournée");
-      try {
-        const event = JSON.parse(body) as any;
-        console.log("[WEBHOOK] Événement test reçu:", event);
-        
-        // Vérifier que l'événement a les champs requis
-        if (!event.event) {
-          console.error("[WEBHOOK] Événement test sans champ 'event'");
-          return NextResponse.json(
-            { success: true, message: "Test webhook reçu - événement invalide." },
-            { status: 200 }
-          );
-        }
-        
-        // Traiter l'événement test avec try/catch individuel
-        try {
-          if (event.event === "payment.completed") {
-            await handlePaymentCompleted(event);
-          } else if (event.event === "payment.failed") {
-            await handlePaymentFailed(event);
-          } else if (event.event === "payout.completed") {
-            await handlePayoutCompleted(event);
-          } else if (event.event === "payout.failed") {
-            await handlePayoutFailed(event);
-          }
-        } catch (handlerError) {
-          console.error("[WEBHOOK] Erreur handler événement test:", handlerError);
-          // En mode test, on retourne quand même succès pour ne pas bloquer
-          return NextResponse.json({ 
-            success: true, 
-            testMode: true,
-            message: "Test webhook reçu - erreur lors du traitement.",
-            error: handlerError instanceof Error ? handlerError.message : String(handlerError)
-          });
-        }
-        
-        return NextResponse.json({ success: true, testMode: true });
-      } catch (parseError) {
-        console.error("[WEBHOOK] Erreur parsing test event:", parseError);
-        return NextResponse.json(
-          { success: true, message: "Test webhook reçu - payload invalide." },
-          { status: 200 }
-        );
-      }
+      console.log("[WEBHOOK] Mode test détecté - retour 200 sans traitement");
+      // En mode test, retourner immédiatement 200 sans traiter l'événement
+      return NextResponse.json({ 
+        success: true, 
+        testMode: true,
+        message: "Test webhook reçu - endpoint fonctionnel."
+      });
     }
 
     if (!signature || !timestamp) {
