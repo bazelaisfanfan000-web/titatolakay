@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         const url = new URL(returnUrl);
         const allowedDomains = [
           process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, ''),
-          'titatopam.vercel.app',
+          'playtocash.vercel.app',
           'localhost'
         ];
         const hostname = url.hostname.replace(/^www\./, '');
@@ -119,7 +119,9 @@ export async function POST(request: Request) {
 
     console.log("[DEPOSIT_API] Paiement créé:", {
       referenceId,
-      paymentUrl: moncashResponse.paymentUrl
+      paymentUrl: moncashResponse.paymentUrl,
+      moncashReference: moncashResponse.reference,
+      expiresAt: moncashResponse.expiresAt
     });
 
     // 7. Retourner l'URL de paiement

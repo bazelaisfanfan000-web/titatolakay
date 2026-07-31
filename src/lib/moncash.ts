@@ -70,6 +70,9 @@ export async function createMonCashPayment(
   console.log("[MONCASH] Création paiement:", {
     amount: request.amount,
     referenceId: request.referenceId,
+    returnUrl: request.returnUrl,
+    customerName: request.customerName,
+    customerEmail: request.customerEmail,
     idempotencyKey: key
   });
 
@@ -87,7 +90,9 @@ export async function createMonCashPayment(
 
   console.log("[MONCASH] Réponse paiement:", {
     status: response.status,
-    data
+    paymentUrl: data.paymentUrl,
+    reference: data.reference,
+    expiresAt: data.expiresAt
   });
 
   if (!response.ok) {
