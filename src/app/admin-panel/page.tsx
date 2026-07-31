@@ -50,7 +50,7 @@ export default function AdminDashboard() {
   const handleLogout = async () => {
     try {
       await fetch('/api/admin/logout', { method: 'POST' });
-      router.push('/admin/login');
+      router.push('/admin-panel/login');
     } catch (error) {
       console.error('Error logging out:', error);
     }

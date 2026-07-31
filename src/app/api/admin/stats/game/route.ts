@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   try {
     // Statistiques des utilisateurs
     const usersRef = adminDB.ref('users');
-    const usersSnapshot = await usersRef.get();
+    const usersSnapshot = await usersRef.once('value');
 
     let totalUsers = 0;
     let onlineUsers = 0;
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
 
     // Statistiques des parties
     const roomsRef = adminDB.ref('rooms');
-    const roomsSnapshot = await roomsRef.get();
+    const roomsSnapshot = await roomsRef.once('value');
 
     let totalGames = 0;
     let gamesToday = 0;

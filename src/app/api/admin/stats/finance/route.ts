@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   try {
     // Calculer le capital total des utilisateurs
     const usersRef = adminDB.ref('users');
-    const usersSnapshot = await usersRef.get();
+    const usersSnapshot = await usersRef.once('value');
 
     let totalUserCapital = 0;
     let totalUsers = 0;

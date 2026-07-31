@@ -121,8 +121,8 @@ async function handlePaymentCompleted(event: any) {
 
   depositSnapshot.forEach((child: any) => {
     depositData = child.val();
-    depositUserId = child.key; // Dans Firebase, la clé parent est l'userId
-    depositKey = child.key;
+    depositKey = child.key; // L'ID du dépôt
+    depositUserId = child.ref.parent.key; // L'userId (parent du dépôt)
   });
 
   // Si le dépôt est déjà complété, ne rien faire
@@ -201,7 +201,7 @@ async function handlePaymentFailed(event: any) {
 
   depositSnapshot.forEach((child: any) => {
     depositData = child.val();
-    depositUserId = child.key;
+    depositUserId = child.ref.parent.key; // L'userId (parent du dépôt)
   });
 
   // Si le dépôt est déjà échoué, ne rien faire
@@ -246,7 +246,7 @@ async function handlePayoutCompleted(event: any) {
 
   withdrawalSnapshot.forEach((child: any) => {
     withdrawalData = child.val();
-    withdrawalUserId = child.key;
+    withdrawalUserId = child.ref.parent.key; // L'userId (parent du retrait)
   });
 
   // Si le retrait est déjà complété, ne rien faire
@@ -323,7 +323,7 @@ async function handlePayoutFailed(event: any) {
 
   withdrawalSnapshot.forEach((child: any) => {
     withdrawalData = child.val();
-    withdrawalUserId = child.key;
+    withdrawalUserId = child.ref.parent.key; // L'userId (parent du retrait)
   });
 
   // Si le retrait est déjà échoué, ne rien faire
