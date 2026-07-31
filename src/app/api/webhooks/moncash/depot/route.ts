@@ -1,6 +1,6 @@
 /**
  * API Route: Webhook MonCashConnect
- * POST /api/webhooks/moncash
+ * POST /api/webhooks/moncash/depot
  * Gère les événements payment.completed, payment.failed, payout.completed, payout.failed
  */
 
