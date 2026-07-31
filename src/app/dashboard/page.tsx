@@ -994,6 +994,17 @@ export default function Dashboard() {
           />
 
 
+          {/* HISTORIQUE */}
+
+          <DashboardNavItem
+            icon="📜"
+            label="Historique"
+            onClick={() =>
+              router.push(
+                "/historique"
+              )
+            }
+          />
 
 
           {/* VYLO */}
