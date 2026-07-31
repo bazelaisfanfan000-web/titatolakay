@@ -50,18 +50,30 @@ useEffect(()=>{
 const checkAdmin = async()=>{
 
 
-// Vérification du passage par la page secrète
+// Vérifier le cookie admin_session
+const checkCookie = async () => {
+  try {
+    const response = await fetch('/api/admin/verify-session');
+    const data = await response.json();
+    return data.valid;
+  } catch (error) {
+    console.error("Erreur vérification cookie:", error);
+    return false;
+  }
+};
 
-const adminAccess =
+const hasValidCookie = await checkCookie();
 
-localStorage.getItem(
-"adminAccess"
-);
+if (hasValidCookie) {
+  setIsAdmin(true);
+  setLoading(false);
+  return;
+}
 
-
+// Fallback: Vérification du localStorage
+const adminAccess = localStorage.getItem("adminAccess");
 
 if(adminAccess === "true"){
-
 
 setIsAdmin(true);
 
@@ -71,8 +83,8 @@ setLoading(false);
 return;
 
 
-}
 
+}
 
 
 
@@ -95,9 +107,8 @@ setLoading(false);
 return;
 
 
+
 }
-
-
 
 
 
@@ -106,7 +117,6 @@ try{
 
 const snapshot = await get(
 
-
 ref(
 
 database,
@@ -114,6 +124,7 @@ database,
 `users/${user.uid}`
 
 )
+
 
 
 );
@@ -133,7 +144,6 @@ setIsAdmin(true);
 
 
 }
-
 else{
 
 
@@ -144,9 +154,7 @@ setIsAdmin(false);
 
 
 
-
 }
-
 catch(error){
 
 
@@ -162,9 +170,7 @@ setIsAdmin(false);
 }
 
 
-
 setLoading(false);
-
 
 
 }
@@ -177,9 +183,7 @@ setLoading(false);
 return unsubscribe;
 
 
-
 };
-
 
 
 
@@ -192,7 +196,6 @@ checkAdmin();
 
 
 
-
 return {
 
 isAdmin,
@@ -200,7 +203,6 @@ isAdmin,
 loading
 
 };
-
 
 
 }
