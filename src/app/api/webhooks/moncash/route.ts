@@ -110,6 +110,8 @@ async function handlePaymentCompleted(event: any) {
     .equalTo(reference)
     .once("value");
 
+  console.log("[WEBHOOK] Deposit snapshot exists:", depositSnapshot.exists());
+
   if (!depositSnapshot.exists()) {
     console.error("[WEBHOOK] Dépôt non trouvé:", reference);
     return;
@@ -122,8 +124,28 @@ async function handlePaymentCompleted(event: any) {
   depositSnapshot.forEach((child: any) => {
     depositData = child.val();
     depositKey = child.key; // L'ID du dépôt
-    depositUserId = child.ref.parent.key; // L'userId (parent du dépôt)
+    // Essayer différentes méthodes pour récupérer l'userId
+    depositUserId = child.ref.parent.key || depositData.userId || "";
   });
+
+  console.log("[WEBHOOK] Deposit found:", {
+    depositKey,
+    depositUserId,
+    depositData,
+    parentKey: depositSnapshot.ref.key,
+    hasUserId: !!depositUserId
+  });
+
+  // Si depositUserId est vide, essayer de le récupérer depuis depositData
+  if (!depositUserId && depositData.userId) {
+    depositUserId = depositData.userId;
+    console.log("[WEBHOOK] Using userId from depositData:", depositUserId);
+  }
+
+  if (!depositUserId) {
+    console.error("[WEBHOOK] Impossible de récupérer l'userId:", { depositKey, depositData });
+    return;
+  }
 
   // Si le dépôt est déjà complété, ne rien faire
   if (depositData.status === "completed") {
@@ -141,6 +163,8 @@ async function handlePaymentCompleted(event: any) {
     return;
   }
 
+  console.log("[WEBHOOK] Tentative de crédit wallet:", { depositUserId, amount, reference });
+
   // Créditer le wallet
   const creditResult = await creditWallet(
     depositUserId,
@@ -148,6 +172,8 @@ async function handlePaymentCompleted(event: any) {
     reference,
     "Dépôt MonCash complété"
   );
+
+  console.log("[WEBHOOK] Résultat crédit wallet:", creditResult);
 
   if (!creditResult.success) {
     console.error("[WEBHOOK] Erreur crédit wallet:", creditResult.error);
@@ -173,7 +199,7 @@ async function handlePaymentCompleted(event: any) {
     depositData.id
   );
 
-  console.log("[WEBHOOK] Payment complété avec succès:", { reference, userId: depositUserId });
+  console.log("[WEBHOOK] Payment complété avec succès:", { reference, userId: depositUserId, newBalance: creditResult.balance });
 }
 
 /**
