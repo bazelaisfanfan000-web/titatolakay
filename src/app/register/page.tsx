@@ -26,7 +26,6 @@ import {
   User,
   Mail,
   Lock,
-  Bell,
 } from "lucide-react";
 
 
@@ -43,24 +42,6 @@ export default function Register() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState<"granted" | "denied" | "default" | "prompt">("default");
-
-  // Demander la permission de notification au chargement
-  useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      setNotificationPermission(Notification.permission);
-    }
-  }, []);
-
-  // Demander la permission de notification
-  const requestNotificationPermission = async () => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-      return permission === "granted";
-    }
-    return false;
-  };
 
 
 
@@ -107,14 +88,6 @@ export default function Register() {
 
 
 
-    // Demander la permission de notification avant l'inscription
-    if (notificationPermission === "default") {
-      const granted = await requestNotificationPermission();
-      if (!granted) {
-        // Continuer même si refusé, mais avertir
-        console.log("Permission de notification refusée");
-      }
-    }
 
 
 
@@ -201,22 +174,6 @@ export default function Register() {
 
 
 
-      /*
-      ========================================
-      ENREGISTRER TOKEN FCM SI PERMISSION ACCORDÉE
-      ========================================
-      */
-      if (notificationPermission === "granted") {
-        try {
-          // Enregistrer le service worker et obtenir le token
-          if ("serviceWorker" in navigator) {
-            const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-            console.log("Service Worker enregistré:", registration);
-          }
-        } catch (swError) {
-          console.error("Erreur enregistrement SW:", swError);
-        }
-      }
 
 
 
@@ -550,32 +507,6 @@ export default function Register() {
 
 
 
-          {/* Notification Permission */}
-          {notificationPermission === "default" && (
-            <motion.button
-              type="button"
-              onClick={requestNotificationPermission}
-              whileTap={{ scale: 0.97 }}
-              className="mt-2 flex h-8 w-full items-center justify-center gap-2 rounded-lg border border-green-400/30 bg-green-500/10 text-[8px] font-bold text-green-300 transition-all hover:bg-green-500/20"
-            >
-              <Bell size={11} />
-              Activer les notifications
-            </motion.button>
-          )}
-
-          {notificationPermission === "granted" && (
-            <div className="mt-2 flex items-center gap-2 rounded-lg border border-green-400/20 bg-green-500/5 px-2 py-1.5">
-              <Bell size={11} className="text-green-400" />
-              <p className="text-[8px] text-green-300">Notifications activées ✓</p>
-            </div>
-          )}
-
-          {notificationPermission === "denied" && (
-            <div className="mt-2 flex items-center gap-2 rounded-lg border border-orange-400/20 bg-orange-500/5 px-2 py-1.5">
-              <Bell size={11} className="text-orange-400" />
-              <p className="text-[8px] text-orange-300">Notifications bloquées</p>
-            </div>
-          )}
 
 
 
