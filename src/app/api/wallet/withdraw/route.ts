@@ -9,15 +9,26 @@ import { createMonCashPayout, generateReferenceId, generateIdempotencyKey } from
 import { atomicWithdrawal } from "@/lib/atomicTransaction";
 import { hasAvailableBalance } from "@/lib/wallet";
 import { transactionExists } from "@/lib/ledger";
+import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MIN_WITHDRAW = 100;
 const MAX_WITHDRAW = 100000;
+const DAILY_WITHDRAW_LIMIT = 200000; // Limite journalière de 200,000 HTG
 
 export async function POST(request: Request) {
   try {
+    // 0. Rate limiting
+    const rateLimitResult = await rateLimitMiddleware(request, "withdraw", RATE_LIMIT_CONFIGS.withdraw);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: "Trop de requêtes. Veuillez réessayer plus tard." },
+        { status: 429 }
+      );
+    }
+
     // 1. Authentification Firebase
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -60,13 +71,43 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Générer les identifiants uniques
+    // 5. Vérifier la limite journalière de retrait
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayTimestamp = today.getTime();
+
+    const withdrawalsRef = adminDB.ref(`withdrawals/${userId}`);
+    const withdrawalsSnapshot = await withdrawalsRef
+      .orderByChild("createdAt")
+      .startAt(todayTimestamp)
+      .once("value");
+
+    let todayTotal = 0;
+    if (withdrawalsSnapshot.exists()) {
+      withdrawalsSnapshot.forEach((child: any) => {
+        const withdrawal = child.val();
+        if (withdrawal.status !== "failed") {
+          todayTotal += withdrawal.amount || 0;
+        }
+      });
+    }
+
+    if (todayTotal + amount > DAILY_WITHDRAW_LIMIT) {
+      return NextResponse.json(
+        { 
+          error: `Limite journalière dépassée. Vous avez déjà retiré ${todayTotal} HTG aujourd'hui. La limite est de ${DAILY_WITHDRAW_LIMIT} HTG.` 
+        },
+        { status: 400 }
+      );
+    }
+
+    // 6. Générer les identifiants uniques
     const referenceId = generateReferenceId("withdraw");
     const idempotencyKey = generateIdempotencyKey();
 
     console.log("[WITHDRAW_API] Création retrait:", { userId, amount, referenceId });
 
-    // 6. Vérifier la déduplication
+    // 7. Vérifier la déduplication
     const exists = await transactionExists(userId, referenceId);
     if (exists) {
       return NextResponse.json(
@@ -75,7 +116,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 7. Débiter immédiatement et créer le retrait en pending
+    // 8. Débiter immédiatement et créer le retrait en pending
     const atomicResult = await atomicWithdrawal({
       userId,
       amount,
@@ -91,7 +132,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 8. Créer le payout MonCash
+    // 9. Créer le payout MonCash
     const moncashResponse = await createMonCashPayout(
       {
         amount,
@@ -101,7 +142,7 @@ export async function POST(request: Request) {
       idempotencyKey
     );
 
-    // 9. Mettre à jour le retrait avec les infos MonCash
+    // 10. Mettre à jour le retrait avec les infos MonCash
     const withdrawalRef = adminDB.ref(`withdrawals/${userId}/${referenceId}`);
     await withdrawalRef.update({
       moncashReference: moncashResponse.payout.reference,
@@ -117,7 +158,7 @@ export async function POST(request: Request) {
       status: moncashResponse.payout.status
     });
 
-    // 10. Retourner le résultat
+    // 11. Retourner le résultat
     return NextResponse.json({
       success: true,
       withdrawalId: referenceId,

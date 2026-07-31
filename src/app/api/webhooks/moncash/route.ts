@@ -42,7 +42,8 @@ export async function POST(request: Request) {
     console.log("[WEBHOOK] Événement reçu:", event);
 
     // 3. Vérifier la déduplication (anti-replay)
-    const eventId = `${event.event}_${event.reference}_${timestamp}`;
+    // Utiliser seulement event.reference qui est unique, pas le timestamp
+    const eventId = `${event.event}_${event.reference}`;
     const processedEventRef = adminDB.ref(`processed_events/${eventId}`);
     const processedSnapshot = await processedEventRef.once("value");
 
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
       eventId,
       eventType: event.event,
       reference: event.reference,
+      timestamp,
       processedAt: Date.now()
     });
 
@@ -126,6 +128,16 @@ async function handlePaymentCompleted(event: any) {
   // Si le dépôt est déjà complété, ne rien faire
   if (depositData.status === "completed") {
     console.log("[WEBHOOK] Dépôt déjà complété:", reference);
+    return;
+  }
+
+  // Vérifier que le montant correspond au montant original
+  if (depositData.amount !== amount) {
+    console.error("[WEBHOOK] Montant mismatch:", {
+      expected: depositData.amount,
+      received: amount,
+      reference
+    });
     return;
   }
 
@@ -240,6 +252,16 @@ async function handlePayoutCompleted(event: any) {
   // Si le retrait est déjà complété, ne rien faire
   if (withdrawalData.status === "completed") {
     console.log("[WEBHOOK] Retrait déjà complété:", reference);
+    return;
+  }
+
+  // Vérifier que le montant correspond au montant original
+  if (withdrawalData.amount !== amount) {
+    console.error("[WEBHOOK] Montant mismatch retrait:", {
+      expected: withdrawalData.amount,
+      received: amount,
+      reference
+    });
     return;
   }
 

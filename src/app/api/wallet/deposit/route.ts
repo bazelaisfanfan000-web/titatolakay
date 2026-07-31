@@ -8,6 +8,7 @@ import { adminAuth, adminDB } from "@/lib/firebaseAdmin";
 import { createMonCashPayment, generateReferenceId, generateIdempotencyKey } from "@/lib/moncash";
 import { atomicDeposit } from "@/lib/atomicTransaction";
 import { transactionExists } from "@/lib/ledger";
+import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,15 @@ const MAX_DEPOSIT = 10000;
 
 export async function POST(request: Request) {
   try {
+    // 0. Rate limiting
+    const rateLimitResult = await rateLimitMiddleware(request, "deposit", RATE_LIMIT_CONFIGS.deposit);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: "Trop de requêtes. Veuillez réessayer plus tard." },
+        { status: 429 }
+      );
+    }
+
     // 1. Authentification Firebase
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -41,6 +51,31 @@ export async function POST(request: Request) {
       );
     }
 
+    // Valider le returnUrl s'il est fourni
+    if (returnUrl) {
+      try {
+        const url = new URL(returnUrl);
+        const allowedDomains = [
+          process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, ''),
+          'titatopam.vercel.app',
+          'localhost'
+        ];
+        const hostname = url.hostname.replace(/^www\./, '');
+        
+        if (!allowedDomains.some(domain => hostname === domain || hostname.endsWith(`.${domain}`))) {
+          return NextResponse.json(
+            { error: "URL de retour non autorisée" },
+            { status: 400 }
+          );
+        }
+      } catch {
+        return NextResponse.json(
+          { error: "URL de retour invalide" },
+          { status: 400 }
+        );
+      }
+    }
+
     // 3. Générer les identifiants uniques
     const referenceId = generateReferenceId("deposit");
     const idempotencyKey = generateIdempotencyKey();
@@ -56,7 +91,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Créer le paiement MonCash
+    // 5. Créer le paiement MonCash (avant de créer le dépôt en Firebase)
     const moncashResponse = await createMonCashPayment(
       {
         amount,
@@ -68,7 +103,7 @@ export async function POST(request: Request) {
       idempotencyKey
     );
 
-    // 6. Créer le dépôt en pending dans Firebase
+    // 6. Créer le dépôt en pending dans Firebase (seulement si MonCash a réussi)
     const depositRef = adminDB.ref(`deposits/${userId}/${referenceId}`);
     await depositRef.set({
       id: referenceId,
