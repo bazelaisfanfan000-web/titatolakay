@@ -180,6 +180,48 @@ async function checkDepositStatus(
 
   } catch (error) {
     console.error("[CRON] Erreur vérification dépôt:", { depositId, error });
+    
+    // Si l'API MonCash échoue, essayer de trouver le dépôt par referenceId comme fallback
+    try {
+      console.log("[CRON] Tentative fallback par referenceId");
+      const status2 = await getPaymentStatus(depositData.id);
+      
+      if (status2.status === "completed") {
+        const creditResult = await creditWallet(
+          userId,
+          depositData.amount,
+          depositData.id,
+          "Dépôt MonCash complété (polling fallback)"
+        );
+
+        if (!creditResult.success) {
+          return { success: false, error: creditResult.error };
+        }
+
+        const depositRef = adminDB.ref(`deposits/${userId}/${depositId}`);
+        await depositRef.update({
+          status: "completed",
+          moncashTransactionId: depositData.id,
+          netAmount: depositData.amount,
+          completedAt: Date.now(),
+          completedBy: "cron-fallback"
+        });
+
+        await createDepositLedgerEntry(
+          userId,
+          depositData.amount,
+          creditResult.balance! - depositData.amount,
+          creditResult.balance!,
+          depositData.id,
+          depositId
+        );
+
+        return { success: true };
+      }
+    } catch (fallbackError) {
+      console.error("[CRON] Erreur fallback:", { depositId, fallbackError });
+    }
+    
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
