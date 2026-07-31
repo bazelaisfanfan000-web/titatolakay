@@ -10,6 +10,7 @@ import { parseWebhook } from "@/lib/moncash";
 import { confirmWithdrawalTransaction, cancelWithdrawalTransaction } from "@/lib/atomicTransaction";
 import { creditWallet } from "@/lib/wallet";
 import { createDepositLedgerEntry, createWithdrawalLedgerEntry, updateLedgerStatus } from "@/lib/ledger";
+import { sanitizeFirebaseKey } from "@/lib/firebaseUtils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,7 +97,9 @@ export async function POST(request: Request) {
 
     // 3. Vérifier la déduplication (anti-replay)
     // Utiliser seulement event.reference qui est unique, pas le timestamp
-    const eventId = `${event.event}_${event.reference}`;
+    const safeEventType = sanitizeFirebaseKey(event.event);
+    const safeReference = sanitizeFirebaseKey(event.reference);
+    const eventId = `${safeEventType}_${safeReference}`;
     const processedEventRef = adminDB.ref(`processed_events/${eventId}`);
     const processedSnapshot = await processedEventRef.once("value");
 

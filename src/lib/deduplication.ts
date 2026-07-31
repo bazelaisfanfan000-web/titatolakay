@@ -4,6 +4,7 @@
  */
 
 import { adminDB } from "./firebaseAdmin";
+import { sanitizeFirebaseKey } from "./firebaseUtils";
 
 /**
  * Vérifie si un événement a déjà été traité
@@ -12,7 +13,8 @@ import { adminDB } from "./firebaseAdmin";
  */
 export async function isEventProcessed(eventId: string): Promise<boolean> {
   try {
-    const eventRef = adminDB.ref(`processed_events/${eventId}`);
+    const safeEventId = sanitizeFirebaseKey(eventId);
+    const eventRef = adminDB.ref(`processed_events/${safeEventId}`);
     const snapshot = await eventRef.once("value");
     return snapshot.exists();
   } catch (error) {
@@ -35,7 +37,8 @@ export async function markEventProcessed(
   userId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const eventRef = adminDB.ref(`processed_events/${eventId}`);
+    const safeEventId = sanitizeFirebaseKey(eventId);
+    const eventRef = adminDB.ref(`processed_events/${safeEventId}`);
     
     // Vérifier d'abord si déjà traité (race condition)
     const snapshot = await eventRef.once("value");
@@ -44,14 +47,14 @@ export async function markEventProcessed(
     }
 
     await eventRef.set({
-      eventId,
+      eventId: safeEventId,
       eventType,
       reference,
       userId,
       processedAt: Date.now()
     });
 
-    console.log("[DEDUP] Événement marqué comme traité:", { eventId, eventType });
+    console.log("[DEDUP] Événement marqué comme traité:", { eventId: safeEventId, eventType });
     return { success: true };
   } catch (error) {
     console.error("[DEDUP] Erreur marquage événement:", error);
@@ -73,7 +76,10 @@ export function generateEventId(
   reference: string,
   timestamp: string
 ): string {
-  return `${eventType}_${reference}_${timestamp}`;
+  const safeEventType = sanitizeFirebaseKey(eventType);
+  const safeReference = sanitizeFirebaseKey(reference);
+  const safeTimestamp = sanitizeFirebaseKey(timestamp);
+  return `${safeEventType}_${safeReference}_${safeTimestamp}`;
 }
 
 /**
