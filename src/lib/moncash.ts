@@ -206,6 +206,14 @@ export function verifyWebhookSignature(
   signature: string,
   timestamp: string
 ): boolean {
+  console.log("[MONCASH] Vérification signature webhook:", {
+    hasSecret: !!WEBHOOK_SECRET,
+    secretLength: WEBHOOK_SECRET?.length,
+    signature: signature ? `${signature.substring(0, 20)}...` : 'missing',
+    timestamp,
+    payloadLength: payload.length
+  });
+
   if (!WEBHOOK_SECRET) {
     console.error("[MONCASH] Webhook secret non configuré");
     return false;
@@ -215,6 +223,13 @@ export function verifyWebhookSignature(
   const now = Math.floor(Date.now() / 1000);
   const webhookTimestamp = parseInt(timestamp);
   const timeDiff = Math.abs(now - webhookTimestamp);
+
+  console.log("[MONCASH] Vérification timestamp:", {
+    webhookTimestamp,
+    now,
+    diff: timeDiff,
+    valid: timeDiff <= 300
+  });
 
   if (timeDiff > 300) {
     console.error("[MONCASH] Timestamp expiré:", {
@@ -228,21 +243,40 @@ export function verifyWebhookSignature(
   // Extraire la signature (format: sha256=...)
   const signatureHash = signature.replace("sha256=", "");
 
+  console.log("[MONCASH] Signature extraite:", {
+    original: signature,
+    extracted: signatureHash,
+    extractedLength: signatureHash.length
+  });
+
   // Calculer HMAC-SHA256
   const hmac = crypto.createHmac("sha256", WEBHOOK_SECRET);
   hmac.update(payload);
   const expectedSignature = hmac.digest("hex");
 
-  const isValid = crypto.timingSafeEqual(
-    Buffer.from(signatureHash, "hex"),
-    Buffer.from(expectedSignature, "hex")
-  );
+  console.log("[MONCASH] Comparaison signatures:", {
+    received: signatureHash,
+    expected: expectedSignature,
+    match: signatureHash === expectedSignature
+  });
 
-  if (!isValid) {
-    console.error("[MONCASH] Signature invalide");
+  try {
+    const isValid = crypto.timingSafeEqual(
+      Buffer.from(signatureHash, "hex"),
+      Buffer.from(expectedSignature, "hex")
+    );
+
+    if (!isValid) {
+      console.error("[MONCASH] Signature invalide (timingSafeEqual failed)");
+    } else {
+      console.log("[MONCASH] Signature valide");
+    }
+
+    return isValid;
+  } catch (error) {
+    console.error("[MONCASH] Erreur timingSafeEqual:", error);
+    return false;
   }
-
-  return isValid;
 }
 
 /**
