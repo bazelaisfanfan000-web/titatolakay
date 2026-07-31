@@ -7,14 +7,14 @@ import { NextResponse } from "next/server";
 import { adminAuth, adminDB } from "@/lib/firebaseAdmin";
 import { createMonCashPayout, generateReferenceId, generateIdempotencyKey } from "@/lib/moncash";
 import { atomicWithdrawal } from "@/lib/atomicTransaction";
-import { hasAvailableBalance, getWallet } from "@/lib/wallet";
+import { hasAvailableBalance } from "@/lib/wallet";
 import { transactionExists } from "@/lib/ledger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MIN_WITHDRAW = 100;
-const MAX_WITHDRAW = 10000;
+const MAX_WITHDRAW = 100000;
 
 export async function POST(request: Request) {
   try {
@@ -60,22 +60,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Vérifier s'il y a déjà un retrait en cours
-    const wallet = await getWallet(userId);
-    if (wallet && wallet.lockedBalance > 0) {
-      return NextResponse.json(
-        { error: "Un retrait est déjà en cours" },
-        { status: 400 }
-      );
-    }
-
-    // 6. Générer les identifiants uniques
+    // 5. Générer les identifiants uniques
     const referenceId = generateReferenceId("withdraw");
     const idempotencyKey = generateIdempotencyKey();
 
     console.log("[WITHDRAW_API] Création retrait:", { userId, amount, referenceId });
 
-    // 7. Vérifier la déduplication
+    // 6. Vérifier la déduplication
     const exists = await transactionExists(userId, referenceId);
     if (exists) {
       return NextResponse.json(
@@ -84,7 +75,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 8. Verrouiller le montant et créer le retrait en pending
+    // 7. Débiter immédiatement et créer le retrait en pending
     const atomicResult = await atomicWithdrawal({
       userId,
       amount,
@@ -100,7 +91,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 9. Créer le payout MonCash
+    // 8. Créer le payout MonCash
     const moncashResponse = await createMonCashPayout(
       {
         amount,
@@ -110,7 +101,7 @@ export async function POST(request: Request) {
       idempotencyKey
     );
 
-    // 10. Mettre à jour le retrait avec les infos MonCash
+    // 9. Mettre à jour le retrait avec les infos MonCash
     const withdrawalRef = adminDB.ref(`withdrawals/${userId}/${referenceId}`);
     await withdrawalRef.update({
       moncashReference: moncashResponse.payout.reference,
@@ -126,7 +117,7 @@ export async function POST(request: Request) {
       status: moncashResponse.payout.status
     });
 
-    // 11. Retourner le résultat
+    // 10. Retourner le résultat
     return NextResponse.json({
       success: true,
       withdrawalId: referenceId,

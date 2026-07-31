@@ -137,11 +137,10 @@ export async function atomicDeposit(params: {
 
 /**
  * Exécute une transaction de retrait atomique
- * 1. Verrouille le montant
+ * 1. Débite immédiatement le solde du joueur
  * 2. Crée le retrait en pending
- * 3. Appelle l'API MonCash
- * 4. Si succès, confirme le retrait
- * 5. Si échec, déverrouille automatiquement
+ * 3. Appelle l'API MonCash payout-create
+ * 4. Si échec, rembourse immédiatement (via webhook payout.failed)
  */
 export async function atomicWithdrawal(params: {
   userId: string;
@@ -155,15 +154,17 @@ export async function atomicWithdrawal(params: {
   console.log("[ATOMIC_WITHDRAWAL] Début transaction:", { userId, amount, referenceId });
 
   try {
-    // 1. Verrouiller le montant
-    const lockResult = await lockBalance(userId, amount, referenceId);
+    // 1. Débiter immédiatement le solde du joueur
+    const debitResult = await debitWallet(userId, amount, referenceId, `Retrait MonCash - ${moncashNumber}`);
 
-    if (!lockResult.success) {
+    if (!debitResult.success) {
       return {
         success: false,
-        error: lockResult.error || "Solde insuffisant"
+        error: debitResult.error || "Solde insuffisant"
       };
     }
+
+    const balanceAfterDebit = debitResult.balance!;
 
     // 2. Créer l'entrée de retrait en pending
     const withdrawalRef = adminDB.ref(`withdrawals/${userId}/${referenceId}`);
@@ -178,13 +179,13 @@ export async function atomicWithdrawal(params: {
       createdAt: Date.now()
     });
 
-    // 3. Créer l'entrée ledger en pending
+    // 3. Créer l'entrée ledger
     const ledgerResult = await createLedgerEntry({
       userId,
       type: "withdraw",
       amount: -amount,
-      balanceBefore: lockResult.balance!,
-      balanceAfter: lockResult.balance!, // Sera mis à jour après confirmation
+      balanceBefore: balanceAfterDebit + amount,
+      balanceAfter: balanceAfterDebit,
       referenceId,
       status: "pending",
       source: "moncash",
@@ -193,31 +194,28 @@ export async function atomicWithdrawal(params: {
     });
 
     if (!ledgerResult.success) {
-      // Rollback: déverrouiller
-      await unlockBalance(userId, amount, referenceId);
+      // Rollback: rembourser
+      await creditWallet(userId, amount, referenceId, `Rollback retrait - ${moncashNumber}`);
       throw new Error("Erreur création ledger");
     }
 
     const transactionId = ledgerResult.transactionId;
 
-    console.log("[ATOMIC_WITHDRAWAL] Retrait créé en pending:", { referenceId });
-
-    // Note: Le débit réel sera effectué lors du webhook payout.completed
-    // Pour l'instant, le montant reste verrouillé
+    console.log("[ATOMIC_WITHDRAWAL] Retrait créé avec débit immédiat:", { referenceId, balanceAfterDebit });
 
     return {
       success: true,
       transactionId,
-      newBalance: lockResult.balance
+      newBalance: balanceAfterDebit
     };
   } catch (error) {
     console.error("[ATOMIC_WITHDRAWAL] Erreur:", error);
 
-    // Rollback: déverrouiller le montant
+    // Rollback: rembourser le montant
     try {
-      await unlockBalance(params.userId, params.amount, params.referenceId);
+      await creditWallet(params.userId, params.amount, params.referenceId, `Rollback retrait erreur - ${params.moncashNumber}`);
     } catch (rollbackError) {
-      console.error("[ATOMIC_WITHDRAWAL] Erreur déverrouillage:", rollbackError);
+      console.error("[ATOMIC_WITHDRAWAL] Erreur remboursement:", rollbackError);
     }
 
     return {
@@ -229,8 +227,8 @@ export async function atomicWithdrawal(params: {
 }
 
 /**
- * Confirme un retrait via webhook
- * Débite le montant verrouillé
+ * Confirme un retrait via webhook payout.completed
+ * Le solde est déjà débité, on met juste à jour le statut
  */
 export async function confirmWithdrawalTransaction(params: {
   userId: string;
@@ -243,17 +241,7 @@ export async function confirmWithdrawalTransaction(params: {
   console.log("[ATOMIC_WITHDRAWAL_CONFIRM] Confirmation:", { userId, amount, referenceId });
 
   try {
-    // 1. Confirmer le retrait (débit + déverrouillage)
-    const confirmResult = await confirmWithdrawal(userId, amount, referenceId);
-
-    if (!confirmResult.success) {
-      return {
-        success: false,
-        error: confirmResult.error || "Erreur confirmation retrait"
-      };
-    }
-
-    // 2. Mettre à jour le statut du retrait
+    // 1. Mettre à jour le statut du retrait
     const withdrawalRef = adminDB.ref(`withdrawals/${userId}/${referenceId}`);
     await withdrawalRef.update({
       status: "completed",
@@ -261,11 +249,7 @@ export async function confirmWithdrawalTransaction(params: {
       completedAt: Date.now()
     });
 
-    // 3. Mettre à jour le ledger
-    const balanceBefore = confirmResult.balance! + amount;
-    const balanceAfter = confirmResult.balance!;
-
-    // Trouver la transaction ledger
+    // 2. Mettre à jour le ledger
     const ledgerSnapshot = await adminDB
       .ref(`wallet_transactions/${userId}`)
       .orderByChild("referenceId")
@@ -276,19 +260,16 @@ export async function confirmWithdrawalTransaction(params: {
       ledgerSnapshot.forEach((child: any) => {
         const txId = child.key;
         adminDB.ref(`wallet_transactions/${userId}/${txId}`).update({
-          balanceBefore,
-          balanceAfter,
           status: "completed",
           completedAt: Date.now()
         });
       });
     }
 
-    console.log("[ATOMIC_WITHDRAWAL_CONFIRM] Retrait confirmé:", { userId, amount, balanceAfter });
+    console.log("[ATOMIC_WITHDRAWAL_CONFIRM] Retrait confirmé:", { userId, amount });
 
     return {
-      success: true,
-      newBalance: balanceAfter
+      success: true
     };
   } catch (error) {
     console.error("[ATOMIC_WITHDRAWAL_CONFIRM] Erreur:", error);
@@ -301,8 +282,8 @@ export async function confirmWithdrawalTransaction(params: {
 }
 
 /**
- * Annule un retrait (échec MonCash)
- * Déverrouille le montant sans débiter
+ * Annule un retrait via webhook payout.failed
+ * Rembourse le solde du joueur (le solde a déjà été débité)
  */
 export async function cancelWithdrawalTransaction(params: {
   userId: string;
@@ -312,11 +293,19 @@ export async function cancelWithdrawalTransaction(params: {
 }): Promise<AtomicTransactionResult> {
   const { userId, amount, referenceId, failureReason } = params;
 
-  console.log("[ATOMIC_WITHDRAWAL_CANCEL] Annulation:", { userId, amount, referenceId });
+  console.log("[ATOMIC_WITHDRAWAL_CANCEL] Annulation avec remboursement:", { userId, amount, referenceId });
 
   try {
-    // 1. Déverrouiller le montant
-    const unlockResult = await unlockBalance(userId, amount, referenceId);
+    // 1. Rembourser le solde du joueur
+    const creditResult = await creditWallet(userId, amount, referenceId, `Remboursement retrait échoué - ${failureReason}`);
+
+    if (!creditResult.success) {
+      console.error("[ATOMIC_WITHDRAWAL_CANCEL] Erreur remboursement:", creditResult.error);
+      return {
+        success: false,
+        error: creditResult.error || "Erreur remboursement"
+      };
+    }
 
     // 2. Mettre à jour le statut du retrait
     const withdrawalRef = adminDB.ref(`withdrawals/${userId}/${referenceId}`);
@@ -340,11 +329,11 @@ export async function cancelWithdrawalTransaction(params: {
       });
     }
 
-    console.log("[ATOMIC_WITHDRAWAL_CANCEL] Retrait annulé:", { userId, amount });
+    console.log("[ATOMIC_WITHDRAWAL_CANCEL] Retrait annulé avec remboursement:", { userId, amount, newBalance: creditResult.balance });
 
     return {
       success: true,
-      newBalance: unlockResult.balance
+      newBalance: creditResult.balance
     };
   } catch (error) {
     console.error("[ATOMIC_WITHDRAWAL_CANCEL] Erreur:", error);
