@@ -240,30 +240,21 @@ export function verifyWebhookSignature(
     return false;
   }
 
-  // Extraire la signature (format: sha256=...)
-  const signatureHash = signature.replace("sha256=", "");
-
-  console.log("[MONCASH] Signature extraite:", {
-    original: signature,
-    extracted: signatureHash,
-    extractedLength: signatureHash.length
-  });
-
   // Calculer HMAC-SHA256
   const hmac = crypto.createHmac("sha256", WEBHOOK_SECRET);
   hmac.update(payload);
-  const expectedSignature = hmac.digest("hex");
+  const expectedSignature = "sha256=" + hmac.digest("hex");
 
   console.log("[MONCASH] Comparaison signatures:", {
-    received: signatureHash,
+    received: signature,
     expected: expectedSignature,
-    match: signatureHash === expectedSignature
+    match: signature === expectedSignature
   });
 
   try {
     const isValid = crypto.timingSafeEqual(
-      Buffer.from(signatureHash, "hex"),
-      Buffer.from(expectedSignature, "hex")
+      Buffer.from(expectedSignature),
+      Buffer.from(signature)
     );
 
     if (!isValid) {
