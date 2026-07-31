@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       {
         amount,
         referenceId,
-        returnUrl: returnUrl || `${process.env.NEXT_PUBLIC_APP_URL}/wallet/deposit-return?referenceId=${referenceId}`,
+        returnUrl: returnUrl || `${process.env.NEXT_PUBLIC_APP_URL}/wallet/deposit-return?referenceId=${referenceId}&amount=${amount}`,
         customerName,
         customerEmail
       },
