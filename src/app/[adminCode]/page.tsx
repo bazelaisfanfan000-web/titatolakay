@@ -54,7 +54,7 @@ setLoading(true);
 
 
 
-if(password === "30Decembre2009"){
+if(password === "G7vK2mQ9xL4pR8aZ6nT3sW5dY1uH0c"){
 
 
 localStorage.setItem(
@@ -221,7 +221,7 @@ font-black
 mt-6
 ">
 
-DOMINOS HAÏTI
+PLAYTOCASH
 
 </h1>
 

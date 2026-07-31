@@ -115,19 +115,6 @@ export default function AdminDashboard() {
                   <span className="text-2xl">💰</span>
                 </div>
               </div>
-
-              {/* Solde Plateforme */}
-              <div className="rounded-xl border border-purple-400/30 bg-purple-500/[0.10] p-3 shadow-[0_3px_0_rgba(147,51,234,0.65),0_0_15px_rgba(147,51,234,0.08)] backdrop-blur-md">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[9px] text-purple-100/40">Solde Plateforme</p>
-                    <p className="mt-1 text-[15px] font-black text-purple-300">
-                      {loading ? '...' : formatCurrency(financeData.platformBalance)}
-                    </p>
-                  </div>
-                  <span className="text-2xl">💎</span>
-                </div>
-              </div>
             </div>
           </section>
 

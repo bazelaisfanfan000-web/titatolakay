@@ -2,36 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import {
-  ArrowLeft,
-  Wallet,
-  ArrowUp,
-  ArrowDown,
-  TrendingUp,
-  Filter,
-  Calendar,
-} from "lucide-react";
 
 export default function AdminTransactionsPage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
-  const [period, setPeriod] = useState('all');
 
   useEffect(() => {
     fetchTransactions();
-  }, [filter, period]);
+  }, []);
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (filter !== 'all') params.append('type', filter);
-      if (period !== 'all') params.append('period', period);
-
-      const response = await fetch(`/api/admin/transactions?${params.toString()}`);
+      const response = await fetch('/api/admin/transactions');
       const data = await response.json();
       if (data.success) {
         setTransactions(data.data);
@@ -46,15 +30,21 @@ export default function AdminTransactionsPage() {
   const getTransactionIcon = (type: string) => {
     switch (type) {
       case 'deposit':
-        return <ArrowDown className="text-green-400" size={20} />;
+        return '💰';
       case 'withdraw':
-        return <ArrowUp className="text-red-400" size={20} />;
+        return '💸';
       case 'reward':
-        return <TrendingUp className="text-purple-400" size={20} />;
+        return '🏆';
       case 'commission':
-        return <Wallet className="text-blue-400" size={20} />;
+        return '💎';
+      case 'bet':
+        return '🎮';
+      case 'GAME_WIN':
+        return '🏆';
+      case 'GAME_LOSS':
+        return '😢';
       default:
-        return <Wallet className="text-gray-400" size={20} />;
+        return '📋';
     }
   };
 
@@ -68,9 +58,21 @@ export default function AdminTransactionsPage() {
         return 'Gain';
       case 'commission':
         return 'Commission';
+      case 'bet':
+        return 'Mise';
+      case 'GAME_WIN':
+        return 'Partie gagnée';
+      case 'GAME_LOSS':
+        return 'Partie perdue';
       default:
         return type;
     }
+  };
+
+  const getTransactionColor = (type: string, amount: number) => {
+    if (amount > 0) return 'text-green-400';
+    if (amount < 0) return 'text-red-400';
+    return 'text-white/70';
   };
 
   const formatCurrency = (amount: number) => {
@@ -83,7 +85,7 @@ export default function AdminTransactionsPage() {
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('fr-HT', {
+    return new Date(timestamp).toLocaleString('fr-HT', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -93,127 +95,97 @@ export default function AdminTransactionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <button
-            onClick={() => router.push('/admin')}
-            className="bg-gray-800/50 hover:bg-gray-700/50 p-3 rounded-xl transition-all duration-200"
-          >
-            <ArrowLeft className="text-white" size={24} />
-          </button>
-          <div>
-            <h1 className="text-4xl font-black text-white mb-2">
-              💰 Transactions
-            </h1>
-            <p className="text-gray-400">Historique complet des transactions</p>
-          </div>
-        </div>
+    <main className="relative min-h-screen overflow-hidden bg-[#020617] text-white">
+      {/* Décorations */}
+      <div className="pointer-events-none fixed -left-24 top-20 h-64 w-64 rounded-full bg-blue-600/10 blur-3xl" />
+      <div className="pointer-events-none fixed -right-24 bottom-24 h-64 w-64 rounded-full bg-purple-600/10 blur-3xl" />
 
-        {/* Filters */}
-        <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700 mb-6">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <Filter className="text-gray-400" size={20} />
-              <span className="text-gray-400 text-sm">Type:</span>
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="all">Tous</option>
-                <option value="deposit">Dépôts</option>
-                <option value="withdraw">Retraits</option>
-                <option value="reward">Gains</option>
-                <option value="commission">Commissions</option>
-              </select>
+      {/* Conteneur mobile */}
+      <div className="relative mx-auto min-h-screen w-full max-w-[430px] overflow-x-hidden pb-28">
+        {/* Header fixe */}
+        <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/[0.08] bg-[#020617]/95 backdrop-blur-2xl">
+          <div className="mx-auto flex h-[64px] w-full max-w-[430px] items-center justify-between px-4">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.025] text-white/70 transition hover:bg-white/[0.05]"
+            >
+              ←
+            </button>
+
+            <div className="flex min-w-0 flex-col justify-center">
+              <h1 className="text-[17px] font-black leading-none tracking-tight text-white">
+                💰 Transactions
+              </h1>
+              <p className="mt-1 text-[8px] font-medium leading-none text-white/35">
+                Historique complet
+              </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Calendar className="text-gray-400" size={20} />
-              <span className="text-gray-400 text-sm">Période:</span>
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-                className="bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="all">Toutes</option>
-                <option value="today">Aujourd'hui</option>
-                <option value="week">Cette semaine</option>
-                <option value="month">Ce mois</option>
-              </select>
-            </div>
+            <div className="w-10" />
           </div>
-        </div>
+        </header>
 
-        {/* Transactions List */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
-            <p className="text-gray-400 mt-4">Chargement...</p>
-          </div>
-        ) : transactions.length === 0 ? (
-          <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl p-12 border border-gray-700 text-center">
-            <Wallet className="text-gray-500 mx-auto mb-4" size={48} />
-            <p className="text-gray-400">Aucune transaction trouvée</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {transactions.map((transaction, index) => (
-              <motion.div
-                key={transaction.transactionId}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="bg-gray-800/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-gray-700/50 p-3 rounded-xl">
+        {/* Contenu */}
+        <div className="px-4 pb-10 pt-[88px]">
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <p className="text-white/50">Chargement...</p>
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <p className="text-4xl mb-4">💰</p>
+              <p className="text-white/50">Aucune transaction trouvée</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {transactions.map((transaction) => (
+                <div
+                  key={transaction.transactionId}
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.025] text-xl">
                       {getTransactionIcon(transaction.type)}
                     </div>
-                    <div>
-                      <h3 className="text-white font-bold">
-                        {getTransactionLabel(transaction.type)}
-                      </h3>
-                      <p className="text-gray-400 text-sm">
-                        ID: {transaction.uid?.slice(0, 8)}...
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-bold text-white/90">
+                          {getTransactionLabel(transaction.type)}
+                        </p>
+                        <p className={`text-[11px] font-black ${getTransactionColor(transaction.type, transaction.amount)}`}>
+                          {transaction.amount > 0 ? '+' : ''}{formatCurrency(Math.abs(transaction.amount || 0))}
+                        </p>
+                      </div>
+
+                      <p className="mt-1 text-[9px] text-white/30">
+                        {formatDate(transaction.createdAt)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <p className="text-white font-bold text-lg">
-                      {transaction.type === 'withdraw' ? '-' : '+'}
-                      {formatCurrency(Math.abs(transaction.amount || 0))}
-                    </p>
-                    <p className="text-gray-400 text-sm">
-                      {formatDate(transaction.createdAt)}
-                    </p>
-                  </div>
+                  {transaction.status && (
+                    <div className="mt-2">
+                      <span
+                        className={`px-2 py-1 rounded-full text-[8px] font-medium ${
+                          transaction.status === 'completed'
+                            ? 'bg-green-500/20 text-green-400'
+                            : transaction.status === 'pending'
+                            ? 'bg-yellow-500/20 text-yellow-400'
+                            : 'bg-red-500/20 text-red-400'
+                        }`}
+                      >
+                        {transaction.status}
+                      </span>
+                    </div>
+                  )}
                 </div>
-
-                {transaction.status && (
-                  <div className="mt-4 pt-4 border-t border-gray-700">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        transaction.status === 'completed'
-                          ? 'bg-green-500/20 text-green-400'
-                          : transaction.status === 'pending'
-                          ? 'bg-yellow-500/20 text-yellow-400'
-                          : 'bg-red-500/20 text-red-400'
-                      }`}
-                    >
-                      {transaction.status}
-                    </span>
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
