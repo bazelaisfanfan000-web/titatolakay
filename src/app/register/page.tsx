@@ -66,6 +66,7 @@ export default function Register() {
 
   async function register() {
 
+    console.log("[REGISTER] Début de l'inscription", { username, email, password: password.length, accepted });
 
     if (
       !username.trim() ||
@@ -73,6 +74,7 @@ export default function Register() {
       !password
     ) {
 
+      console.log("[REGISTER] Champs manquants");
       return setError(
         "Tous les champs sont obligatoires"
       );
@@ -83,6 +85,7 @@ export default function Register() {
 
     if (password.length < 6) {
 
+      console.log("[REGISTER] Mot de passe trop court");
       return setError(
         "Le mot de passe doit avoir au moins 6 caractères"
       );
@@ -93,11 +96,14 @@ export default function Register() {
 
     if (!accepted) {
 
+      console.log("[REGISTER] Conditions non acceptées");
       return setError(
         "Tu dois accepter les conditions d'utilisation"
       );
 
     }
+
+    console.log("[REGISTER] Validations passées");
 
 
 
@@ -113,10 +119,10 @@ export default function Register() {
 
 
     try {
-
-
+      console.log("[REGISTER] Début du try block");
       setLoading(true);
       setError("");
+      console.log("[REGISTER] Loading state set to true");
 
 
 
@@ -126,13 +132,14 @@ export default function Register() {
       ========================================
       */
 
-
+      console.log("[REGISTER] Appel createUserWithEmailAndPassword");
       const { user } =
         await createUserWithEmailAndPassword(
           auth,
           email.trim(),
           password
         );
+      console.log("[REGISTER] Utilisateur créé avec succès", { uid: user.uid, email: user.email });
 
 
 
@@ -671,7 +678,10 @@ export default function Register() {
 
             type="button"
 
-            onClick={register}
+            onClick={() => {
+              console.log("[REGISTER_BUTTON] Button clicked", { loading, username, email, password: password.length, accepted });
+              register();
+            }}
 
             disabled={loading}
 
