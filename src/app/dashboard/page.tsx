@@ -728,241 +728,6 @@ export default function Dashboard() {
 
 
           {/* ======================================
-              NOTIFICATIONS
-          ====================================== */}
-
-          <section
-            className="
-              mt-6
-            "
-          >
-            {notificationPermission === "default" && (
-              <button
-                type="button"
-                onClick={requestNotificationPermission}
-                className="
-                  flex
-                  min-h-[56px]
-                  w-full
-                  items-center
-                  gap-3
-                  rounded-2xl
-                  border
-                  border-green-400/30
-                  bg-green-500/[0.10]
-                  px-3.5
-                  py-2.5
-                  text-left
-                  shadow-[0_4px_0_rgba(34,197,94,0.65),0_0_18px_rgba(34,197,94,0.08)]
-                  backdrop-blur-md
-                  transition-all
-                  hover:border-green-300/50
-                  hover:bg-green-500/[0.16]
-                  hover:shadow-[0_5px_0_rgba(34,197,94,0.7),0_0_24px_rgba(34,197,94,0.14)]
-                  active:translate-y-[3px]
-                  active:shadow-none
-                "
-              >
-                <div
-                  className="
-                    flex
-                    h-10
-                    w-10
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    border-green-300/25
-                    bg-green-400/[0.10]
-                    text-lg
-                    shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]
-                  "
-                >
-                  <Bell size={20} className="text-green-400" />
-                </div>
-
-                <div
-                  className="
-                    min-w-0
-                    flex-1
-                  "
-                >
-                  <h4
-                    className="
-                      text-[13px]
-                      font-black
-                      leading-tight
-                      text-green-100
-                    "
-                  >
-                    Activer les notifications
-                  </h4>
-
-                  <p
-                    className="
-                      mt-1
-                      truncate
-                      text-[9px]
-                      leading-tight
-                      text-green-100/40
-                    "
-                  >
-                    Recevez des alertes en temps réel.
-                  </p>
-                </div>
-
-                <span
-                  className="
-                    shrink-0
-                    pr-1
-                    text-2xl
-                    font-light
-                    leading-none
-                    text-green-200/50
-                  "
-                >
-                  ›
-                </span>
-              </button>
-            )}
-
-            {notificationPermission === "granted" && (
-              <div
-                className="
-                  flex
-                  min-h-[56px]
-                  w-full
-                  items-center
-                  gap-3
-                  rounded-2xl
-                  border
-                  border-green-400/20
-                  bg-green-500/[0.07]
-                  px-3.5
-                  py-2.5
-                  text-left
-                "
-              >
-                <div
-                  className="
-                    flex
-                    h-10
-                    w-10
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    border-green-300/20
-                    bg-green-400/[0.07]
-                    text-lg
-                  "
-                >
-                  <Bell size={20} className="text-green-400" />
-                </div>
-
-                <div
-                  className="
-                    min-w-0
-                    flex-1
-                  "
-                >
-                  <h4
-                    className="
-                      text-[13px]
-                      font-black
-                      leading-tight
-                      text-green-100
-                    "
-                  >
-                    Notifications activées ✓
-                  </h4>
-
-                  <p
-                    className="
-                      mt-1
-                      truncate
-                      text-[9px]
-                      leading-tight
-                      text-green-100/35
-                    "
-                  >
-                    Vous recevrez des alertes en temps réel.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {notificationPermission === "denied" && (
-              <div
-                className="
-                  flex
-                  min-h-[56px]
-                  w-full
-                  items-center
-                  gap-3
-                  rounded-2xl
-                  border
-                  border-orange-400/20
-                  bg-orange-500/[0.07]
-                  px-3.5
-                  py-2.5
-                  text-left
-                "
-              >
-                <div
-                  className="
-                    flex
-                    h-10
-                    w-10
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    border-orange-300/20
-                    bg-orange-400/[0.07]
-                    text-lg
-                  "
-                >
-                  <Bell size={20} className="text-orange-400" />
-                </div>
-
-                <div
-                  className="
-                    min-w-0
-                    flex-1
-                  "
-                >
-                  <h4
-                    className="
-                      text-[13px]
-                      font-black
-                      leading-tight
-                      text-orange-100
-                    "
-                  >
-                    Notifications bloquées
-                  </h4>
-
-                  <p
-                    className="
-                      mt-1
-                      truncate
-                      text-[9px]
-                      leading-tight
-                      text-orange-100/35
-                    "
-                  >
-                    Activez-les dans les paramètres du navigateur.
-                  </p>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* ======================================
               ACTIONS
           ====================================== */}
 
@@ -1201,6 +966,241 @@ export default function Dashboard() {
 
             </div>
 
+          </section>
+
+          {/* ======================================
+              NOTIFICATIONS
+          ====================================== */}
+
+          <section
+            className="
+              mt-6
+            "
+          >
+            {notificationPermission === "default" && (
+              <button
+                type="button"
+                onClick={requestNotificationPermission}
+                className="
+                  flex
+                  min-h-[56px]
+                  w-full
+                  items-center
+                  gap-3
+                  rounded-2xl
+                  border
+                  border-green-400/30
+                  bg-green-500/[0.10]
+                  px-3.5
+                  py-2.5
+                  text-left
+                  shadow-[0_4px_0_rgba(34,197,94,0.65),0_0_18px_rgba(34,197,94,0.08)]
+                  backdrop-blur-md
+                  transition-all
+                  hover:border-green-300/50
+                  hover:bg-green-500/[0.16]
+                  hover:shadow-[0_5px_0_rgba(34,197,94,0.7),0_0_24px_rgba(34,197,94,0.14)]
+                  active:translate-y-[3px]
+                  active:shadow-none
+                "
+              >
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-green-300/25
+                    bg-green-400/[0.10]
+                    text-lg
+                    shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]
+                  "
+                >
+                  <Bell size={20} className="text-green-400" />
+                </div>
+
+                <div
+                  className="
+                    min-w-0
+                    flex-1
+                  "
+                >
+                  <h4
+                    className="
+                      text-[13px]
+                      font-black
+                      leading-tight
+                      text-green-100
+                    "
+                  >
+                    Activer les notifications
+                  </h4>
+
+                  <p
+                    className="
+                      mt-1
+                      truncate
+                      text-[9px]
+                      leading-tight
+                      text-green-100/40
+                    "
+                  >
+                    Pour être au courant des nouvelles parties
+                  </p>
+                </div>
+
+                <span
+                  className="
+                    shrink-0
+                    pr-1
+                    text-2xl
+                    font-light
+                    leading-none
+                    text-green-200/50
+                  "
+                >
+                  ›
+                </span>
+              </button>
+            )}
+
+            {notificationPermission === "granted" && (
+              <div
+                className="
+                  flex
+                  min-h-[56px]
+                  w-full
+                  items-center
+                  gap-3
+                  rounded-2xl
+                  border
+                  border-green-400/20
+                  bg-green-500/[0.07]
+                  px-3.5
+                  py-2.5
+                  text-left
+                "
+              >
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-green-300/20
+                    bg-green-400/[0.07]
+                    text-lg
+                  "
+                >
+                  <Bell size={20} className="text-green-400" />
+                </div>
+
+                <div
+                  className="
+                    min-w-0
+                    flex-1
+                  "
+                >
+                  <h4
+                    className="
+                      text-[13px]
+                      font-black
+                      leading-tight
+                      text-green-100
+                    "
+                  >
+                    Activé ✓
+                  </h4>
+
+                  <p
+                    className="
+                      mt-1
+                      truncate
+                      text-[9px]
+                      leading-tight
+                      text-green-100/35
+                    "
+                  >
+                    Vous recevrez des notifications pour chaque nouvelle partie
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {notificationPermission === "denied" && (
+              <div
+                className="
+                  flex
+                  min-h-[56px]
+                  w-full
+                  items-center
+                  gap-3
+                  rounded-2xl
+                  border
+                  border-orange-400/20
+                  bg-orange-500/[0.07]
+                  px-3.5
+                  py-2.5
+                  text-left
+                "
+              >
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-orange-300/20
+                    bg-orange-400/[0.07]
+                    text-lg
+                  "
+                >
+                  <Bell size={20} className="text-orange-400" />
+                </div>
+
+                <div
+                  className="
+                    min-w-0
+                    flex-1
+                  "
+                >
+                  <h4
+                    className="
+                      text-[13px]
+                      font-black
+                      leading-tight
+                      text-orange-100
+                    "
+                  >
+                    Notifications bloquées
+                  </h4>
+
+                  <p
+                    className="
+                      mt-1
+                      truncate
+                      text-[9px]
+                      leading-tight
+                      text-orange-100/35
+                    "
+                  >
+                    Activez-les dans les paramètres du navigateur
+                  </p>
+                </div>
+              </div>
+            )}
           </section>
 
 
