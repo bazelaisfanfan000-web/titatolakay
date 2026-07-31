@@ -57,13 +57,20 @@ export async function POST(request: Request) {
       contentType,
       userAgent,
       bodyLength: body.length,
-      bodyPreview: body.substring(0, 100)
+      bodyPreview: body.substring(0, 100),
+      nodeEnv: process.env.NODE_ENV
     });
 
-    // Mode test: si le corps contient "test" ou si signature est absente en mode dev
-    const isTestMode = process.env.NODE_ENV === 'development' || 
-                       body.includes('test') ||
-                       !signature;
+    // Mode test: si signature absente OU si le corps contient "test"
+    // NE PAS dépendre de NODE_ENV car Vercel est en production
+    const isTestMode = !signature || body.includes('test');
+    
+    console.log("[WEBHOOK] Détection mode test:", {
+      isTestMode,
+      hasSignature: !!signature,
+      bodyContainsTest: body.includes('test'),
+      nodeEnv: process.env.NODE_ENV
+    });
     
     if (isTestMode) {
       console.log("[WEBHOOK] Mode test détecté - retour 200 sans traitement");
