@@ -3,7 +3,12 @@
 import {
   useEffect,
   useState,
+  Suspense,
 } from "react";
+
+import {
+  useSearchParams,
+} from "next/navigation";
 
 import {
   auth,
@@ -49,8 +54,8 @@ Le serveur doit toujours vérifier :
 */
 
 
-export default function WalletPage() {
-
+function WalletContent() {
+  const searchParams = useSearchParams();
 
   /*
   ==================================================
@@ -332,6 +337,64 @@ export default function WalletPage() {
   }, [
     currentUser,
   ]);
+
+
+  /*
+  ==================================================
+  VÉRIFICATION DU STATUT DE DÉPÔT AU RETOUR
+  ==================================================
+  */
+
+  useEffect(() => {
+
+    if (!currentUser) {
+      return;
+    }
+
+    const reference = searchParams.get("reference");
+    const orderId = searchParams.get("orderId");
+    const referenceId = searchParams.get("referenceId");
+
+    if (!referenceId) {
+      return;
+    }
+
+    async function checkDepositStatus() {
+      try {
+        if (!currentUser) return;
+        const token = await currentUser.getIdToken(true);
+
+        const response = await fetch(
+          `/api/wallet/deposit/status?referenceId=${referenceId}`,
+          {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (result.success && result.deposit) {
+          if (result.deposit.status === "completed") {
+            setDepositMessage("✅ Dépôt réussi ! Votre solde a été crédité.");
+            setDepositMessageType("info");
+            setDepositOpen(true);
+          } else if (result.deposit.status === "failed") {
+            setDepositMessage(`❌ Dépôt échoué: ${result.deposit.failureReason || "Erreur inconnue"}`);
+            setDepositMessageType("error");
+            setDepositOpen(true);
+          }
+        }
+      } catch (error) {
+        console.error("Erreur vérification statut dépôt:", error);
+      }
+    }
+
+    checkDepositStatus();
+
+  }, [currentUser, searchParams]);
 
 
   /*
@@ -2217,5 +2280,22 @@ export default function WalletPage() {
     </main>
 
   );
+}
 
+export default function WalletPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-[#030303] text-white">
+        <div className="mx-auto flex min-h-screen w-full max-w-[430px] items-center justify-center px-5">
+          <div className="text-center">
+            <div className="mb-4 text-4xl">💙</div>
+            <h1 className="text-lg font-black">Wallet</h1>
+            <p className="mt-2 text-[10px] text-white/30">Chargement...</p>
+          </div>
+        </div>
+      </main>
+    }>
+      <WalletContent />
+    </Suspense>
+  );
 }
