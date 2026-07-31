@@ -8,17 +8,14 @@ export function middleware(request: NextRequest) {
   if (pathname.startsWith('/admin')) {
     const adminSession = request.cookies.get('admin_session');
 
-    // Permettre l'accès à la page de login
+    // Bloquer l'accès direct à /admin/login
     if (pathname === '/admin/login') {
-      if (adminSession) {
-        return NextResponse.redirect(new URL('/admin', request.url));
-      }
-      return NextResponse.next();
+      return NextResponse.redirect(new URL('/admin-access-denied', request.url));
     }
 
     // Protéger toutes les autres routes admin
     if (!adminSession) {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
+      return NextResponse.redirect(new URL('/admin-access-denied', request.url));
     }
   }
 
