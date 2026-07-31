@@ -121,21 +121,10 @@ export async function POST(request: Request) {
     const bet = Number(room.bet || 0);
     const creatorId = room.creatorId;
 
-    // Vérifier les soldes des deux joueurs AVANT de débiter
-    const creatorBalanceSnap = await adminDB.ref(`users/${creatorId}/balance`).get();
-    const creatorBalance = Number(creatorBalanceSnap.val() || 0);
-
+    // Vérifier le solde du joueur qui rejoint
+    // Le créateur est déjà débité lors de la création de la partie
     const joinerBalanceSnap = await adminDB.ref(`users/${uid}/balance`).get();
     const joinerBalance = Number(joinerBalanceSnap.val() || 0);
-
-    if (creatorBalance < bet) {
-      return NextResponse.json({
-        success: false,
-        error: "Le créateur n'a pas assez de solde"
-      }, {
-        status: 400
-      });
-    }
 
     if (joinerBalance < bet) {
       return NextResponse.json({
