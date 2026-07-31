@@ -6,7 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebaseAdmin";
-import { parseWebhook } from "@/lib/moncash";
+import { constructEvent, MonCashError } from "@moncashconnect/sdk";
 import { confirmWithdrawalTransaction, cancelWithdrawalTransaction } from "@/lib/atomicTransaction";
 import { creditWallet } from "@/lib/wallet";
 import { createDepositLedgerEntry, createWithdrawalLedgerEntry, updateLedgerStatus } from "@/lib/ledger";
@@ -90,13 +90,36 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Vérifier la signature HMAC
-    const event = parseWebhook(body, signature, timestamp);
-    if (!event) {
-      console.error("[WEBHOOK] Signature invalide");
+    // 2. Vérifier la signature et construire l'événement avec le SDK officiel
+    const webhookSecret = process.env.MONCASH_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error("[WEBHOOK] MONCASH_WEBHOOK_SECRET non configuré");
       return NextResponse.json(
-        { error: "Signature invalide" },
-        { status: 401 }
+        { error: "Configuration serveur invalide" },
+        { status: 500 }
+      );
+    }
+
+    let event: any;
+    try {
+      event = constructEvent(
+        Buffer.from(body),
+        signature,
+        timestamp,
+        webhookSecret
+      );
+    } catch (err) {
+      if (err instanceof MonCashError) {
+        console.error("[WEBHOOK] Erreur SDK MonCash:", err.message);
+        return NextResponse.json(
+          { error: err.message },
+          { status: err.statusCode || 401 }
+        );
+      }
+      console.error("[WEBHOOK] Erreur inconnue:", err);
+      return NextResponse.json(
+        { error: "Erreur lors du traitement" },
+        { status: 500 }
       );
     }
 
@@ -125,7 +148,8 @@ export async function POST(request: Request) {
     });
 
     // 5. Traiter l'événement selon son type
-    switch (event.event) {
+    const eventType = event.event as string;
+    switch (eventType) {
       case "payment.completed":
         await handlePaymentCompleted(event);
         break;
@@ -143,9 +167,9 @@ export async function POST(request: Request) {
         break;
 
       default:
-        console.warn("[WEBHOOK] Type d'événement inconnu:", event.event);
+        console.warn("[WEBHOOK] Type d'événement inconnu:", eventType);
+        break;
     }
-
     return NextResponse.json({ success: true });
 
   } catch (error) {
