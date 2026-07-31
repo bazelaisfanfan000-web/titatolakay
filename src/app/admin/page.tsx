@@ -2,19 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import {
-  Wallet,
-  Building2,
-  Diamond,
-  Users,
-  Gamepad2,
-  Activity,
-  LogOut,
-  UserCircle,
-  LayoutGrid,
-  ArrowRight,
-} from "lucide-react";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -79,214 +66,190 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-6">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-black text-white mb-2">
-              💎 PlayToCash Admin
-            </h1>
-            <p className="text-gray-400">Tableau de bord administrateur sécurisé</p>
+    <main className="relative min-h-screen overflow-hidden bg-[#020617] text-white">
+      {/* Décorations */}
+      <div className="pointer-events-none fixed -left-24 top-20 h-64 w-64 rounded-full bg-blue-600/10 blur-3xl" />
+      <div className="pointer-events-none fixed -right-24 bottom-24 h-64 w-64 rounded-full bg-purple-600/10 blur-3xl" />
+
+      {/* Conteneur mobile */}
+      <div className="relative mx-auto min-h-screen w-full max-w-[430px] overflow-x-hidden pb-28">
+        {/* Header fixe */}
+        <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/[0.08] bg-[#020617]/95 backdrop-blur-2xl">
+          <div className="mx-auto flex h-[64px] w-full max-w-[430px] items-center justify-between px-4">
+            <div className="flex min-w-0 flex-col justify-center">
+              <h1 className="text-[17px] font-black leading-none tracking-tight text-white">
+                💎 Admin
+              </h1>
+              <p className="mt-1 text-[8px] font-medium leading-none text-white/35">
+                Tableau de bord
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-400/30 bg-red-500/[0.10] text-red-400 transition hover:bg-red-500/[0.16]"
+            >
+              ←
+            </button>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 px-4 py-2 rounded-lg transition-all duration-200"
-          >
-            <LogOut size={20} />
-            Déconnexion
-          </button>
+        </header>
+
+        {/* Contenu */}
+        <div className="px-4 pb-10 pt-[88px]">
+          {/* Finance Section */}
+          <section className="mt-4">
+            <h2 className="text-[10px] font-medium text-white/35">
+              💰 Finance
+            </h2>
+            <div className="mt-2 space-y-2">
+              {/* Capital Total */}
+              <div className="rounded-xl border border-blue-400/30 bg-blue-500/[0.10] p-3 shadow-[0_3px_0_rgba(30,64,175,0.65),0_0_15px_rgba(37,99,235,0.08)] backdrop-blur-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[9px] text-blue-100/40">Capital Total</p>
+                    <p className="mt-1 text-[15px] font-black text-blue-300">
+                      {loading ? '...' : formatCurrency(financeData.totalUserCapital)}
+                    </p>
+                  </div>
+                  <span className="text-2xl">💰</span>
+                </div>
+              </div>
+
+              {/* Solde Plateforme */}
+              <div className="rounded-xl border border-purple-400/30 bg-purple-500/[0.10] p-3 shadow-[0_3px_0_rgba(147,51,234,0.65),0_0_15px_rgba(147,51,234,0.08)] backdrop-blur-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[9px] text-purple-100/40">Solde Plateforme</p>
+                    <p className="mt-1 text-[15px] font-black text-purple-300">
+                      {loading ? '...' : formatCurrency(financeData.platformBalance)}
+                    </p>
+                  </div>
+                  <span className="text-2xl">💎</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Game Stats Section */}
+          <section className="mt-6">
+            <h2 className="text-[10px] font-medium text-white/35">
+              🎮 Statistiques
+            </h2>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {/* Total Users */}
+              <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
+                <p className="text-[9px] text-white/40">Total Joueurs</p>
+                <p className="mt-1 text-[15px] font-black text-white">
+                  {loading ? '...' : gameStats.users.total}
+                </p>
+                <p className="mt-1 text-[8px] text-green-400">
+                  +{gameStats.users.newToday} aujourd'hui
+                </p>
+              </div>
+
+              {/* Online Users */}
+              <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
+                <p className="text-[9px] text-white/40">En Ligne</p>
+                <p className="mt-1 text-[15px] font-black text-white">
+                  {loading ? '...' : gameStats.users.online}
+                </p>
+                <p className="mt-1 text-[8px] text-white/30">Actifs maintenant</p>
+              </div>
+
+              {/* Total Games */}
+              <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
+                <p className="text-[9px] text-white/40">Total Parties</p>
+                <p className="mt-1 text-[15px] font-black text-white">
+                  {loading ? '...' : gameStats.games.total}
+                </p>
+                <p className="mt-1 text-[8px] text-purple-400">
+                  +{gameStats.games.today} aujourd'hui
+                </p>
+              </div>
+
+              {/* Games In Progress */}
+              <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
+                <p className="text-[9px] text-white/40">En Cours</p>
+                <p className="mt-1 text-[15px] font-black text-white">
+                  {loading ? '...' : gameStats.games.inProgress}
+                </p>
+                <p className="mt-1 text-[8px] text-white/30">
+                  {gameStats.games.completed} terminées
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Quick Actions */}
+          <section className="mt-6">
+            <h2 className="text-[10px] font-medium text-white/35">
+              ⚡ Actions Rapides
+            </h2>
+            <div className="mt-2 space-y-2">
+              <button
+                onClick={() => router.push('/admin/users')}
+                className="flex min-h-[68px] w-full items-center gap-3 rounded-2xl border border-blue-400/25 bg-blue-500/[0.07] px-3.5 py-2.5 text-left shadow-[0_4px_0_rgba(30,64,175,0.5),0_0_15px_rgba(37,99,235,0.06)] backdrop-blur-md transition-all hover:border-blue-300/45 hover:bg-blue-500/[0.12] hover:shadow-[0_5px_0_rgba(30,64,175,0.6),0_0_22px_rgba(37,99,235,0.1)] active:translate-y-[3px] active:shadow-none"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-300/20 bg-blue-400/[0.07] text-lg shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  👥
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-[13px] font-black leading-tight text-blue-100">
+                    Gestion Utilisateurs
+                  </h4>
+                  <p className="mt-1 truncate text-[9px] leading-tight text-blue-100/35">
+                    Voir et gérer les joueurs
+                  </p>
+                </div>
+                <span className="shrink-0 pr-1 text-2xl font-light leading-none text-blue-200/50">
+                  ›
+                </span>
+              </button>
+
+              <button
+                onClick={() => router.push('/admin/games')}
+                className="flex min-h-[68px] w-full items-center gap-3 rounded-2xl border border-purple-400/25 bg-purple-500/[0.07] px-3.5 py-2.5 text-left shadow-[0_4px_0_rgba(147,51,234,0.5),0_0_15px_rgba(147,51,234,0.06)] backdrop-blur-md transition-all hover:border-purple-300/45 hover:bg-purple-500/[0.12] hover:shadow-[0_5px_0_rgba(147,51,234,0.6),0_0_22px_rgba(147,51,234,0.1)] active:translate-y-[3px] active:shadow-none"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-purple-300/20 bg-purple-400/[0.07] text-lg shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  🎮
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-[13px] font-black leading-tight text-purple-100">
+                    Gestion Parties
+                  </h4>
+                  <p className="mt-1 truncate text-[9px] leading-tight text-purple-100/35">
+                    Voir et gérer les parties
+                  </p>
+                </div>
+                <span className="shrink-0 pr-1 text-2xl font-light leading-none text-purple-200/50">
+                  ›
+                </span>
+              </button>
+
+              <button
+                onClick={() => router.push('/admin/transactions')}
+                className="flex min-h-[68px] w-full items-center gap-3 rounded-2xl border border-green-400/25 bg-green-500/[0.07] px-3.5 py-2.5 text-left shadow-[0_4px_0_rgba(34,197,94,0.5),0_0_15px_rgba(34,197,94,0.06)] backdrop-blur-md transition-all hover:border-green-300/45 hover:bg-green-500/[0.12] hover:shadow-[0_5px_0_rgba(34,197,94,0.6),0_0_22px_rgba(34,197,94,0.1)] active:translate-y-[3px] active:shadow-none"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-green-300/20 bg-green-400/[0.07] text-lg shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  💰
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-[13px] font-black leading-tight text-green-100">
+                    Transactions
+                  </h4>
+                  <p className="mt-1 truncate text-[9px] leading-tight text-green-100/35">
+                    Dépôts, retraits et gains
+                  </p>
+                </div>
+                <span className="shrink-0 pr-1 text-2xl font-light leading-none text-green-200/50">
+                  ›
+                </span>
+              </button>
+            </div>
+          </section>
         </div>
       </div>
-
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Finance Section */}
-        <section>
-          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-            <Wallet className="text-purple-400" />
-            Finance
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Capital Total */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="bg-purple-500/20 p-3 rounded-xl">
-                  <Wallet className="text-purple-400" size={32} />
-                </div>
-                <span className="text-purple-400 text-sm font-medium">Capital Total</span>
-              </div>
-              <p className="text-gray-400 text-sm mb-2">Capital total des utilisateurs</p>
-              <h3 className="text-3xl font-black text-white">
-                {loading ? '...' : formatCurrency(financeData.totalUserCapital)}
-              </h3>
-            </motion.div>
-
-            {/* Solde Plateforme */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-gradient-to-br from-blue-600/20 to-cyan-600/20 backdrop-blur-xl rounded-2xl p-6 border border-blue-500/20"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="bg-blue-500/20 p-3 rounded-xl">
-                  <Diamond className="text-blue-400" size={32} />
-                </div>
-                <span className="text-blue-400 text-sm font-medium">Plateforme</span>
-              </div>
-              <p className="text-gray-400 text-sm mb-2">Solde plateforme</p>
-              <h3 className="text-3xl font-black text-white">
-                {loading ? '...' : formatCurrency(financeData.platformBalance)}
-              </h3>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Game Stats Section */}
-        <section>
-          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-            <Gamepad2 className="text-cyan-400" />
-            Statistiques du Jeu
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Total Users */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-gray-800/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <Users className="text-cyan-400" size={24} />
-                <span className="text-gray-400 text-sm">Total Joueurs</span>
-              </div>
-              <h3 className="text-2xl font-black text-white">
-                {loading ? '...' : gameStats.users.total}
-              </h3>
-              <p className="text-green-400 text-sm mt-1">
-                +{gameStats.users.newToday} aujourd'hui
-              </p>
-            </motion.div>
-
-            {/* Online Users */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-gray-800/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <Activity className="text-green-400" size={24} />
-                <span className="text-gray-400 text-sm">En Ligne</span>
-              </div>
-              <h3 className="text-2xl font-black text-white">
-                {loading ? '...' : gameStats.users.online}
-              </h3>
-              <p className="text-gray-500 text-sm mt-1">Actifs maintenant</p>
-            </motion.div>
-
-            {/* Total Games */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="bg-gray-800/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <Gamepad2 className="text-purple-400" size={24} />
-                <span className="text-gray-400 text-sm">Total Parties</span>
-              </div>
-              <h3 className="text-2xl font-black text-white">
-                {loading ? '...' : gameStats.games.total}
-              </h3>
-              <p className="text-purple-400 text-sm mt-1">
-                +{gameStats.games.today} aujourd'hui
-              </p>
-            </motion.div>
-
-            {/* Games In Progress */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 }}
-              className="bg-gray-800/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <Activity className="text-yellow-400" size={24} />
-                <span className="text-gray-400 text-sm">En Cours</span>
-              </div>
-              <h3 className="text-2xl font-black text-white">
-                {loading ? '...' : gameStats.games.inProgress}
-              </h3>
-              <p className="text-gray-500 text-sm mt-1">
-                {gameStats.games.completed} terminées
-              </p>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Quick Actions */}
-        <section>
-          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-            <LayoutGrid className="text-pink-400" />
-            Actions Rapides
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <button
-              onClick={() => router.push('/admin/users')}
-              className="bg-gray-800/50 hover:bg-gray-700/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700 text-left transition-all duration-200 group"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <UserCircle className="text-cyan-400" size={32} />
-                  <div>
-                    <h3 className="text-white font-bold">Gestion Utilisateurs</h3>
-                    <p className="text-gray-400 text-sm">Voir et gérer les joueurs</p>
-                  </div>
-                </div>
-                <ArrowRight className="text-gray-500 group-hover:text-white transition-colors" />
-              </div>
-            </button>
-
-            <button
-              onClick={() => router.push('/admin/games')}
-              className="bg-gray-800/50 hover:bg-gray-700/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700 text-left transition-all duration-200 group"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Gamepad2 className="text-purple-400" size={32} />
-                  <div>
-                    <h3 className="text-white font-bold">Gestion Parties</h3>
-                    <p className="text-gray-400 text-sm">Voir et gérer les parties</p>
-                  </div>
-                </div>
-                <ArrowRight className="text-gray-500 group-hover:text-white transition-colors" />
-              </div>
-            </button>
-
-            <button
-              onClick={() => router.push('/admin/transactions')}
-              className="bg-gray-800/50 hover:bg-gray-700/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700 text-left transition-all duration-200 group"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Wallet className="text-green-400" size={32} />
-                  <div>
-                    <h3 className="text-white font-bold">Transactions</h3>
-                    <p className="text-gray-400 text-sm">Dépôts, retraits et gains</p>
-                  </div>
-                </div>
-                <ArrowRight className="text-gray-500 group-hover:text-white transition-colors" />
-              </div>
-            </button>
-          </div>
-        </section>
-      </div>
-    </div>
+    </main>
   );
 }
