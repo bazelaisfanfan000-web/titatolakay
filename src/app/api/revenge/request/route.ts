@@ -31,8 +31,42 @@ export async function POST(request: Request) {
       });
     }
 
+    // Authentification Firebase
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json({
+        success: false,
+        error: "Non autorisé"
+      }, {
+        status: 401
+      });
+    }
+
+    const token = authHeader.replace("Bearer ", "").trim();
+    if (!token) {
+      return NextResponse.json({
+        success: false,
+        error: "Token manquant"
+      }, {
+        status: 401
+      });
+    }
+
+    const decoded = await adminAuth.verifyIdToken(token);
+    const uid = decoded.uid;
+
     const body = await request.json();
     const { requesterId, opponentId, previousGameId, previousRoomId, betAmount } = body;
+
+    // Vérifier que le requesterId correspond à l'utilisateur authentifié
+    if (requesterId !== uid) {
+      return NextResponse.json({
+        success: false,
+        error: "Vous ne pouvez demander une revanche que pour vous-même"
+      }, {
+        status: 403
+      });
+    }
 
     // Validation des données
     if (!requesterId || !opponentId || !previousGameId || !previousRoomId || !betAmount) {

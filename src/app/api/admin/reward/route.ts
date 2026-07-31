@@ -42,8 +42,7 @@ await request.json();
 const {
 adminUid,
 amount,
-message,
-mfaCode
+message
 }=body;
 
 
@@ -76,11 +75,23 @@ status:400
 
 
 
-// Vérifier MFA pour admin
-if (!mfaCode || mfaCode.length < 6) {
+// Valider le montant
+const numericAmount = Number(amount);
+if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
   return NextResponse.json(
     {
-      error: "Code MFA requis"
+      error: "Montant invalide - doit être positif"
+    },
+    {
+      status: 400
+    }
+  );
+}
+
+if (numericAmount > 10000) {
+  return NextResponse.json(
+    {
+      error: "Montant trop élevé - maximum 10,000 HTG"
     },
     {
       status: 400

@@ -1,11 +1,29 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createAdminSession } from '@/lib/adminAuth';
+import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   try {
+    // Rate limiting strict pour admin login
+    const rateLimitResult = await rateLimitMiddleware(
+      request,
+      'adminLogin',
+      {
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        maxRequests: 5 // 5 tentatives seulement
+      }
+    );
+
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Trop de tentatives de connexion. Réessayez plus tard.' },
+        { status: 429 }
+      );
+    }
+
     const { password } = await request.json();
 
     // Vérifier le mot de passe admin depuis les variables d'environnement

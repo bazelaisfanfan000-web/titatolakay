@@ -267,7 +267,6 @@ if (!declaredWinner) {
 }
 
 // Validation serveur du gagnant pour empêcher la triche
-// TEMPORAIREMENT DÉSACTIVÉ POUR DEBUG - La validation semble incorrecte
 const actualWinner = determineWinner(board);
 
 console.log("[VALIDATION_DEBUG] Validation du gagnant:", {
@@ -278,8 +277,8 @@ console.log("[VALIDATION_DEBUG] Validation du gagnant:", {
   boardSample: Object.entries(board).slice(0, 5)
 });
 
-// Désactivation temporaire de la validation
-const isValidWinner = true; // validateWinner(board, declaredWinner);
+// Validation active du gagnant
+const isValidWinner = validateWinner(board, declaredWinner);
 
 if (!isValidWinner) {
   console.error("[SECURITY] Gagnant invalide détecté", {

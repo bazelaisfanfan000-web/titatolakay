@@ -16,6 +16,11 @@ import {
   addMonthlyPoints,
 } from "@/lib/monthlyChampion";
 
+import {
+  rateLimitMiddleware,
+  RATE_LIMIT_CONFIGS
+} from "@/lib/rateLimit";
+
 
 // =====================================================
 // TYPES
@@ -41,6 +46,31 @@ export async function POST(
 ) {
 
   try {
+
+    // =================================================
+    // RATE LIMITING
+    // =================================================
+
+    const rateLimitResult = await rateLimitMiddleware(
+      request,
+      "gameMove",
+      {
+        windowMs: 60 * 1000, // 1 minute
+        maxRequests: 60 // 60 coups par minute maximum
+      }
+    );
+
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Trop de coups. Réessayez plus tard."
+        },
+        {
+          status: 429,
+        }
+      );
+    }
 
     // =================================================
     // AUTHENTIFICATION
