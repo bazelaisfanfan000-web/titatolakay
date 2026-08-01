@@ -121,6 +121,36 @@ export async function POST(request: Request) {
     const bet = Number(room.bet || 0);
     const creatorId = room.creatorId;
 
+    /*
+    ================================================
+    VÉRIFIER SOLDE DU JOUEUR QUI REJOINT
+    ================================================
+    */
+
+    const balanceSnap =
+      await adminDB
+        .ref(`users/${uid}/balance`)
+        .once("value");
+
+    const balance =
+      Number(balanceSnap.val() || 0);
+
+    if (balance < bet) {
+
+      return NextResponse.json({
+        success: false,
+        error: "Solde insuffisant pour rejoindre cette partie"
+      }, {
+        status: 400
+      });
+
+    }
+
+    console.log(
+      "JOIN ROOM: Balance vérifiée:",
+      { uid, balance, bet }
+    );
+
     // PLAYER
     const currentPlayers = Object.keys(players).length;
     const symbol = currentPlayers === 0 ? "X" : "O";
@@ -130,23 +160,15 @@ export async function POST(request: Request) {
       name: decoded.name || decoded.email || "Joueur",
       symbol,
       ready: true,
-      betPaid: true,
       joinedAt: Date.now()
     });
 
     const newPlayersCount = playersCount + 1;
-    const newPot = Number(room.pot || 0) + bet;
     const roomFull = newPlayersCount >= maxPlayers;
 
     await roomRef.update({
       playersCount: newPlayersCount,
-      pot: newPot,
-      status: roomFull ? "starting" : "waiting",
-      started: roomFull,
-      startedAt: roomFull ? Date.now() : null,
-      "game/status": roomFull ? "starting" : "waiting",
-      "game/turn": "X",
-      "game/turnStartedAt": Date.now()
+      status: roomFull ? "ready" : "waiting"
     });
 
     return NextResponse.json({
@@ -154,8 +176,7 @@ export async function POST(request: Request) {
       roomId,
       symbol,
       playersCount: newPlayersCount,
-      pot: newPot,
-      status: roomFull ? "starting" : "waiting"
+      status: roomFull ? "ready" : "waiting"
     });
 
   } catch (error: any) {

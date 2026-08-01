@@ -82,6 +82,11 @@ export default function RoomPage() {
   ] = useState(false);
 
 
+  const [
+    starting,
+    setStarting,
+  ] = useState(false);
+
   const startingRef =
     useRef(false);
 
@@ -156,44 +161,12 @@ export default function RoomPage() {
 
           /*
           ==========================================
-          SALLE COMPLÈTE
-          ==========================================
-          */
-
-          if (
-            data.status === "starting" &&
-            !startingRef.current
-          ) {
-
-            startingRef.current =
-              true;
-
-
-            update(
-              ref(
-                database,
-                `rooms/${id}`
-              ),
-              {
-                countdownStart:
-                  true,
-
-                countdownAt:
-                  Date.now(),
-              }
-            );
-
-          }
-
-
-          /*
-          ==========================================
           REDIRECTION COUNTDOWN
           ==========================================
           */
 
           if (
-            data.status === "starting"
+            data.status === "countdown"
           ) {
 
             router.replace(
@@ -241,9 +214,91 @@ export default function RoomPage() {
 
   /*
   ==================================================
-  QUITTER LA SALLE
+  DÉMARRER LA PARTIE
   ==================================================
   */
+
+  async function startGame() {
+
+    try {
+
+      setStarting(true);
+
+      const user =
+        auth.currentUser;
+
+      if (!user) {
+
+        router.push(
+          "/login"
+        );
+
+        return;
+
+      }
+
+      const token =
+        await user.getIdToken();
+
+      const response =
+        await fetch(
+          "/api/game/start-game",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+
+              "Authorization":
+                `Bearer ${token}`,
+            },
+
+            body:
+              JSON.stringify({
+                roomId: id,
+              }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (
+        !response.ok
+      ) {
+
+        throw new Error(
+          data.error ||
+          "Impossible de démarrer la partie"
+        );
+
+      }
+
+      // Redirection vers countdown après succès
+      router.replace(
+        `/countdown/${id}`
+      );
+
+    }
+    catch (
+      error: any
+    ) {
+
+      alert(
+        error.message ||
+        "Une erreur est survenue"
+      );
+
+    }
+    finally {
+
+      setStarting(false);
+
+    }
+
+  }
 
   async function leaveRoom() {
 
@@ -1030,8 +1085,8 @@ export default function RoomPage() {
             >
 
               {isFull
-                ? "Lancement du jeu..."
-                : "La partie commencera automatiquement."
+                ? "En attente du créateur pour démarrer"
+                : "La partie commencera quand tous les joueurs seront prêts."
               }
 
             </p>
@@ -1040,7 +1095,51 @@ export default function RoomPage() {
 
 
           {/* ======================================
-              BOUTON QUITTER
+              BOUTON COMMENCER (CRÉATEUR SEULEMENT)
+          ====================================== */}
+
+          {room.creatorId ===
+            auth.currentUser?.uid &&
+            room.status ===
+              "ready" && (
+
+            <button
+              type="button"
+              onClick={
+                startGame
+              }
+              disabled={
+                starting
+              }
+              className="
+                mt-4
+                h-11
+                w-full
+                rounded-2xl
+                border
+                border-green-500/20
+                bg-green-500/10
+                text-[10px]
+                font-black
+                text-green-400
+                transition
+                active:scale-[0.97]
+                disabled:opacity-50
+              "
+            >
+
+              {starting
+                ? "Démarrage..."
+                : "🚀 Commencer la partie"
+              }
+
+            </button>
+
+          )}
+
+
+          {/* ======================================
+              BOUTON QUITTER (CRÉATEUR)
           ====================================== */}
 
           {room.creatorId ===
@@ -1098,7 +1197,7 @@ export default function RoomPage() {
           "
         >
 
-          TiTaTo • La partie démarre automatiquement
+          TiTaTo • Le créateur démarre la partie
 
         </p>
 

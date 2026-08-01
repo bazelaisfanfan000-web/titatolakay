@@ -305,6 +305,40 @@ export async function POST(
 
     /*
     ================================================
+    5. VÉRIFIER SOLDE DU CRÉATEUR
+    ================================================
+    */
+
+    const balanceSnap =
+      await adminDB
+        .ref(`users/${uid}/balance`)
+        .once("value");
+
+    const balance =
+      Number(balanceSnap.val() || 0);
+
+    if (balance < amount) {
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Solde insuffisant pour créer cette partie"
+        },
+        {
+          status: 400,
+        }
+      );
+
+    }
+
+    console.log(
+      "CREATE ROOM: Balance vérifiée:",
+      { uid, balance, amount }
+    );
+
+    /*
+    ================================================
     6. CONFIGURATION PARTIE
     ================================================
     */
@@ -403,7 +437,7 @@ export async function POST(
 
 
       pot:
-        amount,
+        0,
 
 
       createdAt:
@@ -427,9 +461,6 @@ export async function POST(
             "X",
 
           ready:
-            true,
-
-          betPaid:
             true,
 
           joinedAt:

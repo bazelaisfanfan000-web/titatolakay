@@ -238,8 +238,8 @@ export async function POST(request: Request) {
     // Commission = 50 HTG
     // Crédit gagnant = 100 + 50 = 150 HTG
 
-    const commission = Math.floor(bet * 0.5);
-    const winnerCredit = bet + commission; // Sa mise + la partie restante
+    const commission = Math.round((bet * 0.5) * 100) / 100; // Précision 2 décimales
+    const winnerCredit = Math.round((bet + commission) * 100) / 100; // Sa mise + la commission
 
     console.log("[NEW_PAYMENT_SYSTEM] Calcul du gain:", {
       bet,
@@ -273,53 +273,54 @@ export async function POST(request: Request) {
       Number(balanceSnap.val() || 0);
 
     const newBalance =
-      oldBalance + winnerCredit;
+      Math.round((oldBalance + winnerCredit) * 100) / 100;
 
     const updates: any = {};
 
     updates[
       `users/${winnerUid}/balance`
     ] = newBalance;
-
     updates[
-      `transactions/${winnerUid}/${Date.now()}`
+      `users/${winnerUid}/updatedAt`
+    ] = Date.now();
+
+    const transactionId = `${Date.now()}_${winnerUid}`;
+    updates[
+      `wallet_transactions/${winnerUid}/${transactionId}`
     ] = {
-
-      type: "GAME_WIN",
-
-      gameId,
-
+      id: transactionId,
+      userId: winnerUid,
+      type: "game_win",
       amount: winnerCredit,
-
-      commission,
-
-      oldBalance,
-
-      newBalance,
-
-      createdAt: Date.now()
-
+      balanceBefore: oldBalance,
+      balanceAfter: newBalance,
+      referenceId: gameId,
+      status: "completed",
+      source: "game",
+      description: `Gain de jeu - ${gameId}`,
+      metadata: { gameId, bet, commission },
+      createdAt: Date.now(),
+      completedAt: Date.now()
     };
 
     updates[
       `rooms/${gameId}/game/paymentStatus`
     ] = "completed";
-
     updates[
       `rooms/${gameId}/game/winnerUid`
     ] = winnerUid;
-
     updates[
       `rooms/${gameId}/game/reward`
     ] = winnerCredit;
-
     updates[
       `rooms/${gameId}/game/commission`
     ] = commission;
-
     updates[
       `rooms/${gameId}/game/paidAt`
     ] = Date.now();
+    updates[
+      `rooms/${gameId}/game/rewardProcessed`
+    ] = true;
 
     await adminDB
       .ref()
