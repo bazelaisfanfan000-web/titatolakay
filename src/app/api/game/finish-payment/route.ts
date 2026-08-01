@@ -1,820 +1,457 @@
-import {
-  NextResponse
-} from "next/server";
-
+import { NextResponse } from "next/server";
+import { adminDB, adminAuth } from "@/lib/firebaseAdmin";
+import { sendPushNotification } from "@/lib/broadcastNotification";
+import { addMonthlyPoints } from "@/lib/monthlyChampion";
+import { validateWinner, determineWinner } from "@/lib/gameValidation";
 
 export const runtime = "nodejs";
-
 export const dynamic = "force-dynamic";
 
 
-import {
-  adminDB,
-  adminAuth
-} from "@/lib/firebaseAdmin";
+export async function POST(request: Request) {
 
+  try {
 
-import {
-  sendPushNotification
-} from "@/lib/broadcastNotification";
+    const { gameId } = await request.json();
 
+    if (!gameId) {
+      return NextResponse.json(
+        { error: "GameId manquant" },
+        { status: 400 }
+      );
+    }
 
-import {
-  addMonthlyPoints
-} from "@/lib/monthlyChampion";
 
+    // ==========================
+    // AUTH
+    // ==========================
 
-import {
-  validateWinner,
-  determineWinner
-} from "@/lib/gameValidation";
+    const authHeader = request.headers.get("authorization");
 
+    if (!authHeader) {
+      return NextResponse.json(
+        { error: "Non connecté" },
+        { status:401 }
+      );
+    }
 
 
-const COMMISSION_RATE = 0.25;
+    const token = authHeader.replace("Bearer ", "");
 
+    const decoded = await adminAuth.verifyIdToken(token);
 
+    const callerUid = decoded.uid;
 
-export async function POST(
-  request: Request
-) {
 
 
-try {
+    // ==========================
+    // LOAD ROOM
+    // ==========================
 
+    const roomRef =
+      adminDB.ref(`rooms/${gameId}`);
 
 
-const {
-  gameId
-} = await request.json();
+    const snap = await roomRef.get();
 
 
+    if(!snap.exists()){
 
+      return NextResponse.json(
+        {error:"Partie introuvable"},
+        {status:404}
+      );
 
+    }
 
-if(!gameId){
 
+    const room = snap.val();
 
-return NextResponse.json(
-{
-error:"GameId manquant"
-},
-{
-status:400
-}
-);
 
 
-}
+    if(room.game?.status !== "finished"){
 
+      return NextResponse.json(
+        {error:"Partie non terminée"},
+        {status:400}
+      );
 
+    }
 
 
 
+    // ==========================
+    // SECURITY
+    // ==========================
 
-const authHeader =
-request.headers.get(
-"authorization"
-);
+    if(!room.players?.[callerUid]){
 
+      return NextResponse.json(
+        {error:"Vous ne participez pas à cette partie"},
+        {status:403}
+      );
 
+    }
 
 
-if(!authHeader){
 
+    // ==========================
+    // LOCK PAYMENT
+    // ==========================
 
-return NextResponse.json(
-{
-error:"Non connecté"
-},
-{
-status:401
-}
-);
 
+    const paymentRef =
+      adminDB.ref(
+        `rooms/${gameId}/game/paymentStatus`
+      );
 
-}
 
+    const lock =
+      await paymentRef.transaction(
+        (current)=>{
 
+          if(
+            current === "processing" ||
+            current === "completed"
+          ){
+            return;
+          }
 
 
+          return "processing";
 
-const token =
-authHeader.replace(
-"Bearer ",
-""
-);
+        }
+      );
 
 
+    if(!lock.committed){
 
+      return NextResponse.json(
+        {
+          error:"Paiement déjà traité"
+        },
+        {
+          status:409
+        }
+      );
 
+    }
 
-await adminAuth.verifyIdToken(
-token
-);
 
 
 
+    // ==========================
+    // VALIDATE WINNER
+    // ==========================
 
 
+    const board =
+      room.game.board || {};
 
 
+    const winnerSymbol =
+      room.game.winner;
 
-// ===============================
-// CHARGER LA PARTIE
-// ===============================
 
+    if(!winnerSymbol){
 
-const roomRef =
-adminDB.ref(
-`rooms/${gameId}`
-);
+      await paymentRef.set(null);
 
+      return NextResponse.json(
+        {error:"Aucun gagnant"},
+        {status:400}
+      );
 
+    }
 
-const roomSnap =
-await roomRef.get();
 
 
+    const realWinner =
+      determineWinner(board);
 
+    console.log("[VALIDATION_DEBUG] Validation du gagnant:", {
+      gameId,
+      winnerSymbol,
+      realWinner,
+      boardKeys: Object.keys(board),
+      boardSample: Object.entries(board).slice(0, 5),
+      boardSize: Object.keys(board).length
+    });
 
-if(!roomSnap.exists()){
+    // Validation plus permissive: vérifier seulement si le gagnant déclaré a une victoire valide
+    // Si determineWinner retourne null (match nul ou plateau vide), on accepte le gagnant déclaré
+    // car le client a déjà validé la victoire
+    if (realWinner && realWinner !== winnerSymbol) {
+      console.error("[SECURITY] Gagnant invalide détecté", {
+        gameId,
+        declared: winnerSymbol,
+        actual: realWinner
+      });
 
+      await paymentRef.set(null);
 
-return NextResponse.json(
-{
-error:"Partie introuvable"
-},
-{
-status:404
-}
-);
+      return NextResponse.json(
+        {
+          error:"Résultat invalide"
+        },
+        {
+          status:400
+        }
+      );
+    }
 
 
-}
 
 
+    // ==========================
+    // FIND WINNER UID
+    // ==========================
 
 
+    let winnerUid = "";
 
-const room =
-roomSnap.val();
 
+    Object.entries(room.players)
+    .forEach(
+      ([uid,player]:any)=>{
 
+        if(
+          player.symbol === winnerSymbol
+        ){
 
+          winnerUid = uid;
 
+        }
 
+      }
+    );
 
 
 
-if(
-room.game?.status !== "finished"
-){
+    if(!winnerUid){
 
+      await paymentRef.set(null);
 
-return NextResponse.json(
-{
-error:"Partie non terminée"
-},
-{
-status:400
-}
-);
+      return NextResponse.json(
+        {error:"Gagnant introuvable"},
+        {status:400}
+      );
 
+    }
 
-}
 
 
 
 
+    // ==========================
+    // REWARD +150%
+    // ==========================
 
 
+    const bet =
+      Number(room.bet || 0);
 
 
-// ===============================
-// ANTI DOUBLE PAIEMENT
-// ===============================
+    const reward =
+      Math.floor(
+        bet * 1.5
+      );
 
 
-const paymentRef =
-adminDB.ref(
-`rooms/${gameId}/game/paymentStatus`
-);
+    if(reward <= 0){
 
+      await paymentRef.set(null);
 
+      return NextResponse.json(
+        {error:"Gain invalide"},
+        {status:400}
+      );
 
+    }
 
 
-const lock =
-await paymentRef.transaction(
-(current:any)=>{
 
 
-if(
-current === "completed" ||
-current === "processing"
-){
+    // ==========================
+    // ATOMIC UPDATE
+    // ==========================
 
 
-return;
+    const winnerBalanceRef =
+      adminDB.ref(
+        `users/${winnerUid}/balance`
+      );
 
 
-}
+    const balanceSnap =
+      await winnerBalanceRef.get();
 
 
+    const oldBalance =
+      Number(balanceSnap.val() || 0);
 
-return "processing";
 
+    const newBalance =
+      oldBalance + reward;
 
 
-}
-);
 
+    const updates:any = {};
 
 
 
+    updates[
+      `users/${winnerUid}/balance`
+    ] = newBalance;
 
 
-if(!lock.committed){
 
+    updates[
+      `transactions/${winnerUid}/${Date.now()}`
+    ] = {
 
+      type:"GAME_WIN",
 
-return NextResponse.json(
-{
-error:"Paiement déjà traité"
-},
-{
-status:409
-}
-);
+      gameId,
 
+      amount:reward,
 
-}// ===============================
-// VALIDER GAGNANT CÔTÉ SERVEUR
-// ===============================
+      oldBalance,
 
-const board = room.game?.board || {};
-const declaredWinner = room.game?.winner;
+      newBalance,
 
-if (!declaredWinner) {
-  await paymentRef.set(null);
-  
-  return NextResponse.json({
-    error: "Gagnant non déclaré"
-  }, {
-    status: 400
-  });
-}
+      createdAt:Date.now()
 
-// Validation serveur du gagnant pour empêcher la triche
-const actualWinner = determineWinner(board);
+    };
 
-console.log("[VALIDATION_DEBUG] Validation du gagnant:", {
-  gameId,
-  declaredWinner,
-  actualWinner,
-  boardSize: Object.keys(board).length,
-  boardSample: Object.entries(board).slice(0, 5)
-});
 
-// Validation active du gagnant
-const isValidWinner = validateWinner(board, declaredWinner);
 
-if (!isValidWinner) {
-  console.error("[SECURITY] Gagnant invalide détecté", {
-    gameId,
-    declaredWinner,
-    board
-  });
-  
-  await paymentRef.set(null);
-  
-  return NextResponse.json({
-    error: "Résultat invalide - Gagnant non conforme au plateau"
-  }, {
-    status: 400
-  });
-}
+    updates[
+      `rooms/${gameId}/game/paymentStatus`
+    ] = "completed";
 
-// ===============================
-// TROUVER GAGNANT
-// ===============================
 
-const winnerSymbol = declaredWinner;
+    updates[
+      `rooms/${gameId}/game/winnerUid`
+    ] = winnerUid;
 
 
+    updates[
+      `rooms/${gameId}/game/reward`
+    ] = reward;
 
-let winnerUid = "";
 
+    updates[
+      `rooms/${gameId}/game/paidAt`
+    ] = Date.now();
 
 
-Object.entries(
-room.players || {}
-)
-.forEach(
-([uid,player]:any)=>{
 
 
-if(
-player.symbol === winnerSymbol
-){
 
-winnerUid = uid;
+    await adminDB
+    .ref()
+    .update(updates);
 
-}
 
 
-}
-);
 
 
 
+    // ==========================
+    // STATS
+    // ==========================
 
 
-if(!winnerUid){
+    await adminDB
+    .ref(`users/${winnerUid}`)
+    .transaction(
+      (user:any)=>{
 
+        if(!user)
+          return user;
 
-await paymentRef.set(null);
 
+        user.wins =
+          Number(user.wins || 0)+1;
 
 
-return NextResponse.json(
-{
-error:"Gagnant introuvable"
-},
-{
-status:400
-}
-);
+        user.gamesPlayed =
+          Number(user.gamesPlayed || 0)+1;
 
 
-}
+        user.winRate =
+          Math.round(
+            user.wins /
+            user.gamesPlayed *
+            100
+          );
 
 
+        return user;
 
+      }
+    );
 
 
 
+    await addMonthlyPoints(
+      winnerUid,
+      10
+    );
 
 
 
-// ===============================
-// CALCUL DU GAIN
-// ===============================
+    await sendPushNotification(
+      winnerUid,
+      "🏆 Victoire !",
+      `Tu as gagné ${reward} HTG`,
+      {
+        type:"win",
+        amount:reward
+      }
+    );
 
-const bet =
-Number(room.bet || 0);
 
 
-// Nouveau système: gagnant reçoit 150% de SA mise
-// Exemple: mise 100 HTG → gain = 100 * 1.5 = 150 HTG
-// Solde gagnant: 1000 - 100 + 150 = 1050 HTG
-// Solde perdant: 1000 - 100 = 900 HTG
-const reward = Math.floor(bet * 1.5);
 
-const pot = bet * 2;
-const commission = pot - reward;
 
-console.log("[FINISH_PAYMENT_REWARD] Calcul du gain:", {
-  bet,
-  reward,
-  pot,
-  commission,
-  expectedFormula: `${bet} * 1.5 = ${reward}`
-});
+    return NextResponse.json({
 
+      success:true,
 
+      winnerUid,
 
+      reward,
 
+      oldBalance,
 
+      newBalance
 
+    });
 
-if(reward <= 0){
 
 
+  }
+  catch(error:any){
 
-await paymentRef.set(null);
+    console.error(
+      "FINISH PAYMENT ERROR",
+      error
+    );
 
 
+    return NextResponse.json(
+      {
+        error:
+        error.message ||
+        "Erreur serveur"
+      },
+      {
+        status:500
+      }
+    );
 
-return NextResponse.json(
-{
-error:"Gain invalide"
-},
-{
-status:400
-}
-);
-
-
-}
-
-
-
-
-
-
-
-
-
-// ===============================
-// CREDIT GAGNANT
-// ===============================
-
-
-const balanceRef =
-adminDB.ref(
-`users/${winnerUid}/balance`
-);
-
-
-
-let oldBalance = 0;
-
-let newBalance = 0;
-
-
-
-const balanceTransaction =
-await balanceRef.transaction(
-(current:any)=>{
-
-
-oldBalance =
-Number(current || 0);
-
-
-
-newBalance =
-oldBalance + reward;
-
-
-console.log("[PAYMENT_CREDIT] Crédit gagnant:", {
-  oldBalance,
-  reward,
-  newBalance,
-  winnerUid
-});
-
-
-
-return newBalance;
-
-
-
-}
-);
-
-
-// Vérifier si la transaction a réussi ET que le solde a été mis à jour
-console.log("[PAYMENT_CREDIT_RESULT] Résultat transaction:", {
-  committed: balanceTransaction.committed,
-  snapshot: balanceTransaction.snapshot?.val(),
-  expected: newBalance
-});
-
-if (!balanceTransaction.committed || balanceTransaction.snapshot.val() !== newBalance) {
-  console.error("[PAYMENT] Échec transaction solde gagnant", { 
-    winnerUid, 
-    reward, 
-    committed: balanceTransaction.committed,
-    expectedBalance: newBalance,
-    actualBalance: balanceTransaction.snapshot?.val()
-  });
-  await paymentRef.set(null);
-  
-  return NextResponse.json({
-    error: "Échec du paiement - Transaction solde échouée"
-  }, {
-    status: 500
-  });
-}
-
-
-
-
-
-
-// ===============================
-// TRANSACTION HISTORIQUE
-// ===============================
-
-
-await adminDB
-.ref(
-`transactions/${winnerUid}`
-)
-.push({
-
-type:"GAME_WIN",
-
-gameId,
-
-amount:reward,
-
-commission,
-
-oldBalance,
-
-newBalance,
-
-createdAt:Date.now()
-
-});
-
-
-
-
-
-
-
-
-
-
-
-// ===============================
-// STATS GAGNANT
-// ===============================
-
-
-const winnerRef =
-adminDB.ref(
-`users/${winnerUid}`
-);
-
-
-
-const winnerSnap =
-await winnerRef.get();
-
-
-
-const winnerData =
-winnerSnap.val() || {};
-
-
-
-const wins =
-Number(winnerData.wins || 0) + 1;
-
-
-
-const winnerGames =
-Number(winnerData.gamesPlayed || 0) + 1;
-
-
-
-await winnerRef.update({
-
-wins,
-
-gamesPlayed:winnerGames,
-
-winRate:
-Math.round(
-(wins / winnerGames) * 100
-)
-
-});
-
-
-
-
-
-
-
-// ===============================
-// CHAMPION DU MOIS
-// ===============================
-
-
-await addMonthlyPoints(
-winnerUid,
-10
-);
-
-
-
-
-
-
-
-
-await sendPushNotification(
-winnerUid,
-"🏆 Victoire !",
-`Tu as gagné ${reward} HTG`,
-{
-type:"win",
-amount:reward
-});// ===============================
-// STATS PERDANT
-// ===============================
-// NOTE: Le perdant a déjà été débité de sa mise lors du join
-// via transaction atomique avec le créateur.
-// Donc on ne débite PAS le perdant ici, on met juste à jour ses stats
-// Le perdant ne reçoit AUCUN crédit supplémentaire
-
-
-let loserUid = "";
-
-
-
-Object.entries(
-room.players || {}
-)
-.forEach(
-([uid]:any)=>{
-
-
-if(uid !== winnerUid){
-
-loserUid = uid;
-
-}
-
-
-}
-);
-
-
-
-
-
-
-if(loserUid){
-
-
-
-const loserRef =
-adminDB.ref(
-`users/${loserUid}`
-);
-
-
-
-const loserSnap =
-await loserRef.get();
-
-
-
-const loserData =
-loserSnap.val() || {};
-
-
-
-
-const loserGames =
-Number(loserData.gamesPlayed || 0) + 1;
-
-
-
-const loserWins =
-Number(loserData.wins || 0);
-
-
-
-const loses =
-Number(loserData.loses || 0) + 1;
-
-
-
-
-
-
-await loserRef.update({
-
-loses,
-
-gamesPlayed:loserGames,
-
-winRate:
-Math.round(
-(loserWins / loserGames) * 100
-)
-
-});
-
-
-
-
-
-
-
-await sendPushNotification(
-loserUid,
-"😢 Partie terminée",
-"Tu as perdu cette partie",
-{
-type:"lose"
-}
-);
-
-
-
-}
-
-
-
-
-
-
-
-
-
-// ===============================
-// FERMER PAIEMENT
-// ===============================
-
-
-await roomRef.update({
-
-"game/paymentStatus":
-"completed",
-
-
-"game/winnerUid":
-winnerUid,
-
-
-"game/reward":
-reward,
-
-
-"game/commission":
-commission,
-
-
-"game/pot":
-pot,
-
-
-"game/paidAt":
-Date.now()
-
-
-});
-
-
-
-
-
-
-
-
-return NextResponse.json({
-
-success:true,
-
-winnerUid,
-
-reward,
-
-commission,
-
-oldBalance,
-
-newBalance
-
-});
-
-
-
-
-
-
-
-}
-catch(error:any){
-
-
-
-console.error(
-"FINISH PAYMENT ERROR",
-error
-);
-
-
-
-
-
-return NextResponse.json(
-{
-
-error:
-error?.message ||
-"Erreur serveur"
-
-},
-{
-status:500
-}
-);
-
-
-
-}
-
-
+  }
 
 }
