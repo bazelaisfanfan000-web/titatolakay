@@ -14,6 +14,7 @@ export type TransactionType =
   | "game_win"
   | "game_refund"
   | "commission"
+  | "referral_commission"
   | "admin_adjustment";
 
 export type TransactionStatus = 
@@ -42,7 +43,8 @@ export type TransactionSource =
   | "moncash"
   | "game"
   | "admin"
-  | "system";
+  | "system"
+  | "referral";
 
 // ============================================================================
 // WALLET

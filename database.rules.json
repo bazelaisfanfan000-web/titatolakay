@@ -13,6 +13,26 @@
         "reservedBalance": {
           ".read": "auth != null && auth.uid == $uid",
           ".write": false
+        },
+        "referralCode": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": false
+        },
+        "referralCount": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": false
+        },
+        "referredBy": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": false
+        },
+        "referralStartDate": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": false
+        },
+        "referralEndDate": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": false
         }
       }
     },
@@ -39,6 +59,10 @@
         ".read": "auth != null && auth.uid == $uid",
         ".write": false
       }
+    },
+    "referralRewards": {
+      ".read": false,
+      ".write": false
     },
     "auditLogs": {
       ".read": false,

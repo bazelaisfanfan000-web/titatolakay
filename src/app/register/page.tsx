@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import {
@@ -32,7 +32,8 @@ import {
 export default function Register() {
 
   const router = useRouter();
-
+  const searchParams = useSearchParams();
+  const referralCode = searchParams.get("ref");
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -42,6 +43,25 @@ export default function Register() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [referrerId, setReferrerId] = useState<string | null>(null);
+
+  // Récupérer le parrain à partir du code de parrainage
+  useEffect(() => {
+    async function fetchReferrer() {
+      if (referralCode) {
+        try {
+          const response = await fetch(`/api/referral/lookup?code=${referralCode}`);
+          const data = await response.json();
+          if (data.success && data.referrerId) {
+            setReferrerId(data.referrerId);
+          }
+        } catch (error) {
+          console.error("[REGISTER] Erreur lookup parrain:", error);
+        }
+      }
+    }
+    fetchReferrer();
+  }, [referralCode]);
 
 
 
@@ -127,6 +147,18 @@ export default function Register() {
       */
 
 
+      // Générer un code de parrainage unique (8 caractères pour réduire les collisions)
+      const generateReferralCode = () => {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let code = "";
+        for (let i = 0; i < 8; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      };
+
+      const referralCode = generateReferralCode();
+
       await set(
         ref(
           database,
@@ -168,6 +200,16 @@ export default function Register() {
 
           balanceUpdatedAt:
             now,
+
+          // Parrainage
+          referralCode: referralCode,
+          referralCreatedAt: now,
+          referralCount: 0,
+          ...(referrerId && {
+            referredBy: referrerId,
+            referralStartDate: now,
+            referralEndDate: now + (6 * 30 * 24 * 60 * 60 * 1000) // 6 mois
+          })
 
         }
       );

@@ -477,18 +477,69 @@ export default function Dashboard() {
                 className="
                   whitespace-nowrap
                   text-[10px]
-                  font-black
-                  leading-none
-                  text-blue-300
+                  font-bold
+                  text-blue-100
                 "
               >
 
-                {balanceLoading
-                  ? "..."
-                  : `${balance.toLocaleString(
-                      "fr-FR"
-                    )} HTG`
-                }
+                Portefeuille
+
+              </span>
+
+            </button>
+
+            {/* PARRAINAGE */}
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push("/referral")
+              }
+              className="
+                flex
+                h-[38px]
+                min-w-[92px]
+                items-center
+                justify-center
+                gap-1.5
+                rounded-xl
+                border
+                border-green-400/30
+                bg-green-500/[0.10]
+                px-3
+                text-center
+                shadow-[0_3px_0_rgba(34,197,94,0.65),0_0_15px_rgba(34,197,94,0.08)]
+                backdrop-blur-md
+                transition-all
+                hover:border-green-300/50
+                hover:bg-green-500/[0.16]
+                active:translate-y-[2px]
+                active:shadow-none
+              "
+            >
+
+              <span
+                className="
+                  text-[14px]
+                  leading-none
+                "
+              >
+
+                🎁
+
+              </span>
+
+
+              <span
+                className="
+                  whitespace-nowrap
+                  text-[10px]
+                  font-bold
+                  text-green-100
+                "
+              >
+
+                Parrainage
 
               </span>
 

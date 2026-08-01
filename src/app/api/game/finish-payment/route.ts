@@ -4,6 +4,7 @@ import { sendPushNotification } from "@/lib/broadcastNotification";
 import { addMonthlyPoints } from "@/lib/monthlyChampion";
 import { validateWinner, determineWinner } from "@/lib/gameValidation";
 import { validateBet } from "@/lib/validation";
+import { processReferralCommission } from "@/lib/referral";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -197,6 +198,7 @@ export async function POST(request: Request) {
     // FIND WINNER UID
     // ==========================
 
+    const playerIds = Object.keys(room.players);
     let winnerUid = "";
 
     Object.entries(room.players)
@@ -335,6 +337,32 @@ export async function POST(request: Request) {
     await adminDB
       .ref()
       .update(updates);
+
+    // ==========================
+    // COMMISSION DE PARRAINAGE
+    // ==========================
+
+    try {
+      const loserId = playerIds.find((id: string) => id !== winnerUid);
+      if (loserId) {
+        const commissionResult = await processReferralCommission({
+          gameId,
+          loserId,
+          lostAmount: bet
+        });
+
+        if (commissionResult.success && commissionResult.commission && commissionResult.commission > 0) {
+          console.log("[FINISH_PAYMENT] Commission parrainage versée:", {
+            gameId,
+            loserId,
+            commission: commissionResult.commission
+          });
+        }
+      }
+    } catch (commissionError) {
+      console.error("[FINISH_PAYMENT] Erreur commission parrainage:", commissionError);
+      // Ne pas bloquer le paiement si la commission échoue
+    }
 
     // ==========================
     // STATS
