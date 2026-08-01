@@ -104,9 +104,12 @@ export async function POST(request: Request) {
     );
 
     // 6. Créer le dépôt en pending dans Firebase (seulement si MonCash a réussi)
-    const depositRef = adminDB.ref(`deposits/${userId}/${referenceId}`);
-    await depositRef.set({
+    const depositPath = `deposits/${userId}/${referenceId}`;
+    const depositRef = adminDB.ref(depositPath);
+    
+    const depositData = {
       id: referenceId,
+      referenceId,
       userId,
       amount,
       status: "pending",
@@ -115,6 +118,25 @@ export async function POST(request: Request) {
       moncashReference: moncashResponse.reference,
       idempotencyKey,
       createdAt: Date.now()
+    };
+
+    console.log("[DEPOSIT_API] Création du dépôt Firebase:", {
+      depositPath,
+      depositData
+    });
+
+    await depositRef.set(depositData);
+
+    // Vérifier que le dépôt a bien été créé
+    const verificationSnapshot = await depositRef.once("value");
+    if (!verificationSnapshot.exists()) {
+      console.error("[DEPOSIT_API] ERREUR CRITIQUE: Dépôt non créé dans Firebase:", depositPath);
+      throw new Error("Échec de création du dépôt dans Firebase");
+    }
+
+    console.log("[DEPOSIT_API] Dépôt vérifié dans Firebase:", {
+      depositPath,
+      storedData: verificationSnapshot.val()
     });
 
     console.log("[DEPOSIT_API] Paiement créé:", {

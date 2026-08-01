@@ -295,6 +295,7 @@ async function handlePaymentCompleted(event: any) {
           const deposit = depositSnapshot.val();
           console.log(`[WEBHOOK] DEBUG:   Dépôt ${depositSnapshot.key}:`, {
             id: deposit.id,
+            referenceId: deposit.referenceId,
             moncashReference: deposit.moncashReference,
             amount: deposit.amount,
             status: deposit.status
@@ -305,8 +306,11 @@ async function handlePaymentCompleted(event: any) {
       console.log("[WEBHOOK] DEBUG: Aucun dépôt trouvé dans Firebase");
     }
 
-    // Méthode 1: Rechercher par moncashReference dans toute la structure deposits
+    // Méthode 1: Rechercher par moncashReference (référence MonCash)
     console.log("[WEBHOOK] Recherche par moncashReference:", reference);
+    console.log("[WEBHOOK] Chemin Firebase: deposits");
+    console.log("[WEBHOOK] Query: orderByChild('moncashReference').equalTo(", reference, ")");
+    
     const depositsRef = adminDB.ref("deposits");
     const depositSnapshot = await depositsRef
       .orderByChild("moncashReference")
@@ -328,6 +332,7 @@ async function handlePaymentCompleted(event: any) {
           userId, 
           depositId, 
           moncashReference: data.moncashReference,
+          referenceId: data.referenceId,
           amount: data.amount,
           status: data.status
         });
@@ -338,9 +343,12 @@ async function handlePaymentCompleted(event: any) {
       });
     }
 
-    // Méthode 2: Si non trouvé, rechercher par referenceId (fallback)
+    // Méthode 2: Si non trouvé, rechercher par referenceId (notre référence interne)
     if (!depositData) {
       console.log("[WEBHOOK] Recherche par referenceId (fallback):", reference);
+      console.log("[WEBHOOK] Chemin Firebase: deposits");
+      console.log("[WEBHOOK] Query: orderByChild('id').equalTo(", reference, ")");
+      
       const depositSnapshot2 = await depositsRef
         .orderByChild("id")
         .equalTo(reference)
@@ -358,6 +366,41 @@ async function handlePaymentCompleted(event: any) {
             userId, 
             depositId, 
             id: data.id,
+            referenceId: data.referenceId,
+            moncashReference: data.moncashReference,
+            amount: data.amount,
+            status: data.status
+          });
+          
+          depositData = data;
+          depositKey = depositId;
+          depositUserId = userId;
+        });
+      }
+    }
+
+    // Méthode 3: Si non trouvé, rechercher par referenceId (notre référence interne)
+    if (!depositData) {
+      console.log("[WEBHOOK] Recherche par referenceId (notre champ referenceId):", reference);
+      const depositSnapshot3 = await depositsRef
+        .orderByChild("referenceId")
+        .equalTo(reference)
+        .once("value");
+
+      console.log("[WEBHOOK] Résultat recherche referenceId (champ referenceId):", depositSnapshot3.exists());
+
+      if (depositSnapshot3.exists()) {
+        depositSnapshot3.forEach((childSnapshot: any) => {
+          const userId = childSnapshot.ref.parent.key;
+          const depositId = childSnapshot.key;
+          const data = childSnapshot.val();
+          
+          console.log("[WEBHOOK] Dépôt trouvé via referenceId (champ referenceId):", { 
+            userId, 
+            depositId, 
+            id: data.id,
+            referenceId: data.referenceId,
+            moncashReference: data.moncashReference,
             amount: data.amount,
             status: data.status
           });
