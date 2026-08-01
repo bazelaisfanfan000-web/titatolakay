@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         const url = new URL(returnUrl);
         const allowedDomains = [
           process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, ''),
-          'playtocash.vercel.app',
+          'wincash.vercel.app',
           'localhost'
         ];
         const hostname = url.hostname.replace(/^www\./, '');

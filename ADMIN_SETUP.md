@@ -1,4 +1,4 @@
-# PlayToCash Admin Dashboard Setup
+# WinCash Admin Dashboard Setup
 
 ## Environment Variables Required
 
@@ -25,7 +25,7 @@ MONCASH_MERCHANT_BALANCE=780000
 
 ## Accessing the Admin Dashboard
 
-1. Navigate to `https://playtocash.vercel.app/admin/login`
+1. Navigate to `https://wincash.vercel.app/admin/login`
 2. Enter your admin password
 3. You will be redirected to the main dashboard
 

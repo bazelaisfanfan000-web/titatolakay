@@ -41,7 +41,7 @@ export default function AdminLogin() {
         <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl p-8 border border-purple-500/20 shadow-2xl">
           <div className="text-center mb-8">
             <div className="text-5xl mb-4">🔐</div>
-            <h1 className="text-3xl font-bold text-white mb-2">PlayToCash Admin</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">WinCash Admin</h1>
             <p className="text-gray-400">Espace administrateur sécurisé</p>
           </div>
 

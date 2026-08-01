@@ -259,7 +259,7 @@ font-black
 mt-6
 ">
 
-PLAYTOCASH
+WINCASH
 
 </h1>
 
