@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 
 import { adminDB, adminAuth } from "@/lib/firebaseAdmin";
 import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from "@/lib/rateLimit";
+import { validateBet } from "@/lib/validation";
 
 export async function POST(request: Request) {
   try {
@@ -120,6 +121,25 @@ export async function POST(request: Request) {
 
     const bet = Number(room.bet || 0);
     const creatorId = room.creatorId;
+
+    /*
+    ================================================
+    VALIDATION MISE STRICTE (vérification de cohérence)
+    ================================================
+    */
+
+    const betValidation = validateBet(room.bet);
+
+    if (!betValidation.valid) {
+
+      return NextResponse.json({
+        success: false,
+        error: "Mise de la partie invalide"
+      }, {
+        status: 400
+      });
+
+    }
 
     /*
     ================================================

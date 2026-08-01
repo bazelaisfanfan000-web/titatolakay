@@ -137,10 +137,13 @@ export async function atomicDeposit(params: {
 
 /**
  * Exécute une transaction de retrait atomique
- * 1. Débite immédiatement le solde du joueur
- * 2. Crée le retrait en pending
- * 3. Appelle l'API MonCash payout-create
- * 4. Si échec, rembourse immédiatement (via webhook payout.failed)
+ * 1. Débite immédiatement le solde du joueur avec Firebase transaction()
+ * 2. Vérifie le vrai champ du solde utilisateur
+ * 3. Empêche les doubles retraits
+ * 4. Empêche un utilisateur de retirer plus que son solde
+ * 5. Crée le retrait en pending
+ * 6. Crée l'entrée ledger
+ * 7. Si échec, rembourse immédiatement (via webhook payout.failed ou rollback)
  */
 export async function atomicWithdrawal(params: {
   userId: string;
@@ -151,22 +154,85 @@ export async function atomicWithdrawal(params: {
 }): Promise<AtomicTransactionResult> {
   const { userId, amount, moncashNumber, referenceId, idempotencyKey } = params;
 
-  console.log("[ATOMIC_WITHDRAWAL] Début transaction:", { userId, amount, referenceId });
+  console.log("[ATOMIC_WITHDRAWAL] Début transaction:", { 
+    userId, 
+    amount, 
+    referenceId,
+    moncashNumber: moncashNumber.substring(0, 4) + "****" 
+  });
+
+  // Validation du montant
+  if (!Number.isInteger(amount) || amount <= 0) {
+    return {
+      success: false,
+      error: "Montant invalide. Doit être un entier positif."
+    };
+  }
 
   try {
-    // 1. Débiter immédiatement le solde du joueur
+    // 1. Vérifier le solde réel AVANT débit
+    const userRef = adminDB.ref(`users/${userId}`);
+    const userSnapshot = await userRef.once("value");
+    
+    if (!userSnapshot.exists()) {
+      return {
+        success: false,
+        error: "Utilisateur introuvable"
+      };
+    }
+
+    const userData = userSnapshot.val();
+    const currentBalance = Number(userData.balance || 0);
+    const lockedBalance = Number(userData.lockedBalance || 0);
+    const availableBalance = currentBalance - lockedBalance;
+
+    console.log("[ATOMIC_WITHDRAWAL] Solde vérifié:", {
+      currentBalance,
+      lockedBalance,
+      availableBalance,
+      requestedAmount: amount
+    });
+
+    if (availableBalance < amount) {
+      return {
+        success: false,
+        error: `Solde insuffisant. Disponible: ${availableBalance} HTG, Demandé: ${amount} HTG`
+      };
+    }
+
+    // 2. Vérifier si le retrait existe déjà (anti-double)
+    const existingWithdrawalRef = adminDB.ref(`withdrawals/${userId}/${referenceId}`);
+    const existingSnapshot = await existingWithdrawalRef.once("value");
+    
+    if (existingSnapshot.exists()) {
+      const existing = existingSnapshot.val();
+      console.log("[ATOMIC_WITHDRAWAL] Retrait déjà existant:", { status: existing.status });
+      return {
+        success: false,
+        error: "Ce retrait existe déjà"
+      };
+    }
+
+    // 3. Débiter immédiatement le solde avec Firebase transaction atomique
     const debitResult = await debitWallet(userId, amount, referenceId, `Retrait MonCash - ${moncashNumber}`);
 
     if (!debitResult.success) {
+      console.error("[ATOMIC_WITHDRAWAL] Échec débit:", debitResult.error);
       return {
         success: false,
-        error: debitResult.error || "Solde insuffisant"
+        error: debitResult.error || "Échec du débit wallet"
       };
     }
 
     const balanceAfterDebit = debitResult.balance!;
 
-    // 2. Créer l'entrée de retrait en pending
+    console.log("[ATOMIC_WITHDRAWAL] Débit réussi:", { 
+      balanceBefore: currentBalance,
+      balanceAfter: balanceAfterDebit,
+      debitedAmount: amount
+    });
+
+    // 4. Créer l'entrée de retrait en pending
     const withdrawalRef = adminDB.ref(`withdrawals/${userId}/${referenceId}`);
     await withdrawalRef.set({
       id: referenceId,
@@ -176,15 +242,17 @@ export async function atomicWithdrawal(params: {
       status: "pending",
       referenceId,
       idempotencyKey,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      balanceBefore: currentBalance,
+      balanceAfter: balanceAfterDebit
     });
 
-    // 3. Créer l'entrée ledger
+    // 5. Créer l'entrée ledger
     const ledgerResult = await createLedgerEntry({
       userId,
       type: "withdraw",
       amount: -amount,
-      balanceBefore: balanceAfterDebit + amount,
+      balanceBefore: currentBalance,
       balanceAfter: balanceAfterDebit,
       referenceId,
       status: "pending",
@@ -194,14 +262,32 @@ export async function atomicWithdrawal(params: {
     });
 
     if (!ledgerResult.success) {
-      // Rollback: rembourser
-      await creditWallet(userId, amount, referenceId, `Rollback retrait - ${moncashNumber}`);
-      throw new Error("Erreur création ledger");
+      console.error("[ATOMIC_WITHDRAWAL] Erreur création ledger:", ledgerResult.error);
+      
+      // Rollback: rembourser immédiatement
+      await creditWallet(userId, amount, referenceId, `Rollback retrait (erreur ledger) - ${moncashNumber}`);
+      
+      // Marquer le retrait comme échoué
+      await withdrawalRef.update({
+        status: "failed",
+        failureReason: "Erreur création ledger",
+        failedAt: Date.now()
+      });
+
+      return {
+        success: false,
+        error: "Erreur création ledger",
+        rollbackPerformed: true
+      };
     }
 
     const transactionId = ledgerResult.transactionId;
 
-    console.log("[ATOMIC_WITHDRAWAL] Retrait créé avec débit immédiat:", { referenceId, balanceAfterDebit });
+    console.log("[ATOMIC_WITHDRAWAL] Retrait créé avec succès:", { 
+      referenceId, 
+      balanceAfterDebit,
+      transactionId
+    });
 
     return {
       success: true,
@@ -209,18 +295,19 @@ export async function atomicWithdrawal(params: {
       newBalance: balanceAfterDebit
     };
   } catch (error) {
-    console.error("[ATOMIC_WITHDRAWAL] Erreur:", error);
+    console.error("[ATOMIC_WITHDRAWAL] Erreur critique:", error);
 
-    // Rollback: rembourser le montant
+    // Rollback: rembourser le montant en cas d'erreur
     try {
-      await creditWallet(params.userId, params.amount, params.referenceId, `Rollback retrait erreur - ${params.moncashNumber}`);
+      await creditWallet(params.userId, params.amount, params.referenceId, `Rollback retrait erreur critique - ${params.moncashNumber}`);
+      console.log("[ATOMIC_WITHDRAWAL] Rollback effectué");
     } catch (rollbackError) {
       console.error("[ATOMIC_WITHDRAWAL] Erreur remboursement:", rollbackError);
     }
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Erreur inconnue",
+      error: error instanceof Error ? error.message : "Erreur inconnue lors du retrait",
       rollbackPerformed: true
     };
   }

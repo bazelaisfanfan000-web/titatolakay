@@ -3,6 +3,7 @@ import { adminDB, adminAuth } from "@/lib/firebaseAdmin";
 import { sendPushNotification } from "@/lib/broadcastNotification";
 import { addMonthlyPoints } from "@/lib/monthlyChampion";
 import { validateWinner, determineWinner } from "@/lib/gameValidation";
+import { validateBet } from "@/lib/validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -228,8 +229,17 @@ export async function POST(request: Request) {
     // CALCUL DU GAIN (NOUVEAU SYSTÈME)
     // ==========================
 
-    const bet =
-      Number(room.bet || 0);
+    const betValidation = validateBet(room.bet);
+
+    if (!betValidation.valid) {
+      console.error("[FINISH_PAYMENT] Mise invalide:", room.bet);
+      return NextResponse.json(
+        { error: "Mise de la partie invalide" },
+        { status: 400 }
+      );
+    }
+
+    const bet = betValidation.value!;
 
     // NOUVEAU SYSTÈME:
     // Commission = 50% de la mise du perdant

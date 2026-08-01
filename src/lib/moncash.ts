@@ -1,9 +1,10 @@
 /**
  * MonCashConnect API Client
- * Intégration atomique et sécurisée avec MonCashConnect
+ * Intégration sécurisée paiements + payouts
  */
 
-import crypto from 'crypto';
+import crypto from "crypto";
+
 import type {
   MonCashPaymentRequest,
   MonCashPaymentResponse,
@@ -12,346 +13,702 @@ import type {
   MonCashPayoutResponse,
   MonCashBalance,
   MonCashWebhookEvent
-} from '@/types/wallet';
+} from "@/types/wallet";
 
-const BASE_URL = process.env.MONCASH_API_URL || "https://api.moncashconnect.com/v1";
-const API_KEY = process.env.MONCASHCONNECT_SECRET_KEY || process.env.MONCASH_API_KEY || "";
-const WEBHOOK_SECRET = process.env.MONCASH_WEBHOOK_SECRET || "";
+
+const BASE_URL =
+  process.env.MONCASH_API_URL ||
+  "https://api.moncashconnect.com/v1";
+
+
+const API_KEY =
+  process.env.MONCASHCONNECT_SECRET_KEY ||
+  process.env.MONCASH_API_KEY ||
+  "";
+
+
+const WEBHOOK_SECRET =
+  process.env.MONCASH_WEBHOOK_SECRET ||
+  "";
+
+
 
 /**
- * Vérifie la configuration MonCash
+ * Vérification configuration MonCash
  */
-export function validateMonCashConfig(): { valid: boolean; error?: string } {
+export function validateMonCashConfig() {
+
   if (!API_KEY) {
-    return { valid: false, error: "Clé API MonCash manquante (MONCASHCONNECT_SECRET_KEY)" };
+
+    return {
+      valid:false,
+      error:
+      "Clé API MonCash manquante"
+    };
+
   }
-  
+
+
   if (!API_KEY.startsWith("sk_proj_")) {
-    return { valid: false, error: "Clé API invalide (doit commencer par sk_proj_)" };
+
+    return {
+      valid:false,
+      error:
+      "Clé API invalide. Elle doit commencer par sk_proj_"
+    };
+
   }
-  
-  if (!WEBHOOK_SECRET) {
-    console.warn("[MONCASH] Webhook secret manquant (MONCASH_WEBHOOK_SECRET)");
-  }
-  
-  return { valid: true };
+
+
+  return {
+    valid:true
+  };
+
 }
 
+
+
+
 /**
- * Génère un referenceId unique
+ * Génère une référence unique
  */
-export function generateReferenceId(prefix: string = "txn"): string {
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 15);
-  return `${prefix}_${timestamp}_${random}`;
+export function generateReferenceId(
+  prefix:string="txn"
+) {
+
+  return (
+    `${prefix}_${Date.now()}_` +
+    crypto
+    .randomBytes(8)
+    .toString("hex")
+  );
+
 }
 
+
+
+
+
 /**
- * Génère une clé d'idempotence unique
+ * Génère clé idempotence
  */
-export function generateIdempotencyKey(): string {
-  return `idemp_${Date.now()}_${crypto.randomBytes(16).toString('hex')}`;
+export function generateIdempotencyKey(){
+
+  return (
+    "idemp_" +
+    Date.now() +
+    "_" +
+    crypto
+    .randomBytes(16)
+    .toString("hex")
+  );
+
 }
 
+
+
+
 /**
- * Crée un paiement MonCash avec idempotence
+ * Création paiement entrant
  */
 export async function createMonCashPayment(
-  request: MonCashPaymentRequest,
-  idempotencyKey?: string
-): Promise<MonCashPaymentResponse> {
-  const config = validateMonCashConfig();
-  if (!config.valid) {
-    throw new Error(config.error);
+  request:MonCashPaymentRequest,
+  idempotencyKey?:string
+):Promise<MonCashPaymentResponse>{
+
+
+  const config =
+    validateMonCashConfig();
+
+
+  if(!config.valid){
+
+    throw new Error(
+      config.error
+    );
+
   }
 
-  const key = idempotencyKey || generateIdempotencyKey();
 
-  console.log("[MONCASH] Création paiement:", {
-    amount: request.amount,
-    referenceId: request.referenceId,
-    returnUrl: request.returnUrl,
-    customerName: request.customerName,
-    customerEmail: request.customerEmail,
-    idempotencyKey: key
-  });
 
-  const response = await fetch(`${BASE_URL}/pay-create`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": key
-    },
-    body: JSON.stringify(request)
-  });
+  const key =
+    idempotencyKey ||
+    generateIdempotencyKey();
 
-  const data = await response.json();
 
-  console.log("[MONCASH] Réponse paiement:", {
-    status: response.status,
-    paymentUrl: data.paymentUrl,
-    reference: data.reference,
-    expiresAt: data.expiresAt
-  });
 
-  if (!response.ok) {
-    throw new Error(`MonCash API Error (${response.status}): ${JSON.stringify(data)}`);
-  }
-
-  return data;
-}
-
-/**
- * Vérifie le statut d'un paiement
- */
-export async function getPaymentStatus(referenceId: string): Promise<MonCashPaymentStatus> {
-  const config = validateMonCashConfig();
-  if (!config.valid) {
-    throw new Error(config.error);
-  }
-
-  const response = await fetch(
-    `${BASE_URL}/pay-status?referenceId=${referenceId}`,
+  console.log(
+    "[MONCASH PAYMENT SEND]",
     {
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`
-      }
+      amount:request.amount,
+      referenceId:request.referenceId
     }
   );
 
-  const data = await response.json();
 
-  if (!response.ok) {
-    throw new Error(`MonCash API Error (${response.status}): ${JSON.stringify(data)}`);
+
+  const response =
+    await fetch(
+      `${BASE_URL}/pay-create`,
+      {
+
+        method:"POST",
+
+        headers:{
+
+          Authorization:
+          `Bearer ${API_KEY}`,
+
+          "Content-Type":
+          "application/json",
+
+          "Idempotency-Key":
+          key
+
+        },
+
+
+        body:
+        JSON.stringify(request)
+
+      }
+    );
+
+
+
+  const data =
+    await response.json();
+
+
+
+  console.log(
+    "[MONCASH PAYMENT RESPONSE]",
+    {
+      status:response.status,
+      data
+    }
+  );
+
+
+
+  if(!response.ok){
+
+    throw new Error(
+      `MonCash Error ${response.status}: ${
+        JSON.stringify(data)
+      }`
+    );
+
   }
 
+
+
   return data;
+
 }
 
+
+
+
+
 /**
- * Crée un payout MonCash avec idempotence
+ * Vérifier statut paiement
+ */
+export async function getPaymentStatus(
+  referenceId:string
+):Promise<MonCashPaymentStatus>{
+
+
+  const config =
+    validateMonCashConfig();
+
+
+
+  if(!config.valid){
+
+    throw new Error(
+      config.error
+    );
+
+  }
+
+
+
+  const response =
+    await fetch(
+      `${BASE_URL}/pay-status?referenceId=${referenceId}`,
+      {
+
+        headers:{
+
+          Authorization:
+          `Bearer ${API_KEY}`
+
+        }
+
+      }
+    );
+
+
+
+  const data =
+    await response.json();
+
+
+
+  if(!response.ok){
+
+    throw new Error(
+      `MonCash Error ${response.status}: ${
+        JSON.stringify(data)
+      }`
+    );
+
+  }
+
+
+
+  return data;
+
+}
+/**
+ * Création payout (retrait vers utilisateur MonCash)
  */
 export async function createMonCashPayout(
   request: MonCashPayoutRequest,
   idempotencyKey?: string
 ): Promise<MonCashPayoutResponse> {
-  const config = validateMonCashConfig();
+
+
+  const config =
+    validateMonCashConfig();
+
+
   if (!config.valid) {
-    throw new Error(config.error);
-  }
 
-  const key = idempotencyKey || generateIdempotencyKey();
-
-  console.log("[MONCASH] Création payout:", {
-    amount: request.amount,
-    moncashNumber: request.moncashNumber,
-    referenceId: request.referenceId,
-    idempotencyKey: key
-  });
-
-  const response = await fetch(`${BASE_URL}/payout-create`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": key
-    },
-    body: JSON.stringify(request)
-  });
-
-  const data = await response.json();
-
-  console.log("[MONCASH] Réponse payout:", {
-    status: response.status,
-    data
-  });
-
-  if (!response.ok) {
-    throw new Error(`MonCash API Error (${response.status}): ${JSON.stringify(data)}`);
-  }
-
-  return data;
-}
-
-/**
- * Récupère le solde du compte marchand
- */
-export async function getMerchantBalance(): Promise<MonCashBalance> {
-  const config = validateMonCashConfig();
-  if (!config.valid) {
-    throw new Error(config.error);
-  }
-
-  const response = await fetch(`${BASE_URL}/pay-balance`, {
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`
-    }
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(`MonCash API Error (${response.status}): ${JSON.stringify(data)}`);
-  }
-
-  return data;
-}
-
-/**
- * Vérifie la signature HMAC-SHA256 d'un webhook
- */
-export function verifyWebhookSignature(
-  payload: string,
-  signature: string,
-  timestamp: string
-): boolean {
-  console.log("[MONCASH] Vérification signature webhook:", {
-    hasSecret: !!WEBHOOK_SECRET,
-    secretLength: WEBHOOK_SECRET?.length,
-    signature: signature ? `${signature.substring(0, 20)}...` : 'missing',
-    timestamp,
-    payloadLength: payload.length
-  });
-
-  if (!WEBHOOK_SECRET) {
-    console.error("[MONCASH] Webhook secret non configuré");
-    return false;
-  }
-
-  // Vérifier le timestamp (max 5 minutes)
-  const now = Math.floor(Date.now() / 1000);
-  const webhookTimestamp = parseInt(timestamp);
-  const timeDiff = Math.abs(now - webhookTimestamp);
-
-  console.log("[MONCASH] Vérification timestamp:", {
-    webhookTimestamp,
-    now,
-    diff: timeDiff,
-    valid: timeDiff <= 300
-  });
-
-  if (timeDiff > 300) {
-    console.error("[MONCASH] Timestamp expiré:", {
-      webhookTimestamp,
-      now,
-      diff: timeDiff
-    });
-    return false;
-  }
-
-  // Calculer HMAC-SHA256
-  const hmac = crypto.createHmac("sha256", WEBHOOK_SECRET);
-  hmac.update(payload);
-  const expectedSignature = "sha256=" + hmac.digest("hex");
-
-  console.log("[MONCASH] Comparaison signatures:", {
-    received: signature,
-    expected: expectedSignature,
-    match: signature === expectedSignature
-  });
-
-  try {
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(expectedSignature),
-      Buffer.from(signature)
+    throw new Error(
+      config.error
     );
 
-    if (!isValid) {
-      console.error("[MONCASH] Signature invalide (timingSafeEqual failed)");
-    } else {
-      console.log("[MONCASH] Signature valide");
+  }
+
+
+
+  // Validation montant
+
+  if (
+    !Number.isInteger(request.amount) ||
+    request.amount < 1 ||
+    request.amount > 100000
+  ) {
+
+    throw new Error(
+      "Montant payout invalide"
+    );
+
+  }
+
+
+
+
+  // Nettoyage numéro MonCash
+
+  const moncashNumber =
+    String(request.moncashNumber)
+      .replace(/\D/g, "");
+
+
+
+  if (!/^509\d{8}$/.test(moncashNumber)) {
+
+    throw new Error(
+      "Numéro MonCash invalide. Format attendu: 509XXXXXXXX"
+    );
+
+  }
+
+
+
+
+  const key =
+    idempotencyKey ||
+    generateIdempotencyKey();
+
+
+
+
+  const payload = {
+
+    amount:
+      request.amount,
+
+    moncashNumber,
+
+    referenceId:
+      request.referenceId
+
+  };
+
+
+
+
+  console.log(
+    "[MONCASH PAYOUT REQUEST]",
+    {
+      url:
+      `${BASE_URL}/payout-create`,
+
+      payload,
+
+      idempotencyKey:key
     }
+  );
 
-    return isValid;
-  } catch (error) {
-    console.error("[MONCASH] Erreur timingSafeEqual:", error);
-    return false;
-  }
-}
 
-/**
- * Parse et valide un webhook MonCash
- */
-export function parseWebhook(
-  body: string,
-  signature: string,
-  timestamp: string
-): MonCashWebhookEvent | null {
-  if (!verifyWebhookSignature(body, signature, timestamp)) {
-    return null;
-  }
+
+
+  const response =
+    await fetch(
+      `${BASE_URL}/payout-create`,
+      {
+
+        method:"POST",
+
+        headers:{
+
+          Authorization:
+          `Bearer ${API_KEY}`,
+
+          "Content-Type":
+          "application/json",
+
+          "Idempotency-Key":
+          key
+
+        },
+
+
+        body:
+        JSON.stringify(payload)
+
+      }
+    );
+
+
+
+
+
+  let data:any;
+
+
 
   try {
-    const event = JSON.parse(body) as MonCashWebhookEvent;
-    console.log("[MONCASH] Webhook reçu:", event);
-    return event;
-  } catch (error) {
-    console.error("[MONCASH] Erreur parsing webhook:", error);
-    return null;
+
+    data =
+      await response.json();
+
   }
+
+  catch {
+
+    throw new Error(
+      "Réponse MonCash invalide"
+    );
+
+  }
+
+
+
+
+
+  console.log(
+    "[MONCASH PAYOUT RESPONSE]",
+    {
+      status:
+      response.status,
+
+      data
+    }
+  );
+
+
+
+
+
+  if(!response.ok){
+
+    throw new MonCashError(
+      data?.error ||
+      "Erreur payout MonCash",
+
+      response.status,
+
+      data?.code
+    );
+
+  }
+
+
+
+
+  if(!data?.payout?.reference){
+
+    throw new Error(
+      "Réponse payout incomplète"
+    );
+
+  }
+
+
+
+
+  return data;
+
 }
 
+
+
+
+
+
 /**
- * Types d'erreurs MonCash
+ * Solde marchand MonCashConnect
+ */
+export async function getMerchantBalance()
+:Promise<MonCashBalance>{
+
+
+
+  const config =
+    validateMonCashConfig();
+
+
+
+  if(!config.valid){
+
+    throw new Error(
+      config.error
+    );
+
+  }
+
+
+
+
+  const response =
+    await fetch(
+      `${BASE_URL}/pay-balance`,
+      {
+
+        headers:{
+
+          Authorization:
+          `Bearer ${API_KEY}`
+
+        }
+
+      }
+    );
+
+
+
+
+  const data =
+    await response.json();
+
+
+
+
+  if(!response.ok){
+
+    throw new Error(
+      `MonCash Error ${response.status}`
+    );
+
+  }
+
+
+
+
+  return data;
+
+}
+
+
+
+
+
+
+
+/**
+ * Vérification signature webhook HMAC SHA256
+ */
+export function verifyWebhookSignature(
+  payload:string,
+  signature:string,
+  timestamp:string
+):boolean{
+
+
+
+  if(!WEBHOOK_SECRET){
+
+    console.error(
+      "[MONCASH] Webhook secret absent"
+    );
+
+    return false;
+
+  }
+
+
+
+
+  const now =
+    Math.floor(
+      Date.now()/1000
+    );
+
+
+
+  const webhookTime =
+    Number(timestamp);
+
+
+
+  if(
+    Math.abs(
+      now - webhookTime
+    ) > 300
+  ){
+
+    console.error(
+      "[MONCASH] Timestamp expiré"
+    );
+
+    return false;
+
+  }
+
+
+
+
+  const hmac =
+    crypto
+    .createHmac(
+      "sha256",
+      WEBHOOK_SECRET
+    )
+    .update(payload)
+    .digest("hex");
+
+
+
+
+  const expected =
+    `sha256=${hmac}`;
+
+
+
+
+  try {
+
+
+    return crypto
+      .timingSafeEqual(
+        Buffer.from(expected),
+        Buffer.from(signature)
+      );
+
+
+  }
+
+  catch {
+
+    return false;
+
+  }
+
+}
+
+
+
+
+
+
+
+/**
+ * Parse webhook MonCash
+ */
+export function parseWebhook(
+  body:string,
+  signature:string,
+  timestamp:string
+):MonCashWebhookEvent|null{
+
+
+  const valid =
+    verifyWebhookSignature(
+      body,
+      signature,
+      timestamp
+    );
+
+
+
+  if(!valid){
+
+    return null;
+
+  }
+
+
+
+
+  try {
+
+
+    return JSON.parse(body);
+
+
+  }
+
+  catch {
+
+
+    return null;
+
+  }
+
+}
+
+
+
+
+
+
+
+/**
+ * Erreur MonCash personnalisée
  */
 export class MonCashError extends Error {
+
+
   constructor(
-    message: string,
-    public statusCode: number = 500,
-    public code?: string
-  ) {
+
+    message:string,
+
+    public statusCode:number=500,
+
+    public code?:string
+
+  ){
+
     super(message);
-    this.name = "MonCashError";
-  }
-}
 
-/**
- * Gestionnaire d'erreurs MonCash
- */
-export function handleMonCashError(error: any): MonCashError {
-  if (error instanceof MonCashError) {
-    return error;
+    this.name =
+      "MonCashError";
+
   }
 
-  // Erreurs HTTP courantes
-  if (error.response) {
-    const status = error.response.status;
-    const data = error.response.data;
-
-    switch (status) {
-      case 401:
-        return new MonCashError("Clé API invalide", 401, "invalid_api_key");
-      case 403:
-        return new MonCashError("Accès refusé", 403, "access_denied");
-      case 409:
-        return new MonCashError("ReferenceId déjà utilisé", 409, "duplicate_reference");
-      case 422:
-        return new MonCashError("Paramètres invalides", 422, "invalid_parameters");
-      case 502:
-        return new MonCashError("Erreur serveur MonCash", 502, "server_error");
-      default:
-        return new MonCashError(
-          data?.error || "Erreur MonCash",
-          status,
-          data?.code
-        );
-    }
-  }
-
-  // Erreurs réseau
-  if (error.code === "ECONNREFUSED") {
-    return new MonCashError("Connexion refusée", 503, "connection_refused");
-  }
-
-  if (error.code === "ETIMEDOUT") {
-    return new MonCashError("Timeout", 504, "timeout");
-  }
-
-  // Erreur générique
-  return new MonCashError(
-    error.message || "Erreur inconnue",
-    500,
-    "unknown_error"
-  );
 }

@@ -34,6 +34,10 @@ import {
   RATE_LIMIT_CONFIGS
 } from "@/lib/rateLimit";
 
+import {
+  validateBet,
+} from "@/lib/validation";
+
 
 
 
@@ -135,24 +139,18 @@ export async function POST(
 
     /*
     ================================================
-    2. VALIDATION MISE
+    2. VALIDATION MISE STRICTE
     ================================================
     */
 
-    const amount =
-      Number(bet);
+    const betValidation = validateBet(bet);
 
-
-    if (
-      !Number.isFinite(amount) ||
-      amount < 25
-    ) {
+    if (!betValidation.valid) {
 
       return NextResponse.json(
         {
           success: false,
-          error:
-            "La mise minimum est de 25 HTG",
+          error: betValidation.error || "Mise invalide"
         },
         {
           status: 400,
@@ -161,23 +159,7 @@ export async function POST(
 
     }
 
-
-    if (
-      amount > 10000
-    ) {
-
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "La mise maximum est de 10 000 HTG",
-        },
-        {
-          status: 400,
-        }
-      );
-
-    }
+    const amount = betValidation.value!;
 
 
     /*

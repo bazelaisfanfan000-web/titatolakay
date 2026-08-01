@@ -4,6 +4,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { adminDB, adminAuth } from "@/lib/firebaseAdmin";
+import { validateBet } from "@/lib/validation";
 
 export async function POST(request: Request) {
   try {
@@ -80,12 +81,22 @@ export async function POST(request: Request) {
 
     const bet = Number(room.bet || 0);
 
-    if (bet <= 0) {
+    /*
+    ================================================
+    VALIDATION MISE STRICTE
+    ================================================
+    */
+
+    const betValidation = validateBet(room.bet);
+
+    if (!betValidation.valid) {
       return NextResponse.json(
         { error: "Mise invalide" },
         { status: 400 }
       );
     }
+
+    const validatedBet = betValidation.value!;
 
     // Vérifier le solde de tous les joueurs
     const playerBalances: Record<string, number> = {};
@@ -94,7 +105,7 @@ export async function POST(request: Request) {
       const balanceSnap = await adminDB.ref(`users/${playerId}/balance`).get();
       const balance = Number(balanceSnap.val() || 0);
 
-      if (balance < bet) {
+      if (balance < validatedBet) {
         return NextResponse.json(
           { error: "Solde insuffisant pour un des joueurs" },
           { status: 400 }
@@ -109,7 +120,7 @@ export async function POST(request: Request) {
 
     for (const playerId of playerIds) {
       const oldBalance = playerBalances[playerId];
-      const newBalance = Math.round((oldBalance - bet) * 100) / 100; // Précision 2 décimales
+      const newBalance = Math.round((oldBalance - validatedBet) * 100) / 100; // Précision 2 décimales
 
       updates[`users/${playerId}/balance`] = newBalance;
       updates[`users/${playerId}/updatedAt`] = Date.now();
@@ -120,14 +131,14 @@ export async function POST(request: Request) {
         id: transactionId,
         userId: playerId,
         type: "game_bet",
-        amount: -bet,
+        amount: -validatedBet,
         balanceBefore: oldBalance,
         balanceAfter: newBalance,
         referenceId: roomId,
         status: "completed",
         source: "game",
         description: `Mise de jeu - ${roomId}`,
-        metadata: { roomId, bet },
+        metadata: { roomId, bet: validatedBet },
         createdAt: Date.now(),
         completedAt: Date.now()
       };
@@ -136,7 +147,7 @@ export async function POST(request: Request) {
     // Marquer les mises comme débitées et passer à countdown
     updates[`rooms/${roomId}/game/betsDebited`] = true;
     updates[`rooms/${roomId}/game/betsDebitedAt`] = Date.now();
-    updates[`rooms/${roomId}/pot`] = bet * playerIds.length;
+    updates[`rooms/${roomId}/pot`] = validatedBet * playerIds.length;
     updates[`rooms/${roomId}/status`] = "countdown";
     updates[`rooms/${roomId}/updatedAt`] = Date.now();
     updates[`rooms/${roomId}/countdownAt`] = Date.now(); // Pour le compte à rebours
@@ -152,8 +163,8 @@ export async function POST(request: Request) {
     console.log("[START_GAME] Partie démarrée avec succès:", {
       roomId,
       playerIds,
-      bet,
-      totalPot: bet * playerIds.length,
+      bet: validatedBet,
+      totalPot: validatedBet * playerIds.length,
       status: "countdown"
     });
 
@@ -161,7 +172,7 @@ export async function POST(request: Request) {
       success: true,
       roomId,
       status: "countdown",
-      pot: bet * playerIds.length,
+      pot: validatedBet * playerIds.length,
       playersCount: playerIds.length
     });
 

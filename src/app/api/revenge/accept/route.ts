@@ -7,6 +7,7 @@ import { adminDB, adminAuth } from "@/lib/firebaseAdmin";
 import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from "@/lib/rateLimit";
 import { createAuditLog, AuditActions } from "@/lib/auditLogger";
 import type { RevengeRequest } from "@/lib/revengeTypes";
+import { validateBet } from "@/lib/validation";
 
 /**
  * API Route: POST /api/revenge/accept
@@ -101,10 +102,29 @@ export async function POST(request: Request) {
     const requesterUser = requesterSnap.val();
     const opponentUser = opponentSnap.val();
 
+    /*
+    ================================================
+    VALIDATION MISE STRICTE
+    ================================================
+    */
+
+    const betValidation = validateBet(revengeRequest.betAmount);
+
+    if (!betValidation.valid) {
+      return NextResponse.json({
+        success: false,
+        error: "Mise de la revanche invalide"
+      }, {
+        status: 400
+      });
+    }
+
+    const validatedBet = betValidation.value!;
+
     // Vérifier que les deux joueurs ont un solde suffisant
     const requesterBalance = Number(requesterUser.balance || 0);
     const opponentBalance = Number(opponentUser.balance || 0);
-    const betAmount = revengeRequest.betAmount;
+    const betAmount = validatedBet;
 
     if (requesterBalance < betAmount) {
       return NextResponse.json({

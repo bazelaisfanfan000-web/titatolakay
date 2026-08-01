@@ -1,183 +1,752 @@
 /**
- * API Route: Création de retrait
+ * API Route: Création retrait wallet
  * POST /api/wallet/withdraw
  */
 
 import { NextResponse } from "next/server";
-import { adminAuth, adminDB } from "@/lib/firebaseAdmin";
-import { createMonCashPayout, generateReferenceId, generateIdempotencyKey } from "@/lib/moncash";
-import { atomicWithdrawal } from "@/lib/atomicTransaction";
-import { hasAvailableBalance } from "@/lib/wallet";
-import { transactionExists } from "@/lib/ledger";
-import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from "@/lib/rateLimit";
+
+import {
+  adminAuth,
+  adminDB
+} from "@/lib/firebaseAdmin";
+
+import {
+  createMonCashPayout,
+  generateReferenceId,
+  generateIdempotencyKey
+} from "@/lib/moncash";
+
+import {
+  atomicWithdrawal
+} from "@/lib/atomicTransaction";
+
+import {
+  hasAvailableBalance,
+  creditWallet
+} from "@/lib/wallet";
+
+import {
+  transactionExists
+} from "@/lib/ledger";
+
+import {
+  rateLimitMiddleware,
+  RATE_LIMIT_CONFIGS
+} from "@/lib/rateLimit";
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+
 const MIN_WITHDRAW = 100;
 const MAX_WITHDRAW = 100000;
-const DAILY_WITHDRAW_LIMIT = 200000; // Limite journalière de 200,000 HTG
 
-export async function POST(request: Request) {
-  try {
-    // 0. Rate limiting
-    const rateLimitResult = await rateLimitMiddleware(request, "withdraw", RATE_LIMIT_CONFIGS.withdraw);
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { error: "Trop de requêtes. Veuillez réessayer plus tard." },
-        { status: 429 }
-      );
-    }
+const DAILY_WITHDRAW_LIMIT = 200000;
 
-    // 1. Authentification Firebase
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Non autorisé" },
-        { status: 401 }
-      );
-    }
 
-    const token = authHeader.substring(7);
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    const userId = decodedToken.uid;
 
-    // 2. Validation du corps de la requête
-    const body = await request.json();
-    const { amount, moncashNumber } = body;
+export async function POST(
+  request: Request
+) {
 
-    if (typeof amount !== "number" || amount < MIN_WITHDRAW || amount > MAX_WITHDRAW) {
-      return NextResponse.json(
-        { error: `Le montant doit être entre ${MIN_WITHDRAW} et ${MAX_WITHDRAW} HTG` },
-        { status: 400 }
-      );
-    }
+try {
 
-    // 3. Validation du numéro MonCash
-    const cleanNumber = moncashNumber.replace(/\D/g, "");
-    if (!/^\d{8}$/.test(cleanNumber)) {
-      return NextResponse.json(
-        { error: "Numéro MonCash invalide (8 chiffres requis)" },
-        { status: 400 }
-      );
-    }
 
-    // 4. Vérifier le solde disponible
-    const hasBalance = await hasAvailableBalance(userId, amount);
-    if (!hasBalance) {
-      return NextResponse.json(
-        { error: "Solde insuffisant" },
-        { status: 400 }
-      );
-    }
+/*
+================================
+1 - RATE LIMIT
+================================
+*/
 
-    // 5. Vérifier la limite journalière de retrait
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayTimestamp = today.getTime();
+const rate =
+await rateLimitMiddleware(
+  request,
+  "withdraw",
+  RATE_LIMIT_CONFIGS.withdraw
+);
 
-    const withdrawalsRef = adminDB.ref(`withdrawals/${userId}`);
-    const withdrawalsSnapshot = await withdrawalsRef
-      .orderByChild("createdAt")
-      .startAt(todayTimestamp)
-      .once("value");
 
-    let todayTotal = 0;
-    if (withdrawalsSnapshot.exists()) {
-      withdrawalsSnapshot.forEach((child: any) => {
-        const withdrawal = child.val();
-        if (withdrawal.status !== "failed") {
-          todayTotal += withdrawal.amount || 0;
-        }
-      });
-    }
+if(!rate.allowed){
 
-    if (todayTotal + amount > DAILY_WITHDRAW_LIMIT) {
-      return NextResponse.json(
-        { 
-          error: `Limite journalière dépassée. Vous avez déjà retiré ${todayTotal} HTG aujourd'hui. La limite est de ${DAILY_WITHDRAW_LIMIT} HTG.` 
-        },
-        { status: 400 }
-      );
-    }
+return NextResponse.json(
+{
+error:"Trop de requêtes"
+},
+{
+status:429
+}
+);
 
-    // 6. Générer les identifiants uniques
-    const referenceId = generateReferenceId("withdraw");
-    const idempotencyKey = generateIdempotencyKey();
+}
 
-    console.log("[WITHDRAW_API] Création retrait:", { userId, amount, referenceId });
 
-    // 7. Vérifier la déduplication
-    const exists = await transactionExists(userId, referenceId);
-    if (exists) {
-      return NextResponse.json(
-        { error: "Transaction déjà existante" },
-        { status: 409 }
-      );
-    }
 
-    // 8. Débiter immédiatement et créer le retrait en pending
-    const atomicResult = await atomicWithdrawal({
-      userId,
-      amount,
-      moncashNumber: cleanNumber,
-      referenceId,
-      idempotencyKey
-    });
 
-    if (!atomicResult.success) {
-      return NextResponse.json(
-        { error: atomicResult.error || "Erreur lors de la création du retrait" },
-        { status: 400 }
-      );
-    }
 
-    // 9. Créer le payout MonCash
-    const moncashResponse = await createMonCashPayout(
-      {
-        amount,
-        moncashNumber: cleanNumber,
-        referenceId
-      },
-      idempotencyKey
-    );
+/*
+================================
+2 - AUTH FIREBASE
+================================
+*/
 
-    // 10. Mettre à jour le retrait avec les infos MonCash
-    const withdrawalRef = adminDB.ref(`withdrawals/${userId}/${referenceId}`);
-    await withdrawalRef.update({
-      moncashReference: moncashResponse.payout.reference,
-      fee: moncashResponse.payout.fee_htg,
-      netAmount: moncashResponse.payout.net_htg,
-      recipientAccountMasked: moncashResponse.payout.recipient_account_masked,
-      status: "queued"
-    });
 
-    console.log("[WITHDRAW_API] Retrait créé:", {
-      referenceId,
-      moncashReference: moncashResponse.payout.reference,
-      status: moncashResponse.payout.status
-    });
+const auth =
+request.headers.get(
+"authorization"
+);
 
-    // 11. Retourner le résultat
-    return NextResponse.json({
-      success: true,
-      withdrawalId: referenceId,
-      referenceId: moncashResponse.payout.reference,
-      status: moncashResponse.payout.status,
-      amount: moncashResponse.payout.amount_htg,
-      fee: moncashResponse.payout.fee_htg,
-      recipientAccountMasked: moncashResponse.payout.recipient_account_masked
-    });
 
-  } catch (error) {
-    console.error("[WITHDRAW_API] Erreur:", error);
+if(
+!auth ||
+!auth.startsWith("Bearer ")
+){
 
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Erreur lors de la création du retrait",
-        success: false
-      },
-      { status: 500 }
-    );
-  }
+return NextResponse.json(
+{
+error:"Non autorisé"
+},
+{
+status:401
+}
+);
+
+}
+
+
+
+const token =
+auth.substring(7);
+
+
+
+const decoded =
+await adminAuth.verifyIdToken(
+token
+);
+
+
+
+const userId =
+decoded.uid;
+
+
+
+
+
+
+
+/*
+================================
+3 - BODY
+================================
+*/
+
+
+const body =
+await request.json();
+
+
+
+let amount =
+Number(body.amount);
+
+
+
+if(
+!Number.isInteger(amount)
+){
+
+return NextResponse.json(
+{
+error:"Le montant doit être un entier"
+},
+{
+status:400
+}
+);
+
+}
+
+
+
+
+if(
+amount < MIN_WITHDRAW ||
+amount > MAX_WITHDRAW
+){
+
+return NextResponse.json(
+{
+error:
+`Le retrait doit être entre ${MIN_WITHDRAW} et ${MAX_WITHDRAW} HTG`
+},
+{
+status:400
+}
+);
+
+}
+
+
+
+
+
+
+
+
+/*
+================================
+4 - FORMAT NUMERO MONCASH
+================================
+*/
+
+
+let cleanNumber =
+String(
+body.moncashNumber || ""
+)
+.replace(/\D/g,"");
+
+
+// Accepte 8 chiffres
+// Exemple: 49289375
+
+if(
+cleanNumber.length === 8
+){
+
+cleanNumber =
+"509" + cleanNumber;
+
+}
+
+
+
+// Vérification finale
+
+if(
+!/^509\d{8}$/.test(cleanNumber)
+){
+
+return NextResponse.json(
+{
+error:
+"Numéro MonCash invalide. Entrez les 8 chiffres après +509"
+},
+{
+status:400
+}
+);
+
+}
+
+
+
+
+
+
+
+
+/*
+================================
+5 - VERIFICATION SOLDE
+================================
+*/
+
+
+const balance =
+await hasAvailableBalance(
+userId,
+amount
+);
+
+
+
+if(!balance){
+
+return NextResponse.json(
+{
+error:"Solde insuffisant"
+},
+{
+status:400
+}
+);
+
+}
+
+
+
+
+
+
+
+
+/*
+================================
+6 - LIMITE JOURNALIERE
+================================
+*/
+
+
+const startDay =
+new Date();
+
+
+startDay.setHours(
+0,
+0,
+0,
+0
+);
+
+
+
+const snapshot =
+await adminDB
+.ref(
+`withdrawals/${userId}`
+)
+.orderByChild(
+"createdAt"
+)
+.startAt(
+startDay.getTime()
+)
+.once(
+"value"
+);
+
+
+
+let totalToday = 0;
+
+
+
+if(snapshot.exists()){
+
+
+snapshot.forEach(
+(child:any)=>{
+
+
+const withdrawal =
+child.val();
+
+
+if(
+withdrawal.status !== "failed"
+){
+
+totalToday +=
+Number(
+withdrawal.amount || 0
+);
+
+}
+
+
+});
+
+
+}
+
+
+
+
+if(
+totalToday + amount >
+DAILY_WITHDRAW_LIMIT
+){
+
+return NextResponse.json(
+{
+error:
+`Limite journalière dépassée (${DAILY_WITHDRAW_LIMIT} HTG)`
+},
+{
+status:400
+}
+);
+
+}
+
+
+
+
+
+
+
+
+
+/*
+================================
+7 - IDENTIFIANTS
+================================
+*/
+
+
+const referenceId =
+generateReferenceId(
+"withdraw"
+);
+
+
+
+const idempotencyKey =
+generateIdempotencyKey();
+
+
+
+
+
+
+console.log(
+"[WITHDRAW REQUEST]",
+{
+userId,
+amount,
+moncashNumber:cleanNumber,
+referenceId
+}
+);
+
+
+
+
+
+
+
+
+
+/*
+================================
+8 - EVITER DOUBLE TRANSACTION
+================================
+*/
+
+
+const exists =
+await transactionExists(
+userId,
+referenceId
+);
+
+
+
+if(exists){
+
+return NextResponse.json(
+{
+error:
+"Transaction déjà existante"
+},
+{
+status:409
+}
+);
+
+}
+
+
+
+
+
+
+
+
+/*
+================================
+9 - DEBIT ATOMIQUE (AVANT PAYOUT)
+================================
+*/
+
+
+const atomic =
+await atomicWithdrawal(
+{
+
+userId,
+
+amount,
+
+moncashNumber:
+cleanNumber,
+
+referenceId,
+
+idempotencyKey
+
+}
+);
+
+
+
+
+if(!atomic.success){
+
+return NextResponse.json(
+{
+error:
+atomic.error ||
+"Erreur débit wallet"
+},
+{
+status:400
+}
+);
+
+}
+
+
+
+
+
+
+
+
+console.log(
+"[WITHDRAW DEBIT SUCCESS]",
+{
+userId,
+amount,
+newBalance:atomic.newBalance
+}
+);
+
+
+
+
+
+
+
+
+
+/*
+================================
+10 - CREATION PAYOUT MONCASH
+================================
+*/
+
+
+let payout;
+
+
+
+try{
+
+
+payout =
+await createMonCashPayout(
+{
+
+amount,
+
+moncashNumber:
+cleanNumber,
+
+referenceId
+
+},
+
+idempotencyKey
+
+);
+
+
+
+}
+
+catch(error){
+
+
+console.error(
+"[MONCASH PAYOUT ERROR]",
+error
+);
+
+
+
+// REMBOURSEMENT AUTOMATIQUE SI PAYOUT ÉCHOUE
+await creditWallet(
+userId,
+amount,
+referenceId,
+`Remboursement retrait échoué - ${cleanNumber}`
+);
+
+
+await adminDB
+.ref(
+`withdrawals/${userId}/${referenceId}`
+)
+.update(
+{
+status:"failed",
+failureReason:
+error instanceof Error
+?error.message
+:"Erreur MonCashConnect",
+failedAt:Date.now()
+}
+);
+
+
+return NextResponse.json(
+{
+error:
+"MonCashConnect a refusé le retrait. Votre solde a été remboursé.",
+details:
+error instanceof Error
+?error.message
+:"Erreur inconnue"
+
+},
+{
+status:400
+}
+);
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+================================
+11 - SAUVEGARDE
+================================
+*/
+
+
+await adminDB
+.ref(
+`withdrawals/${userId}/${referenceId}`
+)
+.set(
+{
+
+userId,
+
+amount,
+
+moncashNumber:
+cleanNumber,
+
+referenceId,
+
+
+moncashReference:
+payout.payout.reference,
+
+
+status:
+"queued",
+
+
+fee:
+payout.payout.fee_htg || 0,
+
+
+netAmount:
+payout.payout.net_htg || amount,
+
+
+createdAt:
+Date.now()
+
+
+}
+);
+
+
+
+
+
+
+
+
+console.log(
+"[WITHDRAW SUCCESS]",
+{
+referenceId,
+payout:
+payout.payout.reference
+}
+);
+
+
+
+
+
+
+
+return NextResponse.json(
+{
+
+success:true,
+
+
+withdrawalId:
+referenceId,
+
+
+reference:
+payout.payout.reference,
+
+
+status:
+"queued",
+
+
+amount
+
+
+}
+);
+
+
+
+
+}
+
+catch(error){
+
+
+console.error(
+"[WITHDRAW ERROR]",
+error
+);
+
+
+
+return NextResponse.json(
+{
+
+success:false,
+
+error:
+error instanceof Error
+?
+error.message
+:
+"Erreur serveur"
+
+},
+{
+status:500
+}
+);
+
+
+}
+
+
 }

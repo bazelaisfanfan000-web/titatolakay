@@ -185,6 +185,24 @@ function WalletContent() {
 
   /*
   ==================================================
+  HISTORIQUE DES RETRAITS
+  ==================================================
+  */
+
+  const [
+    withdrawals,
+    setWithdrawals,
+  ] = useState<any[]>([]);
+
+
+  const [
+    withdrawalsLoading,
+    setWithdrawalsLoading,
+  ] = useState(true);
+
+
+  /*
+  ==================================================
   AUTH FIREBASE
   ==================================================
   */
@@ -322,6 +340,103 @@ function WalletContent() {
           setError(
             "Impossible de charger votre solde."
           );
+
+        }
+
+      );
+
+
+    return () => {
+
+      unsubscribe();
+
+    };
+
+  }, [
+    currentUser,
+  ]);
+
+
+  /*
+  ==================================================
+  HISTORIQUE DES RETRAITS EN TEMPS RÉEL
+  ==================================================
+  */
+
+  useEffect(() => {
+
+    if (!currentUser) {
+
+      setWithdrawals([]);
+
+      setWithdrawalsLoading(false);
+
+      return;
+
+    }
+
+
+    setWithdrawalsLoading(true);
+
+
+    const withdrawalsRef =
+      ref(
+        database,
+        `withdrawals/${currentUser.uid}`
+      );
+
+
+    const unsubscribe =
+      onValue(
+
+        withdrawalsRef,
+
+        (snapshot) => {
+
+          const data =
+            snapshot.val();
+
+
+          if (!data) {
+
+            setWithdrawals([]);
+
+            setWithdrawalsLoading(false);
+
+            return;
+
+          }
+
+
+          const withdrawalsList =
+            Object.entries(data)
+              .map(([id, withdrawal]: [string, any]) => ({
+                id,
+                ...withdrawal
+              }))
+              .sort((a, b) =>
+                (b.createdAt || 0) - (a.createdAt || 0)
+              )
+              .slice(0, 10);
+
+
+          setWithdrawals(withdrawalsList);
+
+          setWithdrawalsLoading(false);
+
+        },
+
+        (firebaseError) => {
+
+          console.error(
+            "Erreur chargement retraits :",
+            firebaseError
+          );
+
+
+          setWithdrawals([]);
+
+          setWithdrawalsLoading(false);
 
         }
 
@@ -1226,12 +1341,12 @@ function WalletContent() {
         ==========================================
         */
 
+        const maskedPhone =
+          `509****${localPhone.slice(-4)}`;
+
+
         setWithdrawMessage(
-
-          result.message ||
-
-          "Votre demande de retrait a été créée. Le transfert vers votre compte MonCash est en cours."
-
+          `✅ Retrait de ${amount} HTG vers ${maskedPhone} en cours.`
         );
 
 
@@ -1716,6 +1831,148 @@ function WalletContent() {
               </div>
 
             </div>
+
+          </section>
+
+
+          {/* ========================================
+              HISTORIQUE DES RETRAITS
+          ======================================== */}
+
+          <section className="mt-6">
+
+            <div className="mb-3">
+
+              <h3 className="text-[14px] font-black">
+                Historique des retraits
+              </h3>
+
+            </div>
+
+
+            {withdrawalsLoading ? (
+
+              <div className="flex items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.025] py-8">
+
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+
+              </div>
+
+            ) : withdrawals.length === 0 ? (
+
+              <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-6 text-center">
+
+                <div className="mb-2 text-3xl">
+                  💸
+                </div>
+
+                <p className="text-[10px] text-white/30">
+                  Aucun retrait effectué
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="space-y-2">
+
+                {withdrawals.map((withdrawal) => {
+
+                  const statusIcon =
+                    withdrawal.status === "completed"
+                      ? "🟢"
+                      : withdrawal.status === "failed"
+                      ? "🔴"
+                      : "🟡";
+
+
+                  const statusText =
+                    withdrawal.status === "completed"
+                      ? "Réussi"
+                      : withdrawal.status === "failed"
+                      ? "Échoué"
+                      : "En traitement";
+
+
+                  const statusColor =
+                    withdrawal.status === "completed"
+                      ? "text-green-400"
+                      : withdrawal.status === "failed"
+                      ? "text-red-400"
+                      : "text-yellow-400";
+
+
+                  const maskedPhone =
+                    withdrawal.moncashNumber
+                      ? `509****${withdrawal.moncashNumber.slice(-4)}`
+                      : "N/A";
+
+
+                  const date =
+                    withdrawal.createdAt
+                      ? new Date(withdrawal.createdAt).toLocaleDateString(
+                          "fr-FR",
+                          {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric"
+                          }
+                        )
+                      : "N/A";
+
+
+                  return (
+
+                    <div
+                      key={withdrawal.id}
+                      className="overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3"
+                    >
+
+                      <div className="flex items-start justify-between">
+
+                        <div className="flex items-center gap-3">
+
+                          <div className="text-lg">
+                            {statusIcon}
+                          </div>
+
+                          <div>
+
+                            <p className="text-[11px] font-bold">
+                              {withdrawal.amount} HTG
+                            </p>
+
+                            <p className="mt-0.5 text-[8px] text-white/30">
+                              Vers {maskedPhone}
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                        <div className="text-right">
+
+                          <p className={`text-[9px] font-bold ${statusColor}`}>
+                            {statusText}
+                          </p>
+
+                          <p className="mt-0.5 text-[8px] text-white/25">
+                            {date}
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  );
+
+                })}
+
+              </div>
+
+            )}
 
           </section>
 

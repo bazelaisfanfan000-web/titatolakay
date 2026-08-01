@@ -7,6 +7,7 @@ import { adminDB, adminAuth } from "@/lib/firebaseAdmin";
 import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from "@/lib/rateLimit";
 import { createAuditLog, AuditActions } from "@/lib/auditLogger";
 import type { RevengeRequest, CreateRevengeRequest } from "@/lib/revengeTypes";
+import { validateBet } from "@/lib/validation";
 
 /**
  * API Route: POST /api/revenge/request
@@ -88,15 +89,19 @@ export async function POST(request: Request) {
       });
     }
 
-    // Vérifier que la mise est valide
-    if (betAmount < 25 || betAmount > 10000) {
+    // Vérifier que la mise est valide avec validation stricte
+    const betValidation = validateBet(betAmount);
+
+    if (!betValidation.valid) {
       return NextResponse.json({
         success: false,
-        error: "Mise invalide"
+        error: betValidation.error || "Mise invalide"
       }, {
         status: 400
       });
     }
+
+    const validatedBet = betValidation.value!;
 
     // Vérifier que l'ancienne partie existe
     const previousRoomRef = adminDB.ref(`rooms/${previousRoomId}`);
