@@ -182,16 +182,15 @@ export default function RulesPage() {
 
 
       if (!response.ok) {
-
-        const data =
-          await response.json();
-
+        const text = await response.text();
+        console.error("[RULES] Erreur réponse:", response.status, text);
         throw new Error(
-          data.error ||
-          "Erreur lors de l'acceptation des règles"
+          `Erreur ${response.status}: ${text || "Erreur lors de l'acceptation des règles"}`
         );
-
       }
+
+      const data = await response.json();
+      console.log("[RULES] Réponse succès:", data);
 
 
       /*

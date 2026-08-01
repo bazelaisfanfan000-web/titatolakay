@@ -164,13 +164,13 @@ function RegisterContent() {
         return code;
       };
 
-      const referralCode = generateReferralCode();
+      const generatedReferralCode = generateReferralCode();
 
       console.log("[REGISTER] Données utilisateur à créer:", {
         uid: user.uid,
         username: username.trim(),
         email: user.email || email.trim(),
-        referralCode: referralCode,
+        referralCode: generatedReferralCode,
         referrerId: referrerId,
         hasReferrer: !!referrerId
       });
@@ -218,7 +218,7 @@ function RegisterContent() {
             now,
 
           // Parrainage
-          referralCode: referralCode,
+          referralCode: generatedReferralCode,
           referralCreatedAt: now,
           ...(referrerId && {
             referredBy: referrerId,

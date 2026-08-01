@@ -1098,7 +1098,7 @@ export default function Dashboard() {
                     text-purple-100
                   "
                 >
-                  Parrainage
+                  inviter et gagnez sans jouer
                 </h4>
 
                 <p

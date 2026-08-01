@@ -1,88 +1,88 @@
 {
   "rules": {
-    ".read": false,
-    ".write": false,
+    ".read": "auth != null",
+    ".write": "auth != null",
     "users": {
       "$uid": {
         ".read": "auth != null && auth.uid == $uid",
-        ".write": false,
+        ".write": "auth != null && (auth.uid == $uid || auth.token.admin == true)",
         "balance": {
           ".read": "auth != null && auth.uid == $uid",
-          ".write": false
+          ".write": "auth.token.admin == true"
         },
         "reservedBalance": {
           ".read": "auth != null && auth.uid == $uid",
-          ".write": false
+          ".write": "auth.token.admin == true"
         },
         "referralCode": {
-          ".read": "auth != null && auth.uid == $uid",
-          ".write": false
+          ".read": "auth != null",
+          ".write": "auth.token.admin == true"
         },
         "referralCount": {
           ".read": "auth != null && auth.uid == $uid",
-          ".write": false
+          ".write": "auth.token.admin == true"
         },
         "referredBy": {
           ".read": "auth != null && auth.uid == $uid",
-          ".write": false
+          ".write": "auth.token.admin == true"
         },
         "referralStartDate": {
           ".read": "auth != null && auth.uid == $uid",
-          ".write": false
+          ".write": "auth.token.admin == true"
         },
         "referralEndDate": {
           ".read": "auth != null && auth.uid == $uid",
-          ".write": false
+          ".write": "auth.token.admin == true"
         }
       }
     },
     "transactions": {
       "$uid": {
         ".read": "auth != null && auth.uid == $uid",
-        ".write": false
+        ".write": "auth.token.admin == true"
       }
     },
     "deposits": {
       "$uid": {
         ".read": "auth != null && auth.uid == $uid",
-        ".write": false
+        ".write": "auth.token.admin == true"
       }
     },
     "withdrawals": {
       "$uid": {
         ".read": "auth != null && auth.uid == $uid",
-        ".write": false
+        ".write": "auth.token.admin == true"
       }
     },
     "ledger": {
       "$uid": {
         ".read": "auth != null && auth.uid == $uid",
-        ".write": false
+        ".write": "auth.token.admin == true"
       }
     },
     "referralRewards": {
-      ".read": false,
-      ".write": false
+      ".read": "auth.token.admin == true",
+      ".write": "auth.token.admin == true"
     },
     "auditLogs": {
-      ".read": false,
-      ".write": false
+      ".read": "auth.token.admin == true",
+      ".write": "auth.token.admin == true"
     },
     "webhookIdempotency": {
-      ".read": false,
-      ".write": false
+      ".read": "auth.token.admin == true",
+      ".write": "auth.token.admin == true"
     },
     "withdrawalRateLimit": {
-      ".read": false,
-      ".write": false
+      ".read": "auth.token.admin == true",
+      ".write": "auth.token.admin == true"
     },
     "rooms": {
       ".read": true,
-      ".write": false
+      ".write": "auth != null"
     },
     "settings": {
       ".read": true,
-      ".write": false
+      ".write": "auth.token.admin == true"
     }
   }
 }
