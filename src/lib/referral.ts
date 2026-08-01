@@ -210,10 +210,15 @@ export async function processReferralCommission(params: {
   try {
     const { gameId, loserId, lostAmount } = params;
     
+    console.log("[REFERRAL] Début traitement commission:", { gameId, loserId, lostAmount });
+    
     // Vérifier si le perdant a un parrain actif
     const { hasReferrer, referrerId } = await hasActiveReferrer(loserId);
     
+    console.log("[REFERRAL] Vérification parrain:", { hasReferrer, referrerId });
+    
     if (!hasReferrer || !referrerId) {
+      console.log("[REFERRAL] Pas de parrain actif pour:", loserId);
       return { success: true, commission: 0 }; // Pas de commission si pas de parrain
     }
     
@@ -225,17 +230,22 @@ export async function processReferralCommission(params: {
       .once("value");
     
     if (existingReward.exists()) {
+      console.log("[REFERRAL] Commission déjà versée pour:", gameId);
       return { success: true, commission: 0 }; // Déjà traité
     }
     
     // Calculer la commission (10% de la perte)
     const commission = Math.round((lostAmount * REFERRAL_COMMISSION_RATE) * 100) / 100;
     
+    console.log("[REFERRAL] Commission calculée:", { lostAmount, commission });
+    
     if (commission <= 0) {
+      console.log("[REFERRAL] Commission nulle ou négative");
       return { success: true, commission: 0 };
     }
     
     // Créditer le wallet du parrain
+    console.log("[REFERRAL] Crédit wallet pour:", referrerId, "montant:", commission);
     const creditResult = await creditWallet(
       referrerId,
       commission,
@@ -247,6 +257,8 @@ export async function processReferralCommission(params: {
       console.error("[REFERRAL] Erreur crédit wallet:", creditResult.error);
       return { success: false, error: "Erreur crédit wallet" };
     }
+    
+    console.log("[REFERRAL] Wallet crédité avec succès:", creditResult);
     
     // Créer l'entrée ledger
     await createLedgerEntry({
@@ -274,7 +286,7 @@ export async function processReferralCommission(params: {
       createdAt: Date.now()
     });
     
-    console.log("[REFERRAL] Commission versée:", {
+    console.log("[REFERRAL] Commission versée avec succès:", {
       referrerId,
       referredUserId: loserId,
       gameId,

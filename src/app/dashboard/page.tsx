@@ -25,7 +25,7 @@ import {
 
 import { useNotifications } from "@/hooks/useNotifications";
 import { useForegroundNotifications } from "@/hooks/useForegroundNotifications";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 
 
 /*
@@ -394,6 +394,7 @@ export default function Dashboard() {
               className="
                 flex
                 min-w-0
+                flex-1
                 flex-col
                 justify-center
               "
@@ -430,6 +431,64 @@ export default function Dashboard() {
 
             </div>
 
+            {/* NOTIFICATIONS */}
+
+            {notificationPermission === "default" && (
+              <button
+                type="button"
+                onClick={requestNotificationPermission}
+                className="
+                  flex
+                  h-[38px]
+                  min-w-[38px]
+                  items-center
+                  justify-center
+                  rounded-xl
+                  border
+                  border-green-400/30
+                  bg-green-500/[0.10]
+                  px-3
+                  text-center
+                  shadow-[0_3px_0_rgba(34,197,94,0.65),0_0_15px_rgba(34,197,94,0.08)]
+                  backdrop-blur-md
+                  transition-all
+                  hover:border-green-300/50
+                  hover:bg-green-500/[0.16]
+                  active:translate-y-[2px]
+                  active:shadow-none
+                "
+              >
+                <Bell size={16} className="text-green-400" />
+              </button>
+            )}
+
+            {notificationPermission === "denied" && (
+              <button
+                type="button"
+                className="
+                  flex
+                  h-[38px]
+                  min-w-[38px]
+                  items-center
+                  justify-center
+                  rounded-xl
+                  border
+                  border-orange-400/30
+                  bg-orange-500/[0.10]
+                  px-3
+                  text-center
+                  shadow-[0_3px_0_rgba(249,115,22,0.65),0_0_15px_rgba(249,115,22,0.08)]
+                  backdrop-blur-md
+                  cursor-not-allowed
+                  opacity-60
+                "
+              >
+                <div className="relative">
+                  <Bell size={16} className="text-orange-400" />
+                  <X size={10} className="absolute -top-1 -right-1 text-orange-400 bg-[#05070b] rounded-full" />
+                </div>
+              </button>
+            )}
 
             {/* SOLDE */}
 
@@ -482,64 +541,10 @@ export default function Dashboard() {
                 "
               >
 
-                Portefeuille
-
-              </span>
-
-            </button>
-
-            {/* PARRAINAGE */}
-
-            <button
-              type="button"
-              onClick={() =>
-                router.push("/referral")
-              }
-              className="
-                flex
-                h-[38px]
-                min-w-[92px]
-                items-center
-                justify-center
-                gap-1.5
-                rounded-xl
-                border
-                border-green-400/30
-                bg-green-500/[0.10]
-                px-3
-                text-center
-                shadow-[0_3px_0_rgba(34,197,94,0.65),0_0_15px_rgba(34,197,94,0.08)]
-                backdrop-blur-md
-                transition-all
-                hover:border-green-300/50
-                hover:bg-green-500/[0.16]
-                active:translate-y-[2px]
-                active:shadow-none
-              "
-            >
-
-              <span
-                className="
-                  text-[14px]
-                  leading-none
-                "
-              >
-
-                🎁
-
-              </span>
-
-
-              <span
-                className="
-                  whitespace-nowrap
-                  text-[10px]
-                  font-bold
-                  text-green-100
-                "
-              >
-
-                Parrainage
+                {balanceLoading
+                  ? "..."
+                  : `${balance.toLocaleString("fr-FR")} HTG`
+                }
 
               </span>
 
@@ -1020,7 +1025,7 @@ export default function Dashboard() {
           </section>
 
           {/* ======================================
-              NOTIFICATIONS
+              PARRAINAGE
           ====================================== */}
 
           <section
@@ -1028,230 +1033,97 @@ export default function Dashboard() {
               mt-6
             "
           >
-            {notificationPermission === "default" && (
-              <button
-                type="button"
-                onClick={requestNotificationPermission}
-                className="
-                  flex
-                  min-h-[56px]
-                  w-full
-                  items-center
-                  gap-3
-                  rounded-2xl
-                  border
-                  border-green-400/30
-                  bg-green-500/[0.10]
-                  px-3.5
-                  py-2.5
-                  text-left
-                  shadow-[0_4px_0_rgba(34,197,94,0.65),0_0_18px_rgba(34,197,94,0.08)]
-                  backdrop-blur-md
-                  transition-all
-                  hover:border-green-300/50
-                  hover:bg-green-500/[0.16]
-                  hover:shadow-[0_5px_0_rgba(34,197,94,0.7),0_0_24px_rgba(34,197,94,0.14)]
-                  active:translate-y-[3px]
-                  active:shadow-none
-                "
-              >
-                <div
-                  className="
-                    flex
-                    h-10
-                    w-10
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    border-green-300/25
-                    bg-green-400/[0.10]
-                    text-lg
-                    shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]
-                  "
-                >
-                  <Bell size={20} className="text-green-400" />
-                </div>
-
-                <div
-                  className="
-                    min-w-0
-                    flex-1
-                  "
-                >
-                  <h4
-                    className="
-                      text-[13px]
-                      font-black
-                      leading-tight
-                      text-green-100
-                    "
-                  >
-                    Activer les notifications
-                  </h4>
-
-                  <p
-                    className="
-                      mt-1
-                      truncate
-                      text-[9px]
-                      leading-tight
-                      text-green-100/40
-                    "
-                  >
-                    Pour être au courant des nouvelles parties
-                  </p>
-                </div>
-
-                <span
-                  className="
-                    shrink-0
-                    pr-1
-                    text-2xl
-                    font-light
-                    leading-none
-                    text-green-200/50
-                  "
-                >
-                  ›
-                </span>
-              </button>
-            )}
-
-            {notificationPermission === "granted" && (
+            <button
+              type="button"
+              onClick={() =>
+                router.push("/referral")
+              }
+              className="
+                flex
+                min-h-[56px]
+                w-full
+                items-center
+                gap-3
+                rounded-2xl
+                border
+                border-purple-400/30
+                bg-purple-500/[0.10]
+                px-3.5
+                py-2.5
+                text-left
+                shadow-[0_4px_0_rgba(147,51,234,0.65),0_0_18px_rgba(147,51,234,0.08)]
+                backdrop-blur-md
+                transition-all
+                hover:border-purple-300/50
+                hover:bg-purple-500/[0.16]
+                hover:shadow-[0_5px_0_rgba(147,51,234,0.7),0_0_24px_rgba(147,51,234,0.14)]
+                active:translate-y-[3px]
+                active:shadow-none
+              "
+            >
               <div
                 className="
                   flex
-                  min-h-[56px]
-                  w-full
+                  h-10
+                  w-10
+                  shrink-0
                   items-center
-                  gap-3
-                  rounded-2xl
+                  justify-center
+                  rounded-xl
                   border
-                  border-green-400/20
-                  bg-green-500/[0.07]
-                  px-3.5
-                  py-2.5
-                  text-left
+                  border-purple-300/25
+                  bg-purple-400/[0.10]
+                  text-lg
+                  shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]
                 "
               >
-                <div
-                  className="
-                    flex
-                    h-10
-                    w-10
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    border-green-300/20
-                    bg-green-400/[0.07]
-                    text-lg
-                  "
-                >
-                  <Bell size={20} className="text-green-400" />
-                </div>
-
-                <div
-                  className="
-                    min-w-0
-                    flex-1
-                  "
-                >
-                  <h4
-                    className="
-                      text-[13px]
-                      font-black
-                      leading-tight
-                      text-green-100
-                    "
-                  >
-                    Activé ✓
-                  </h4>
-
-                  <p
-                    className="
-                      mt-1
-                      truncate
-                      text-[9px]
-                      leading-tight
-                      text-green-100/35
-                    "
-                  >
-                    Vous recevrez des notifications pour chaque nouvelle partie
-                  </p>
-                </div>
+                <span className="text-2xl">🎁</span>
               </div>
-            )}
 
-            {notificationPermission === "denied" && (
               <div
                 className="
-                  flex
-                  min-h-[56px]
-                  w-full
-                  items-center
-                  gap-3
-                  rounded-2xl
-                  border
-                  border-orange-400/20
-                  bg-orange-500/[0.07]
-                  px-3.5
-                  py-2.5
-                  text-left
+                  min-w-0
+                  flex-1
                 "
               >
-                <div
+                <h4
                   className="
-                    flex
-                    h-10
-                    w-10
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    border-orange-300/20
-                    bg-orange-400/[0.07]
-                    text-lg
+                    text-[13px]
+                    font-black
+                    leading-tight
+                    text-purple-100
                   "
                 >
-                  <Bell size={20} className="text-orange-400" />
-                </div>
+                  Parrainage
+                </h4>
 
-                <div
+                <p
                   className="
-                    min-w-0
-                    flex-1
+                    mt-1
+                    truncate
+                    text-[9px]
+                    leading-tight
+                    text-purple-100/40
                   "
                 >
-                  <h4
-                    className="
-                      text-[13px]
-                      font-black
-                      leading-tight
-                      text-orange-100
-                    "
-                  >
-                    Notifications bloquées
-                  </h4>
-
-                  <p
-                    className="
-                      mt-1
-                      truncate
-                      text-[9px]
-                      leading-tight
-                      text-orange-100/35
-                    "
-                  >
-                    Activez-les dans les paramètres du navigateur
-                  </p>
-                </div>
+                  Invitez vos amis et gagnez 10% de leurs pertes
+                </p>
               </div>
-            )}
+
+              <span
+                className="
+                  shrink-0
+                  pr-1
+                  text-2xl
+                  font-light
+                  leading-none
+                  text-purple-200/50
+                "
+              >
+                ›
+              </span>
+            </button>
+
           </section>
 
 

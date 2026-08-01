@@ -344,6 +344,8 @@ export async function POST(request: Request) {
 
     try {
       const loserId = playerIds.find((id: string) => id !== winnerUid);
+      console.log("[FINISH_PAYMENT] Identification perdant:", { winnerUid, loserId, playerIds, bet });
+      
       if (loserId) {
         const commissionResult = await processReferralCommission({
           gameId,
@@ -351,12 +353,16 @@ export async function POST(request: Request) {
           lostAmount: bet
         });
 
+        console.log("[FINISH_PAYMENT] Résultat commission:", commissionResult);
+
         if (commissionResult.success && commissionResult.commission && commissionResult.commission > 0) {
           console.log("[FINISH_PAYMENT] Commission parrainage versée:", {
             gameId,
             loserId,
             commission: commissionResult.commission
           });
+        } else if (!commissionResult.success) {
+          console.error("[FINISH_PAYMENT] Erreur commission:", commissionResult.error);
         }
       }
     } catch (commissionError) {
