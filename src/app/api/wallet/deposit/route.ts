@@ -122,7 +122,9 @@ export async function POST(request: Request) {
 
     console.log("[DEPOSIT_API] Création du dépôt Firebase:", {
       depositPath,
-      depositData
+      depositData,
+      moncashReference: moncashResponse.reference,
+      referenceId: referenceId
     });
 
     await depositRef.set(depositData);
@@ -137,6 +139,39 @@ export async function POST(request: Request) {
     console.log("[DEPOSIT_API] Dépôt vérifié dans Firebase:", {
       depositPath,
       storedData: verificationSnapshot.val()
+    });
+
+    // 7. Créer l'index secondaire pour recherche webhook
+    const indexPath = `deposit_index/${moncashResponse.reference}`;
+    const indexRef = adminDB.ref(indexPath);
+    
+    const indexData = {
+      userId,
+      depositId: referenceId,
+      referenceId: referenceId,
+      moncashReference: moncashResponse.reference,
+      amount,
+      status: "pending",
+      createdAt: Date.now()
+    };
+
+    console.log("[DEPOSIT_API] Création de l'index secondaire:", {
+      indexPath,
+      indexData
+    });
+
+    await indexRef.set(indexData);
+
+    // Vérifier que l'index a bien été créé
+    const indexVerification = await indexRef.once("value");
+    if (!indexVerification.exists()) {
+      console.error("[DEPOSIT_API] ERREUR CRITIQUE: Index non créé dans Firebase:", indexPath);
+      throw new Error("Échec de création de l'index dans Firebase");
+    }
+
+    console.log("[DEPOSIT_API] Index vérifié dans Firebase:", {
+      indexPath,
+      storedData: indexVerification.val()
     });
 
     console.log("[DEPOSIT_API] Paiement créé:", {
