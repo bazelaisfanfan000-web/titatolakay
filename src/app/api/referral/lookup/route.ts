@@ -22,8 +22,8 @@ export async function GET(request: Request) {
       );
     }
 
-    // Valider le format du code (6 caractères alphanumériques)
-    if (!/^[A-Z0-9]{6}$/.test(code)) {
+    // Valider le format du code (8 caractères alphanumériques)
+    if (!/^[A-Z0-9]{8}$/.test(code)) {
       return NextResponse.json(
         { success: false, error: "Code invalide" },
         { status: 400 }

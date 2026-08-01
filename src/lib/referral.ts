@@ -409,3 +409,154 @@ export async function getReferralInfo(userId: string): Promise<{
     return {};
   }
 }
+
+/**
+ * Calcule le nombre de filleuls d'un utilisateur (comptage dynamique)
+ * Compte tous les utilisateurs dont referredBy == userId
+ */
+export async function getReferralCount(userId: string): Promise<number> {
+  try {
+    const snapshot = await adminDB
+      .ref("users")
+      .orderByChild("referredBy")
+      .equalTo(userId)
+      .once("value");
+    
+    if (!snapshot.exists()) {
+      return 0;
+    }
+    
+    let count = 0;
+    snapshot.forEach(() => {
+      count++;
+    });
+    
+    return count;
+  } catch (error) {
+    console.error("[REFERRAL] Erreur comptage filleuls:", error);
+    return 0;
+  }
+}
+
+/**
+ * Récupère la liste complète des filleuls d'un utilisateur avec leurs statistiques
+ */
+export async function getReferrals(userId: string): Promise<any[]> {
+  try {
+    const snapshot = await adminDB
+      .ref("users")
+      .orderByChild("referredBy")
+      .equalTo(userId)
+      .once("value");
+    
+    if (!snapshot.exists()) {
+      return [];
+    }
+    
+    const referrals: any[] = [];
+    const now = Date.now();
+    
+    snapshot.forEach((child: any) => {
+      const userData = child.val();
+      const referralEndDate = userData.referralEndDate || 0;
+      const isActive = now <= referralEndDate;
+      
+      referrals.push({
+        uid: child.key,
+        username: userData.username || "Utilisateur",
+        email: userData.email,
+        createdAt: userData.createdAt,
+        referralStartDate: userData.referralStartDate,
+        referralEndDate: referralEndDate,
+        isActive: isActive,
+        timeRemaining: isActive ? referralEndDate - now : 0
+      });
+    });
+    
+    // Trier par date d'inscription décroissante
+    referrals.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    
+    return referrals;
+  } catch (error) {
+    console.error("[REFERRAL] Erreur récupération filleuls:", error);
+    return [];
+  }
+}
+
+/**
+ * Récupère les statistiques détaillées de parrainage
+ */
+export async function getDetailedReferralStats(userId: string): Promise<{
+  totalReferrals: number;
+  activeReferrals: number;
+  expiredReferrals: number;
+  totalEarnings: number;
+  todayEarnings: number;
+  monthEarnings: number;
+}> {
+  try {
+    // Compter les filleuls
+    const totalReferrals = await getReferralCount(userId);
+    
+    // Récupérer les filleuls pour compter actifs/expirés
+    const referrals = await getReferrals(userId);
+    const activeReferrals = referrals.filter(r => r.isActive).length;
+    const expiredReferrals = referrals.filter(r => !r.isActive).length;
+    
+    // Calculer les gains
+    const rewardsSnapshot = await adminDB
+      .ref("referralRewards")
+      .orderByChild("referrerId")
+      .equalTo(userId)
+      .once("value");
+    
+    let totalEarnings = 0;
+    let todayEarnings = 0;
+    let monthEarnings = 0;
+    
+    const now = Date.now();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    
+    if (rewardsSnapshot.exists()) {
+      rewardsSnapshot.forEach((child: any) => {
+        const reward = child.val();
+        const amount = reward.commissionAmount || 0;
+        const createdAt = reward.createdAt || 0;
+        
+        totalEarnings += amount;
+        
+        if (createdAt >= todayStart.getTime()) {
+          todayEarnings += amount;
+        }
+        
+        if (createdAt >= monthStart.getTime()) {
+          monthEarnings += amount;
+        }
+      });
+    }
+    
+    return {
+      totalReferrals,
+      activeReferrals,
+      expiredReferrals,
+      totalEarnings,
+      todayEarnings,
+      monthEarnings
+    };
+  } catch (error) {
+    console.error("[REFERRAL] Erreur stats détaillées:", error);
+    return {
+      totalReferrals: 0,
+      activeReferrals: 0,
+      expiredReferrals: 0,
+      totalEarnings: 0,
+      todayEarnings: 0,
+      monthEarnings: 0
+    };
+  }
+}

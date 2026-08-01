@@ -16,7 +16,6 @@ import {
 import {
   ref,
   set,
-  runTransaction,
 } from "firebase/database";
 
 import {
@@ -205,7 +204,6 @@ function RegisterContent() {
           // Parrainage
           referralCode: referralCode,
           referralCreatedAt: now,
-          referralCount: 0,
           ...(referrerId && {
             referredBy: referrerId,
             referralStartDate: now,
@@ -220,22 +218,6 @@ function RegisterContent() {
 
 
 
-      /*
-      ========================================
-      INCRÉMENTER COMPTEUR PARRAINAGE
-      ========================================
-      */
-
-      if (referrerId) {
-        try {
-          await runTransaction(ref(database, `users/${referrerId}/referralCount`), (currentCount) => {
-            return (currentCount || 0) + 1;
-          });
-          console.log("[REGISTER] Compteur parrainage incrémenté pour:", referrerId);
-        } catch (error) {
-          console.error("[REGISTER] Erreur incrémentation compteur parrainage:", error);
-        }
-      }
 
 
 

@@ -4,7 +4,7 @@ import { sendPushNotification } from "@/lib/broadcastNotification";
 import { addMonthlyPoints } from "@/lib/monthlyChampion";
 import { validateWinner, determineWinner } from "@/lib/gameValidation";
 import { validateBet } from "@/lib/validation";
-import { processReferralCommission } from "@/lib/referral";
+import { processReferralCommission, hasActiveReferrer } from "@/lib/referral";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -361,6 +361,26 @@ export async function POST(request: Request) {
             loserId,
             commission: commissionResult.commission
           });
+          
+          // Envoyer notification au parrain
+          try {
+            const { hasReferrer, referrerId } = await hasActiveReferrer(loserId);
+            if (hasReferrer && referrerId) {
+              await sendPushNotification(
+                referrerId,
+                "🎉 Commission reçue !",
+                `Vous avez reçu +${commissionResult.commission} HTG grâce au parrainage`,
+                {
+                  type: "referral_commission",
+                  amount: commissionResult.commission,
+                  gameId,
+                  referredUserId: loserId
+                }
+              );
+            }
+          } catch (notifError) {
+            console.error("[FINISH_PAYMENT] Erreur notification parrainage:", notifError);
+          }
         } else if (!commissionResult.success) {
           console.error("[FINISH_PAYMENT] Erreur commission:", commissionResult.error);
         }

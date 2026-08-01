@@ -436,7 +436,7 @@ export default function Dashboard() {
             {notificationPermission === "default" && (
               <button
                 type="button"
-                onClick={requestNotificationPermission}
+                onClick={() => router.push("/notifications-help")}
                 className="
                   flex
                   h-[38px]
@@ -465,6 +465,7 @@ export default function Dashboard() {
             {notificationPermission === "denied" && (
               <button
                 type="button"
+                onClick={() => router.push("/notifications-help")}
                 className="
                   flex
                   h-[38px]
@@ -479,8 +480,11 @@ export default function Dashboard() {
                   text-center
                   shadow-[0_3px_0_rgba(249,115,22,0.65),0_0_15px_rgba(249,115,22,0.08)]
                   backdrop-blur-md
-                  cursor-not-allowed
-                  opacity-60
+                  transition-all
+                  hover:border-orange-300/50
+                  hover:bg-orange-500/[0.16]
+                  active:translate-y-[2px]
+                  active:shadow-none
                 "
               >
                 <div className="relative">
