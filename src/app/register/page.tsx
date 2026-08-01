@@ -49,15 +49,22 @@ function RegisterContent() {
   useEffect(() => {
     async function fetchReferrer() {
       if (referralCode) {
+        console.log("[REGISTER] Récupération parrain pour code:", referralCode);
         try {
           const response = await fetch(`/api/referral/lookup?code=${referralCode}`);
           const data = await response.json();
+          console.log("[REGISTER] Réponse lookup:", data);
           if (data.success && data.referrerId) {
             setReferrerId(data.referrerId);
+            console.log("[REGISTER] ReferrerId défini:", data.referrerId);
+          } else {
+            console.log("[REGISTER] Échec lookup:", data.error || "Code introuvable");
           }
         } catch (error) {
           console.error("[REGISTER] Erreur lookup parrain:", error);
         }
+      } else {
+        console.log("[REGISTER] Pas de code de parrainage");
       }
     }
     fetchReferrer();
@@ -159,6 +166,15 @@ function RegisterContent() {
 
       const referralCode = generateReferralCode();
 
+      console.log("[REGISTER] Données utilisateur à créer:", {
+        uid: user.uid,
+        username: username.trim(),
+        email: user.email || email.trim(),
+        referralCode: referralCode,
+        referrerId: referrerId,
+        hasReferrer: !!referrerId
+      });
+
       await set(
         ref(
           database,
@@ -212,6 +228,8 @@ function RegisterContent() {
 
         }
       );
+
+      console.log("[REGISTER] Utilisateur créé avec referredBy:", referrerId);
 
 
 

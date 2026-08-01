@@ -175,15 +175,24 @@ export async function recordReferral(
  * Vérifie si un utilisateur a un parrain actif (période de 6 mois non expirée)
  */
 export async function hasActiveReferrer(userId: string): Promise<{ hasReferrer: boolean; referrerId?: string }> {
+  console.log("[REFERRAL] hasActiveReferrer appelé pour:", userId);
+  
   const snapshot = await adminDB.ref(`users/${userId}`).once("value");
   
   if (!snapshot.exists()) {
+    console.log("[REFERRAL] Utilisateur introuvable:", userId);
     return { hasReferrer: false };
   }
   
   const userData = snapshot.val();
+  console.log("[REFERRAL] Données utilisateur:", { 
+    userId, 
+    referredBy: userData.referredBy, 
+    referralEndDate: userData.referralEndDate 
+  });
   
   if (!userData.referredBy) {
+    console.log("[REFERRAL] Pas de referredBy pour:", userId);
     return { hasReferrer: false };
   }
   
@@ -191,10 +200,14 @@ export async function hasActiveReferrer(userId: string): Promise<{ hasReferrer: 
   const now = Date.now();
   const referralEndDate = userData.referralEndDate || 0;
   
+  console.log("[REFERRAL] Vérification période:", { now, referralEndDate, isActive: now <= referralEndDate });
+  
   if (now > referralEndDate) {
+    console.log("[REFERRAL] Période expirée pour:", userId);
     return { hasReferrer: false };
   }
   
+  console.log("[REFERRAL] Parrain actif trouvé:", { userId, referrerId: userData.referredBy });
   return { hasReferrer: true, referrerId: userData.referredBy };
 }
 
@@ -495,13 +508,17 @@ export async function getDetailedReferralStats(userId: string): Promise<{
   monthEarnings: number;
 }> {
   try {
+    console.log("[REFERRAL] getDetailedReferralStats appelé pour:", userId);
+    
     // Compter les filleuls
     const totalReferrals = await getReferralCount(userId);
+    console.log("[REFERRAL] totalReferrals:", totalReferrals);
     
     // Récupérer les filleuls pour compter actifs/expirés
     const referrals = await getReferrals(userId);
     const activeReferrals = referrals.filter(r => r.isActive).length;
     const expiredReferrals = referrals.filter(r => !r.isActive).length;
+    console.log("[REFERRAL] activeReferrals:", activeReferrals, "expiredReferrals:", expiredReferrals);
     
     // Calculer les gains
     const rewardsSnapshot = await adminDB
@@ -509,6 +526,8 @@ export async function getDetailedReferralStats(userId: string): Promise<{
       .orderByChild("referrerId")
       .equalTo(userId)
       .once("value");
+    
+    console.log("[REFERRAL] rewardsSnapshot exists:", rewardsSnapshot.exists());
     
     let totalEarnings = 0;
     let todayEarnings = 0;
@@ -528,6 +547,8 @@ export async function getDetailedReferralStats(userId: string): Promise<{
         const amount = reward.commissionAmount || 0;
         const createdAt = reward.createdAt || 0;
         
+        console.log("[REFERRAL] Reward trouvé:", { amount, createdAt, gameId: reward.gameId });
+        
         totalEarnings += amount;
         
         if (createdAt >= todayStart.getTime()) {
@@ -539,6 +560,8 @@ export async function getDetailedReferralStats(userId: string): Promise<{
         }
       });
     }
+    
+    console.log("[REFERRAL] Stats calculées:", { totalEarnings, todayEarnings, monthEarnings });
     
     return {
       totalReferrals,

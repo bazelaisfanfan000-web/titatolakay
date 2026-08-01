@@ -259,15 +259,15 @@ export default function ReferralPage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 backdrop-blur-xl"
+      className="relative overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02] p-3 backdrop-blur-xl sm:rounded-2xl sm:p-4"
     >
-      <div className={`absolute -right-4 -top-4 h-20 w-20 rounded-full bg-gradient-to-br ${color} opacity-10 blur-xl`} />
+      <div className={`absolute -right-3 -top-3 h-16 w-16 rounded-full bg-gradient-to-br ${color} opacity-10 blur-xl sm:-right-4 sm:-top-4 sm:h-20 sm:w-20`} />
       <div className="relative">
-        <div className="mb-2 flex items-center gap-2">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br ${color}`}>
-            <Icon size={16} className="text-white" />
+        <div className="mb-1.5 flex items-center gap-2 sm:mb-2">
+          <div className={`flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br ${color} sm:h-8 sm:w-8 sm:rounded-xl`}>
+            <Icon size={14} className="text-white sm:size-16" />
           </div>
-          <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">
+          <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider sm:text-[10px]">
             {label}
           </span>
         </div>
@@ -275,7 +275,7 @@ export default function ReferralPage() {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: delay + 0.2, type: "spring" }}
-          className="text-3xl font-black"
+          className="text-2xl font-black sm:text-3xl"
         >
           {typeof value === "number" ? formatNumber(value) : value}
         </motion.p>
@@ -295,10 +295,10 @@ export default function ReferralPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-[#05070b] px-4 pb-24 pt-6 text-white">
+    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-[#05070b] px-3 pb-20 pt-4 text-white sm:px-4 sm:pb-24 sm:pt-6">
       {/* Background effects */}
-      <div className="pointer-events-none absolute left-1/2 top-[-200px] h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-blue-600/10 blur-[150px]" />
-      <div className="pointer-events-none absolute bottom-0 right-0 h-[300px] w-[300px] rounded-full bg-purple-600/10 blur-[120px]" />
+      <div className="pointer-events-none absolute left-1/2 top-[-150px] h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-blue-600/10 blur-[120px] sm:top-[-200px] sm:h-[400px] sm:w-[400px]" />
+      <div className="pointer-events-none absolute bottom-0 right-0 h-[200px] w-[200px] rounded-full bg-purple-600/10 blur-[100px] sm:h-[300px] sm:w-[300px]" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -306,19 +306,19 @@ export default function ReferralPage() {
         className="relative z-10 w-full max-w-lg"
       >
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between sm:mb-6">
           <Link
             href="/dashboard"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025] backdrop-blur-xl transition-all hover:bg-white/[0.05]"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025] backdrop-blur-xl transition-all hover:bg-white/[0.05] sm:h-10 sm:w-10"
           >
-            <X size={20} className="text-white/50" />
+            <X size={18} className="text-white/50 sm:size-20" />
           </Link>
 
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-400/20 bg-purple-500/[0.1]">
-              <Gift size={20} className="text-purple-400" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-purple-400/20 bg-purple-500/[0.1] sm:h-10 sm:w-10">
+              <Gift size={18} className="text-purple-400 sm:size-20" />
             </div>
-            <span className="text-sm font-black tracking-[0.15em] text-purple-400">
+            <span className="text-xs font-black tracking-[0.15em] text-purple-400 sm:text-sm">
               PARRAINAGE
             </span>
           </div>
@@ -329,17 +329,17 @@ export default function ReferralPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="mb-8 overflow-hidden rounded-3xl border border-purple-400/20 bg-gradient-to-br from-purple-500/[0.15] to-blue-500/[0.15] p-6 backdrop-blur-xl"
+          className="mb-6 overflow-hidden rounded-2xl border border-purple-400/20 bg-gradient-to-br from-purple-500/[0.15] to-blue-500/[0.15] p-4 backdrop-blur-xl sm:mb-8 sm:rounded-3xl sm:p-6"
         >
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-purple-400/30 bg-purple-500/[0.2]">
-              <Sparkles size={32} className="text-purple-300" />
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-purple-400/30 bg-purple-500/[0.2] sm:h-16 sm:w-16 sm:rounded-2xl">
+              <Sparkles size={24} className="text-purple-300 sm:size-32" />
             </div>
             <div className="flex-1">
-              <h1 className="text-xl font-black leading-tight">
+              <h1 className="text-base font-black leading-tight sm:text-xl">
                 🎁 Parrainage WinCash
               </h1>
-              <p className="mt-1 text-sm text-purple-200/80">
+              <p className="mt-1 text-xs text-purple-200/80 sm:mt-1 sm:text-sm">
                 Invitez vos amis et gagnez automatiquement <span className="font-bold text-purple-300">10 % de leurs pertes</span> pendant <span className="font-bold text-purple-300">6 mois</span>.
               </p>
             </div>
@@ -347,7 +347,7 @@ export default function ReferralPage() {
         </motion.div>
 
         {/* Stats Grid */}
-        <div className="mb-8 grid grid-cols-2 gap-4">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-4">
           <StatCard
             icon={Users}
             label="Invités"
@@ -383,26 +383,26 @@ export default function ReferralPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="mb-6 overflow-hidden rounded-2xl border border-blue-400/20 bg-blue-500/[0.08] p-5 backdrop-blur-xl"
+          className="mb-5 overflow-hidden rounded-2xl border border-blue-400/20 bg-blue-500/[0.05] p-4 backdrop-blur-xl sm:mb-6 sm:p-5"
         >
           <div className="mb-3 flex items-center gap-2">
-            <Share2 size={20} className="text-blue-400" />
-            <h2 className="text-sm font-bold text-blue-100">Mon lien personnel</h2>
+            <Share2 size={18} className="text-blue-400 sm:size-20" />
+            <h2 className="text-xs font-bold text-blue-100 sm:text-sm">Mon lien personnel</h2>
           </div>
           
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/[0.05] px-4 py-3">
-            <p className="flex-1 truncate text-sm text-blue-100/80">
+          <div className="mb-3 flex items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/[0.05] px-3 py-2.5 sm:mb-4 sm:px-4 sm:py-3">
+            <p className="flex-1 truncate text-xs text-blue-100/80 sm:text-sm">
               {referralLink || "Génération en cours..."}
             </p>
             <button
               onClick={copyToClipboard}
               disabled={!referralLink}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/[0.15] transition-all hover:bg-blue-500/[0.25] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/[0.1] transition-all hover:bg-blue-500/[0.2] disabled:opacity-50 disabled:cursor-not-allowed sm:h-10 sm:w-10"
             >
               {copied ? (
-                <Check size={20} className="text-green-400" />
+                <Check size={16} className="text-green-400 sm:size-20" />
               ) : (
-                <Copy size={20} className="text-blue-400" />
+                <Copy size={16} className="text-blue-400 sm:size-20" />
               )}
             </button>
           </div>
@@ -410,7 +410,7 @@ export default function ReferralPage() {
           <button
             onClick={copyToClipboard}
             disabled={!referralLink}
-            className="w-full rounded-xl border border-blue-400/30 bg-gradient-to-r from-blue-500/[0.2] to-blue-600/[0.2] px-4 py-3 text-sm font-bold text-blue-100 transition-all hover:from-blue-500/[0.3] hover:to-blue-600/[0.3] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-xl border border-blue-400/30 bg-blue-500/[0.1] px-4 py-2.5 text-xs font-bold text-blue-100 transition-all hover:bg-blue-500/[0.2] disabled:opacity-50 disabled:cursor-not-allowed sm:py-3 sm:text-sm"
           >
             📋 Copier le lien
           </button>
@@ -421,17 +421,17 @@ export default function ReferralPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="mb-6 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 backdrop-blur-xl"
+          className="mb-5 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 backdrop-blur-xl sm:mb-6 sm:p-5"
         >
           <div className="mb-3 flex items-center gap-2">
-            <QrCode size={20} className="text-white/60" />
-            <h2 className="text-sm font-bold text-white/80">QR Code</h2>
+            <QrCode size={18} className="text-white/60 sm:size-20" />
+            <h2 className="text-xs font-bold text-white/80 sm:text-sm">QR Code</h2>
           </div>
           
           {qrCodeUrl && (
-            <div className="mb-4 flex justify-center">
+            <div className="mb-3 flex justify-center sm:mb-4">
               <div className="overflow-hidden rounded-xl border border-white/[0.1] bg-white p-2">
-                <img src={qrCodeUrl} alt="QR Code" className="h-40 w-40" />
+                <img src={qrCodeUrl} alt="QR Code" className="h-32 w-32 sm:h-40 sm:w-40" />
               </div>
             </div>
           )}
@@ -439,9 +439,9 @@ export default function ReferralPage() {
           <button
             onClick={downloadQRCode}
             disabled={!qrCodeUrl}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.05] px-4 py-3 text-sm font-bold text-white/80 transition-all hover:bg-white/[0.1] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.05] px-4 py-2.5 text-xs font-bold text-white/80 transition-all hover:bg-white/[0.1] disabled:opacity-50 disabled:cursor-not-allowed sm:py-3 sm:text-sm"
           >
-            <Download size={18} />
+            <Download size={16} />
             Télécharger le QR Code
           </button>
         </motion.div>
@@ -451,11 +451,11 @@ export default function ReferralPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
-          className="mb-6"
+          className="mb-5 sm:mb-6"
         >
           <div className="mb-3 flex items-center gap-2">
-            <Share2 size={20} className="text-white/60" />
-            <h2 className="text-sm font-bold text-white/80">Partager</h2>
+            <Share2 size={18} className="text-white/60 sm:size-20" />
+            <h2 className="text-xs font-bold text-white/80 sm:text-sm">Partager</h2>
           </div>
 
           {/* Native share on mobile */}
@@ -463,66 +463,66 @@ export default function ReferralPage() {
             <button
               onClick={nativeShare}
               disabled={!referralLink}
-              className="mb-3 w-full flex items-center justify-center gap-2 rounded-xl border border-purple-400/30 bg-gradient-to-r from-purple-500/[0.2] to-pink-500/[0.2] px-4 py-3 text-sm font-bold text-purple-100 transition-all hover:from-purple-500/[0.3] hover:to-pink-500/[0.3] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mb-3 w-full flex items-center justify-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/[0.1] px-4 py-2.5 text-xs font-bold text-blue-100 transition-all hover:bg-blue-500/[0.2] disabled:opacity-50 disabled:cursor-not-allowed sm:py-3 sm:text-sm"
             >
-              <Share size={18} />
+              <Share size={16} />
               Partager
             </button>
           )}
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <button
               onClick={shareWhatsApp}
               disabled={!referralLink}
-              className="flex flex-col items-center gap-2 rounded-xl border border-green-500/20 bg-green-500/[0.08] p-3 transition-all hover:bg-green-500/[0.15] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-green-500/20 bg-green-500/[0.05] p-2.5 transition-all hover:bg-green-500/[0.1] disabled:opacity-50 disabled:cursor-not-allowed sm:gap-2 sm:p-3"
             >
-              <MessageCircle size={24} className="text-green-400" />
-              <span className="text-[10px] font-bold text-green-400">WhatsApp</span>
+              <MessageCircle size={20} className="text-green-400 sm:size-24" />
+              <span className="text-[9px] font-bold text-green-400 sm:text-[10px]">WhatsApp</span>
             </button>
 
             <button
               onClick={shareFacebook}
               disabled={!referralLink}
-              className="flex flex-col items-center gap-2 rounded-xl border border-blue-600/20 bg-blue-600/[0.08] p-3 transition-all hover:bg-blue-600/[0.15] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-blue-600/20 bg-blue-600/[0.05] p-2.5 transition-all hover:bg-blue-600/[0.1] disabled:opacity-50 disabled:cursor-not-allowed sm:gap-2 sm:p-3"
             >
-              <Share2 size={24} className="text-blue-400" />
-              <span className="text-[10px] font-bold text-blue-400">Facebook</span>
+              <Share2 size={20} className="text-blue-400 sm:size-24" />
+              <span className="text-[9px] font-bold text-blue-400 sm:text-[10px]">Facebook</span>
             </button>
 
             <button
               onClick={shareTelegram}
               disabled={!referralLink}
-              className="flex flex-col items-center gap-2 rounded-xl border border-sky-500/20 bg-sky-500/[0.08] p-3 transition-all hover:bg-sky-500/[0.15] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-sky-500/20 bg-sky-500/[0.05] p-2.5 transition-all hover:bg-sky-500/[0.1] disabled:opacity-50 disabled:cursor-not-allowed sm:gap-2 sm:p-3"
             >
-              <Send size={24} className="text-sky-400" />
-              <span className="text-[10px] font-bold text-sky-400">Telegram</span>
+              <Send size={20} className="text-sky-400 sm:size-24" />
+              <span className="text-[9px] font-bold text-sky-400 sm:text-[10px]">Telegram</span>
             </button>
 
             <button
               onClick={shareTwitter}
               disabled={!referralLink}
-              className="flex flex-col items-center gap-2 rounded-xl border border-gray-500/20 bg-gray-500/[0.08] p-3 transition-all hover:bg-gray-500/[0.15] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-500/20 bg-gray-500/[0.05] p-2.5 transition-all hover:bg-gray-500/[0.1] disabled:opacity-50 disabled:cursor-not-allowed sm:gap-2 sm:p-3"
             >
-              <Share2 size={24} className="text-gray-400" />
-              <span className="text-[10px] font-bold text-gray-400">X</span>
+              <Share2 size={20} className="text-gray-400 sm:size-24" />
+              <span className="text-[9px] font-bold text-gray-400 sm:text-[10px]">X</span>
             </button>
 
             <button
               onClick={shareEmail}
               disabled={!referralLink}
-              className="flex flex-col items-center gap-2 rounded-xl border border-orange-500/20 bg-orange-500/[0.08] p-3 transition-all hover:bg-orange-500/[0.15] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-orange-500/20 bg-orange-500/[0.05] p-2.5 transition-all hover:bg-orange-500/[0.1] disabled:opacity-50 disabled:cursor-not-allowed sm:gap-2 sm:p-3"
             >
-              <Mail size={24} className="text-orange-400" />
-              <span className="text-[10px] font-bold text-orange-400">Email</span>
+              <Mail size={20} className="text-orange-400 sm:size-24" />
+              <span className="text-[9px] font-bold text-orange-400 sm:text-[10px]">Email</span>
             </button>
 
             <button
               onClick={copyToClipboard}
               disabled={!referralLink}
-              className="flex flex-col items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/[0.08] p-3 transition-all hover:bg-blue-500/[0.15] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-blue-400/20 bg-blue-500/[0.05] p-2.5 transition-all hover:bg-blue-500/[0.1] disabled:opacity-50 disabled:cursor-not-allowed sm:gap-2 sm:p-3"
             >
-              <Copy size={24} className="text-blue-400" />
-              <span className="text-[10px] font-bold text-blue-400">Copier</span>
+              <Copy size={20} className="text-blue-400 sm:size-24" />
+              <span className="text-[9px] font-bold text-blue-400 sm:text-[10px]">Copier</span>
             </button>
           </div>
         </motion.div>
@@ -532,14 +532,14 @@ export default function ReferralPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.9 }}
-          className="mb-6 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 backdrop-blur-xl"
+          className="mb-5 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 backdrop-blur-xl sm:mb-6 sm:p-5"
         >
-          <div className="mb-4 flex items-center gap-2">
-            <Zap size={20} className="text-yellow-400" />
-            <h2 className="text-sm font-bold text-white/80">Comment fonctionne le parrainage ?</h2>
+          <div className="mb-3 flex items-center gap-2">
+            <Zap size={18} className="text-yellow-400 sm:size-20" />
+            <h2 className="text-xs font-bold text-white/80 sm:text-sm">Comment fonctionne le parrainage ?</h2>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5 sm:space-y-3">
             {[
               { icon: Share2, text: "Partagez votre lien avec vos amis" },
               { icon: User, text: "Votre ami crée un compte via votre lien" },
@@ -547,11 +547,11 @@ export default function ReferralPage() {
               { icon: Clock, text: "Pendant 6 mois, vous recevez automatiquement 10% de ses pertes" },
               { icon: DollarSign, text: "Les commissions sont créditées sur votre solde principal" }
             ].map((step, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.1] bg-white/[0.05]">
-                  <step.icon size={16} className="text-white/60" />
+              <div key={index} className="flex items-start gap-2.5 sm:gap-3">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.1] bg-white/[0.05] sm:h-8 sm:w-8">
+                  <step.icon size={14} className="text-white/60 sm:size-16" />
                 </div>
-                <p className="flex-1 text-sm text-white/60">{step.text}</p>
+                <p className="flex-1 text-xs text-white/60 sm:text-sm">{step.text}</p>
               </div>
             ))}
           </div>
@@ -562,11 +562,11 @@ export default function ReferralPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.0 }}
-          className="mb-6 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 backdrop-blur-xl"
+          className="mb-5 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 backdrop-blur-xl sm:mb-6 sm:p-5"
         >
-          <div className="mb-4 flex items-center gap-2">
-            <TrendingUp size={20} className="text-green-400" />
-            <h2 className="text-sm font-bold text-white/80">Historique des commissions</h2>
+          <div className="mb-3 flex items-center gap-2">
+            <TrendingUp size={18} className="text-green-400 sm:size-20" />
+            <h2 className="text-xs font-bold text-white/80 sm:text-sm">Historique des commissions</h2>
           </div>
 
           {recentRewards.length > 0 ? (
@@ -574,32 +574,32 @@ export default function ReferralPage() {
               {recentRewards.slice(0, 5).map((reward) => (
                 <div
                   key={reward.id}
-                  className="flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3"
+                  className="flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2.5 sm:px-4 sm:py-3"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-green-400/20 bg-green-500/[0.1]">
-                      <DollarSign size={18} className="text-green-400" />
+                  <div className="flex items-center gap-2.5 sm:gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-green-400/20 bg-green-500/[0.1] sm:h-10 sm:w-10">
+                      <DollarSign size={16} className="text-green-400 sm:size-18" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-green-400">
+                      <p className="text-xs font-bold text-green-400 sm:text-sm">
                         +{reward.commissionAmount} HTG
                       </p>
-                      <p className="text-xs text-white/40">
+                      <p className="text-[10px] text-white/40 sm:text-xs">
                         {formatDate(reward.createdAt)}
                       </p>
                     </div>
                   </div>
-                  <ArrowRight size={16} className="text-white/20" />
+                  <ArrowRight size={14} className="text-white/20 sm:size-16" />
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center py-8 text-center">
-              <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.02]">
-                <TrendingUp size={32} className="text-white/20" />
+            <div className="flex flex-col items-center py-6 text-center sm:py-8">
+              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.02] sm:h-16 sm:w-16">
+                <TrendingUp size={28} className="text-white/20 sm:size-32" />
               </div>
-              <p className="text-sm text-white/40">Aucune commission pour le moment</p>
-              <p className="mt-1 text-xs text-white/30">Partagez votre lien pour commencer à gagner</p>
+              <p className="text-xs text-white/40 sm:text-sm">Aucune commission pour le moment</p>
+              <p className="mt-1 text-[10px] text-white/30 sm:text-xs">Partagez votre lien pour commencer à gagner</p>
             </div>
           )}
         </motion.div>
@@ -609,11 +609,11 @@ export default function ReferralPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.1 }}
-          className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 backdrop-blur-xl"
+          className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 backdrop-blur-xl sm:p-5"
         >
-          <div className="mb-4 flex items-center gap-2">
-            <Users size={20} className="text-blue-400" />
-            <h2 className="text-sm font-bold text-white/80">Mes filleuls</h2>
+          <div className="mb-3 flex items-center gap-2">
+            <Users size={18} className="text-blue-400 sm:size-20" />
+            <h2 className="text-xs font-bold text-white/80 sm:text-sm">Mes filleuls</h2>
           </div>
 
           {referralUsers.length > 0 ? (
@@ -623,26 +623,26 @@ export default function ReferralPage() {
                 return (
                   <div
                     key={userData.uid}
-                    className="flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3"
+                    className="flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2.5 sm:px-4 sm:py-3"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.1] bg-gradient-to-br from-blue-500/[0.2] to-purple-500/[0.2]">
-                        <User size={18} className="text-white/60" />
+                    <div className="flex items-center gap-2.5 sm:gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.1] bg-gradient-to-br from-blue-500/[0.2] to-purple-500/[0.2] sm:h-10 sm:w-10">
+                        <User size={16} className="text-white/60 sm:size-18" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-white/80">
+                        <p className="text-xs font-bold text-white/80 sm:text-sm">
                           {userData.username || "Utilisateur"}
                         </p>
-                        <p className="text-xs text-white/40">
+                        <p className="text-[10px] text-white/40 sm:text-xs">
                           {formatDate(userData.createdAt)}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${isActive ? 'bg-green-500/[0.2] text-green-400' : 'bg-orange-500/[0.2] text-orange-400'}`}>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full sm:text-[10px] sm:px-2 sm:py-1 ${isActive ? 'bg-green-500/[0.2] text-green-400' : 'bg-orange-500/[0.2] text-orange-400'}`}>
                         {isActive ? 'Actif' : 'Expiré'}
                       </span>
-                      <span className="text-xs text-white/40">
+                      <span className="text-[10px] text-white/40 sm:text-xs">
                         {getTimeRemaining(userData.referralEndDate)}
                       </span>
                     </div>
