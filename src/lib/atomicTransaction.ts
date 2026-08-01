@@ -1,5 +1,5 @@
 /**
- * Transactions Atomiques - PlayToWin
+ * Transactions Atomiques - WinCash
  * Opérations financières atomiques avec rollback automatique
  * Garantit l'intégrité des données même en cas d'échec
  */

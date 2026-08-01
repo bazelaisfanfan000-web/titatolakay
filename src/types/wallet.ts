@@ -1,6 +1,6 @@
 /**
  * Types TypeScript pour le système de wallet atomique
- * PlayToWin - MonCashConnect Integration
+ * WinCash - MonCashConnect Integration
  */
 
 // ============================================================================

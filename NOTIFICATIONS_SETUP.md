@@ -1,4 +1,4 @@
-# Configuration des Notifications PlayToWin
+# Configuration des Notifications WinCash
 
 ## 📋 Vue d'ensemble
 
@@ -9,7 +9,7 @@ Les notifications fonctionnent même si l'utilisateur ferme le navigateur (via S
 Quand une partie est créée, les utilisateurs reçoivent:
 
 ```
-🎮 PlayToWin
+🎮 WinCash
 
 🔥 Fanfan vient de créer une partie !
 💰 Mise : 100 HTG
@@ -120,7 +120,7 @@ export function useForegroundNotifications() {
 
       // Afficher la notification
       if (payload.notification) {
-        new Notification(payload.notification.title || 'PlayToWin', {
+        new Notification(payload.notification.title || 'WinCash', {
           body: payload.notification.body,
           icon: '/icon-192.png',
           data: payload.data,
@@ -151,7 +151,7 @@ export default function HomePage() {
 
   return (
     <div>
-      <h1>PlayToWin</h1>
+      <h1>WinCash</h1>
       {/* Votre site */}
     </div>
   );
@@ -199,6 +199,6 @@ useEffect(() => {
 
 Quand une partie est créée:
 1. Notification envoyée instantanément à tous les utilisateurs abonnés
-2. Format: "🎮 PlayToWin" avec le nom du créateur et la mise
+2. Format: "🎮 WinCash" avec le nom du créateur et la mise
 3. Clic sur la notification → Redirection vers `/join/{roomId}`
 4. Fonctionne même si le navigateur est fermé

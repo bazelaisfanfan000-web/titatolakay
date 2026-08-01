@@ -76,7 +76,7 @@ export async function detectAbandonedGames() {
 REMBOURSER LES JOUEURS D'UNE PARTIE
 ====================================================
 */
-// DÉSACTIVÉ: Avec le nouveau système PlayToWin, aucun remboursement automatique
+// DÉSACTIVÉ: Avec le nouveau système WinCash, aucun remboursement automatique
 // Les mises restent bloquées même si la partie est abandonnée
 // Seul le gagnant reçoit un crédit à la fin de la partie
 /*
@@ -159,7 +159,7 @@ export async function cleanupAbandonedGames(): Promise<{
     try {
       processed++;
 
-      // DÉSACTIVÉ: Plus de remboursement automatique avec le nouveau système PlayToWin
+      // DÉSACTIVÉ: Plus de remboursement automatique avec le nouveau système WinCash
       // await refundGamePlayers(game.roomId, game.players, game.bet);
       // refunded++;
 

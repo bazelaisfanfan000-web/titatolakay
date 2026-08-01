@@ -1,5 +1,5 @@
 /**
- * Ledger Imuable - PlayToWin
+ * Ledger Imuable - WinCash
  * Enregistrement permanent de toutes les transactions financières
  * Aucune suppression autorisée - historique complet et traçable
  */

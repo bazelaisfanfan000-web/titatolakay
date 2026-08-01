@@ -274,11 +274,11 @@ export async function notifyNewGame(
 
     const message = {
       notification: {
-        title: "🎮 PlayToWin",
+        title: "🎮 WinCash",
         body: `🔥 ${creatorName} vient de créer une partie !\n💰 Mise : ${bet} HTG\n\nTouchez pour rejoindre la partie.`,
       },
       data: {
-        title: "🎮 PlayToWin",
+        title: "🎮 WinCash",
         body: `🔥 ${creatorName} vient de créer une partie !\n💰 Mise : ${bet} HTG\n\nTouchez pour rejoindre la partie.`,
         type: "game",
         roomId,

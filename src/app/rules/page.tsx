@@ -23,7 +23,7 @@ import BackButton from "@/components/BackButton";
 
 /*
 ====================================================
-PAGE RÈGLES IMPORTANTES PLAYTOWIN
+PAGE RÈGLES IMPORTANTES WINCASH
 ====================================================
 */
 
@@ -348,7 +348,7 @@ export default function RulesPage() {
             "
           >
 
-            ⚡ Règles importantes PlayToWin
+            ⚡ Règles importantes WinCash
 
           </h1>
 
@@ -362,7 +362,7 @@ export default function RulesPage() {
             "
           >
 
-            Bienvenue sur PlayToWin. Avant de commencer, veuillez lire les règles importantes concernant les parties et les gains.
+            Bienvenue sur WinCash. Avant de commencer, veuillez lire les règles importantes concernant les parties et les gains.
 
           </p>
 
@@ -631,7 +631,7 @@ export default function RulesPage() {
                   "
                 />
 
-                Le partage des gains est de 50/50 selon les règles PlayToWin.
+                Le partage des gains est de 50/50 selon les règles WinCash.
 
               </li>
 
@@ -755,7 +755,7 @@ export default function RulesPage() {
                   "
                 />
 
-                Une commission peut être appliquée par PlayToWin pour le fonctionnement du service.
+                Une commission peut être appliquée par WinCash pour le fonctionnement du service.
 
               </li>
 
@@ -1128,7 +1128,7 @@ export default function RulesPage() {
               "
             >
 
-              J'ai lu et compris les règles importantes de PlayToWin
+              J'ai lu et compris les règles importantes de WinCash
 
             </p>
 

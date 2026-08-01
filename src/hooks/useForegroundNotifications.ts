@@ -15,7 +15,7 @@ export function useForegroundNotifications() {
 
       // Afficher la notification dans le navigateur
       if (payload.notification) {
-        const notificationTitle = payload.notification.title || 'PlayToWin';
+        const notificationTitle = payload.notification.title || 'WinCash';
         const notificationOptions = {
           body: payload.notification.body,
           icon: '/icon-192.png',

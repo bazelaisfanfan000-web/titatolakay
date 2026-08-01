@@ -1,4 +1,4 @@
-# Système de Wallet Atomique - PlayToWin
+# Système de Wallet Atomique - WinCash
 
 ## Vue d'ensemble
 

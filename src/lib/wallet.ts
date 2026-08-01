@@ -1,5 +1,5 @@
 /**
- * Système Wallet Atomique - PlayToWin
+ * Système Wallet Atomique - WinCash
  * Gestion sécurisée et atomique des soldes avec Firebase Realtime Database
  */
 
