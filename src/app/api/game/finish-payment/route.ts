@@ -137,34 +137,26 @@ export async function POST(request: Request) {
 
     }
 
-
-
-
     // ==========================
     // VALIDATE WINNER
     // ==========================
 
-
     const board =
       room.game.board || {};
-
 
     const winnerSymbol =
       room.game.winner;
 
-
-    if(!winnerSymbol){
+    if (!winnerSymbol) {
 
       await paymentRef.set(null);
 
       return NextResponse.json(
-        {error:"Aucun gagnant"},
-        {status:400}
+        { error: "Aucun gagnant" },
+        { status: 400 }
       );
 
     }
-
-
 
     const realWinner =
       determineWinner(board);
@@ -192,237 +184,201 @@ export async function POST(request: Request) {
 
       return NextResponse.json(
         {
-          error:"Résultat invalide"
+          error: "Résultat invalide"
         },
         {
-          status:400
+          status: 400
         }
       );
     }
-
-
-
 
     // ==========================
     // FIND WINNER UID
     // ==========================
 
-
     let winnerUid = "";
 
-
     Object.entries(room.players)
-    .forEach(
-      ([uid,player]:any)=>{
+      .forEach(
+        ([uid, player]: any) => {
 
-        if(
-          player.symbol === winnerSymbol
-        ){
+          if (
+            player.symbol === winnerSymbol
+          ) {
 
-          winnerUid = uid;
+            winnerUid = uid;
+
+          }
 
         }
+      );
 
-      }
-    );
-
-
-
-    if(!winnerUid){
+    if (!winnerUid) {
 
       await paymentRef.set(null);
 
       return NextResponse.json(
-        {error:"Gagnant introuvable"},
-        {status:400}
+        { error: "Gagnant introuvable" },
+        { status: 400 }
       );
 
     }
 
-
-
-
-
     // ==========================
-    // REWARD +150%
+    // CALCUL DU GAIN (NOUVEAU SYSTÈME)
     // ==========================
-
 
     const bet =
       Number(room.bet || 0);
 
+    // NOUVEAU SYSTÈME:
+    // Commission = 50% de la mise du perdant
+    // Crédit gagnant = sa mise + (50% de la mise du perdant)
+    // Exemple: mise 100 HTG
+    // Commission = 50 HTG
+    // Crédit gagnant = 100 + 50 = 150 HTG
 
-    const reward =
-      Math.floor(
-        bet * 1.5
-      );
+    const commission = Math.floor(bet * 0.5);
+    const winnerCredit = bet + commission; // Sa mise + la partie restante
 
+    console.log("[NEW_PAYMENT_SYSTEM] Calcul du gain:", {
+      bet,
+      commission,
+      winnerCredit,
+      formula: `${bet} + (${bet} * 0.5) = ${winnerCredit}`
+    });
 
-    if(reward <= 0){
+    if (winnerCredit <= 0) {
 
       await paymentRef.set(null);
 
       return NextResponse.json(
-        {error:"Gain invalide"},
-        {status:400}
+        { error: "Gain invalide" },
+        { status: 400 }
       );
 
     }
 
-
-
-
     // ==========================
-    // ATOMIC UPDATE
+    // TRANSACTION ATOMIQUE FINALE
     // ==========================
-
 
     const winnerBalanceRef =
-      adminDB.ref(
-        `users/${winnerUid}/balance`
-      );
-
+      adminDB.ref(`users/${winnerUid}/balance`);
 
     const balanceSnap =
       await winnerBalanceRef.get();
 
-
     const oldBalance =
       Number(balanceSnap.val() || 0);
 
-
     const newBalance =
-      oldBalance + reward;
+      oldBalance + winnerCredit;
 
-
-
-    const updates:any = {};
-
-
+    const updates: any = {};
 
     updates[
       `users/${winnerUid}/balance`
     ] = newBalance;
 
-
-
     updates[
       `transactions/${winnerUid}/${Date.now()}`
     ] = {
 
-      type:"GAME_WIN",
+      type: "GAME_WIN",
 
       gameId,
 
-      amount:reward,
+      amount: winnerCredit,
+
+      commission,
 
       oldBalance,
 
       newBalance,
 
-      createdAt:Date.now()
+      createdAt: Date.now()
 
     };
-
-
 
     updates[
       `rooms/${gameId}/game/paymentStatus`
     ] = "completed";
 
-
     updates[
       `rooms/${gameId}/game/winnerUid`
     ] = winnerUid;
 
-
     updates[
       `rooms/${gameId}/game/reward`
-    ] = reward;
+    ] = winnerCredit;
 
+    updates[
+      `rooms/${gameId}/game/commission`
+    ] = commission;
 
     updates[
       `rooms/${gameId}/game/paidAt`
     ] = Date.now();
 
-
-
-
-
     await adminDB
-    .ref()
-    .update(updates);
-
-
-
-
-
+      .ref()
+      .update(updates);
 
     // ==========================
     // STATS
     // ==========================
 
-
     await adminDB
-    .ref(`users/${winnerUid}`)
-    .transaction(
-      (user:any)=>{
+      .ref(`users/${winnerUid}`)
+      .transaction(
+        (user: any) => {
 
-        if(!user)
+          if (!user)
+            return user;
+
+          user.wins =
+            Number(user.wins || 0) + 1;
+
+          user.gamesPlayed =
+            Number(user.gamesPlayed || 0) + 1;
+
+          user.winRate =
+            Math.round(
+              user.wins /
+              user.gamesPlayed *
+              100
+            );
+
           return user;
 
-
-        user.wins =
-          Number(user.wins || 0)+1;
-
-
-        user.gamesPlayed =
-          Number(user.gamesPlayed || 0)+1;
-
-
-        user.winRate =
-          Math.round(
-            user.wins /
-            user.gamesPlayed *
-            100
-          );
-
-
-        return user;
-
-      }
-    );
-
-
+        }
+      );
 
     await addMonthlyPoints(
       winnerUid,
       10
     );
 
-
-
     await sendPushNotification(
       winnerUid,
       "🏆 Victoire !",
-      `Tu as gagné ${reward} HTG`,
+      `Tu as gagné ${winnerCredit} HTG`,
       {
-        type:"win",
-        amount:reward
+        type: "win",
+        amount: winnerCredit
       }
     );
 
-
-
-
-
     return NextResponse.json({
 
-      success:true,
+      success: true,
 
       winnerUid,
 
-      reward,
+      reward: winnerCredit,
+
+      commission,
 
       oldBalance,
 
@@ -430,25 +386,22 @@ export async function POST(request: Request) {
 
     });
 
-
-
   }
-  catch(error:any){
+  catch (error: any) {
 
     console.error(
       "FINISH PAYMENT ERROR",
       error
     );
 
-
     return NextResponse.json(
       {
         error:
-        error.message ||
-        "Erreur serveur"
+          error.message ||
+          "Erreur serveur"
       },
       {
-        status:500
+        status: 500
       }
     );
 

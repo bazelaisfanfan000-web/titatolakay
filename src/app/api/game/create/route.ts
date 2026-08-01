@@ -305,80 +305,7 @@ export async function POST(
 
     /*
     ================================================
-    5. VÉRIFIER LE SOLDE
-    ================================================
-    */
-
-    const balance =
-      await checkUserBalance(
-        uid
-      );
-
-
-    if (
-      balance < amount
-    ) {
-
-      return NextResponse.json(
-
-        {
-          success: false,
-
-          error:
-            "Solde insuffisant",
-        },
-
-        {
-          status: 400,
-        }
-
-      );
-
-    }
-
-
-    /*
-    ================================================
-    6. DÉDUIRE LA MISE DU CRÉATEUR
-    ================================================
-    */
-
-    let creatorOldBalance = 0;
-    let creatorNewBalance = 0;
-
-    const creatorBalanceRef = adminDB.ref(`users/${uid}/balance`);
-    const creatorTransaction = await creatorBalanceRef.transaction((current: any) => {
-      creatorOldBalance = Number(current || 0);
-
-      if (creatorOldBalance < amount) {
-        console.log("[CREATE_DEBIT_CREATOR] Solde insuffisant:", creatorOldBalance, amount);
-        return current;
-      }
-
-      creatorNewBalance = creatorOldBalance - amount;
-      console.log("[CREATE_DEBIT_CREATOR] Débit créateur:", creatorOldBalance, "->", creatorNewBalance);
-      return creatorNewBalance;
-    });
-
-    console.log("[CREATE_DEBIT_CREATOR] Résultat transaction:", {
-      committed: creatorTransaction.committed,
-      snapshot: creatorTransaction.snapshot?.val(),
-      expected: creatorNewBalance
-    });
-
-    if (!creatorTransaction.committed) {
-      return NextResponse.json({
-        success: false,
-        error: "Échec du débit du créateur - transaction non committed"
-      }, {
-        status: 500
-      });
-    }
-
-
-    /*
-    ================================================
-    7. CONFIGURATION PARTIE
+    6. CONFIGURATION PARTIE
     ================================================
     */
 
@@ -530,17 +457,6 @@ export async function POST(
       "ROOM CREATED:",
       roomId
     );
-
-    // Créer transaction pour le créateur après avoir le roomId
-    await adminDB.ref(`transactions/${uid}`).push({
-      type: "bet",
-      reason: roomId,
-      amount: -amount,
-      oldBalance: creatorOldBalance,
-      newBalance: creatorNewBalance,
-      status: "completed",
-      createdAt: Date.now()
-    });
 
 
     /*

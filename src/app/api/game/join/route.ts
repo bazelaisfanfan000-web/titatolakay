@@ -121,66 +121,6 @@ export async function POST(request: Request) {
     const bet = Number(room.bet || 0);
     const creatorId = room.creatorId;
 
-    // Vérifier le solde du joueur qui rejoint
-    // Le créateur est déjà débité lors de la création de la partie
-    const joinerBalanceSnap = await adminDB.ref(`users/${uid}/balance`).get();
-    const joinerBalance = Number(joinerBalanceSnap.val() || 0);
-
-    if (joinerBalance < bet) {
-      return NextResponse.json({
-        success: false,
-        error: "Solde insuffisant"
-      }, {
-        status: 400
-      });
-    }
-
-    // DÉBIT ATOMIQUE DES DEUX JOUEURS
-    let joinerOldBalance = 0;
-    let joinerNewBalance = 0;
-
-    // Le créateur est déjà débité lors de la création de la partie
-    // On ne débite que le joueur qui rejoint
-    const joinerBalanceRef = adminDB.ref(`users/${uid}/balance`);
-    const joinerTransaction = await joinerBalanceRef.transaction((current: any) => {
-      joinerOldBalance = Number(current || 0);
-
-      if (joinerOldBalance < bet) {
-        console.log("[JOIN_DEBIT_JOINER] Solde insuffisant:", joinerOldBalance, bet);
-        return current;
-      }
-
-      joinerNewBalance = joinerOldBalance - bet;
-      console.log("[JOIN_DEBIT_JOINER] Débit joueur:", joinerOldBalance, "->", joinerNewBalance);
-      return joinerNewBalance;
-    });
-
-    console.log("[JOIN_DEBIT_JOINER] Résultat transaction:", {
-      committed: joinerTransaction.committed,
-      snapshot: joinerTransaction.snapshot?.val(),
-      expected: joinerNewBalance
-    });
-
-    if (!joinerTransaction.committed) {
-      return NextResponse.json({
-        success: false,
-        error: "Échec du débit du joueur - transaction non committed"
-      }, {
-        status: 500
-      });
-    }
-
-    // Créer transaction pour le joueur qui rejoint
-    await adminDB.ref(`transactions/${uid}`).push({
-      type: "bet",
-      reason: roomId,
-      amount: -bet,
-      oldBalance: joinerOldBalance,
-      newBalance: joinerNewBalance,
-      status: "completed",
-      createdAt: Date.now()
-    });
-
     // PLAYER
     const currentPlayers = Object.keys(players).length;
     const symbol = currentPlayers === 0 ? "X" : "O";
