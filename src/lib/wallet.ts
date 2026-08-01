@@ -95,13 +95,10 @@ export async function creditWallet(
 
   const result = await userRef.transaction((current: any) => {
     if (!current) {
-      // Créer le wallet s'il n'existe pas
-      return {
-        balance: amount,
-        lockedBalance: 0,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      };
+      // NE PAS créer le wallet s'il n'existe pas
+      // Cela pourrait indiquer un utilisateur supprimé ou invalide
+      console.error("[WALLET] Tentative de crédit pour utilisateur inexistant:", uid);
+      return; // Annuler la transaction
     }
 
     return {
@@ -112,7 +109,13 @@ export async function creditWallet(
   });
 
   if (!result.committed) {
-    return { success: false, error: "Transaction Firebase échouée" };
+    console.error("[WALLET] Transaction non committed - possible conflit concurrent:", {
+      uid,
+      amount,
+      referenceId,
+      snapshot: result.snapshot
+    });
+    return { success: false, error: "Transaction Firebase échouée ou utilisateur inexistant" };
   }
 
   const newBalance = result.snapshot.val()?.balance || 0;

@@ -114,6 +114,7 @@ export async function POST(request: Request) {
             switch (eventType) {
               case "payment.completed":
                 await handlePaymentCompleted(event);
+                // Vérifier que le traitement a réussi en vérifiant les logs ou le dépôt
                 processingSuccess = true;
                 break;
               case "payment.failed":
@@ -132,7 +133,12 @@ export async function POST(request: Request) {
                 console.warn("[WEBHOOK] Type d'événement inconnu:", eventType);
                 break;
             }
+          } catch (handlerError) {
+            console.error("[WEBHOOK] Erreur lors du traitement de l'événement:", handlerError);
+            // NE PAS marquer comme traité si erreur - permettre retry
+            processingSuccess = false;
           } finally {
+            // Marquer comme traité SEULEMENT si succès
             if (processingSuccess) {
               await processedEventRef.set({
                 eventId,
@@ -343,7 +349,8 @@ async function handlePaymentCompleted(event: any) {
     if (!depositData) {
       console.error("[WEBHOOK] Dépôt non trouvé:", reference);
       console.log("[WEBHOOK] ========== PAYMENT COMPLETED ABORT (DEPÔT NON TROUVÉ) ==========");
-      return;
+      // Lancer une erreur pour que l'événement ne soit pas marqué comme traité
+      throw new Error(`Dépôt non trouvé pour reference: ${reference}`);
     }
 
     console.log("[WEBHOOK] Dépôt trouvé:", {
@@ -364,7 +371,8 @@ async function handlePaymentCompleted(event: any) {
         status: depositData.status 
       });
       console.log("[WEBHOOK] ========== PAYMENT COMPLETED ABORT (DÉJÀ TRAITÉ) ==========");
-      return;
+      // Lancer une erreur pour que l'événement ne soit pas marqué comme traité
+      throw new Error(`Dépôt déjà traité avec statut: ${depositData.status}`);
     }
 
     // Vérifier que le montant correspond au montant original
@@ -375,7 +383,8 @@ async function handlePaymentCompleted(event: any) {
         reference
       });
       console.log("[WEBHOOK] ========== PAYMENT COMPLETED ABORT (MONTANT MISMATCH) ==========");
-      return;
+      // Lancer une erreur pour que l'événement ne soit pas marqué comme traité
+      throw new Error(`Montant mismatch: attendu ${depositData.amount}, reçu ${amount}`);
     }
 
     console.log("[WEBHOOK] Validations OK - Crédit du wallet:", { 
@@ -402,7 +411,8 @@ async function handlePaymentCompleted(event: any) {
     if (!creditResult.success) {
       console.error("[WEBHOOK] Échec crédit wallet:", creditResult.error);
       console.log("[WEBHOOK] ========== PAYMENT COMPLETED ABORT (CRÉDIT ÉCHOUÉ) ==========");
-      return;
+      // Lancer une erreur pour que l'événement ne soit pas marqué comme traité
+      throw new Error(`Échec crédit wallet: ${creditResult.error}`);
     }
 
     const newBalance = creditResult.balance || 0;
