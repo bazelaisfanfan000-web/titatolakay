@@ -121,7 +121,8 @@ export async function POST(request: Request) {
       referenceId,
       paymentUrl: moncashResponse.paymentUrl,
       moncashReference: moncashResponse.reference,
-      expiresAt: moncashResponse.expiresAt
+      expiresAt: moncashResponse.expiresAt,
+      fullResponse: moncashResponse
     });
 
     // 7. Retourner l'URL de paiement

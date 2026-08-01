@@ -277,10 +277,33 @@ async function handlePaymentCompleted(event: any) {
 
     console.log("[WEBHOOK] ========== PAYMENT COMPLETED START ==========");
     console.log("[WEBHOOK] Event data:", { reference, amount, completedAt });
+    console.log("[WEBHOOK] Event complet:", JSON.stringify(event, null, 2));
 
     let depositData: any = null;
     let depositUserId: string = "";
     let depositKey: string = "";
+
+    // DEBUG: Lister tous les dépôts pour comprendre la structure
+    console.log("[WEBHOOK] DEBUG: Liste de tous les dépôts dans Firebase");
+    const allDepositsSnapshot = await adminDB.ref("deposits").once("value");
+    if (allDepositsSnapshot.exists()) {
+      console.log("[WEBHOOK] DEBUG: Dépôts trouvés:", Object.keys(allDepositsSnapshot.val() || {}));
+      allDepositsSnapshot.forEach((userSnapshot: any) => {
+        const userId = userSnapshot.key;
+        console.log(`[WEBHOOK] DEBUG: Utilisateur ${userId} a des dépôts`);
+        userSnapshot.forEach((depositSnapshot: any) => {
+          const deposit = depositSnapshot.val();
+          console.log(`[WEBHOOK] DEBUG:   Dépôt ${depositSnapshot.key}:`, {
+            id: deposit.id,
+            moncashReference: deposit.moncashReference,
+            amount: deposit.amount,
+            status: deposit.status
+          });
+        });
+      });
+    } else {
+      console.log("[WEBHOOK] DEBUG: Aucun dépôt trouvé dans Firebase");
+    }
 
     // Méthode 1: Rechercher par moncashReference dans toute la structure deposits
     console.log("[WEBHOOK] Recherche par moncashReference:", reference);
