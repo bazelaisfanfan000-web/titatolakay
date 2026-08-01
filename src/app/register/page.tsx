@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 
 
-export default function Register() {
+function RegisterContent() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -776,6 +776,21 @@ export default function Register() {
   );
 
 
+}
+
+export default function Register() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen items-center justify-center bg-[#05070b] px-3 text-white">
+        <div className="text-center">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent mx-auto" />
+          <p className="text-[10px] text-white/30">Chargement...</p>
+        </div>
+      </main>
+    }>
+      <RegisterContent />
+    </Suspense>
+  );
 }
 
 
