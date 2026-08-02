@@ -52,11 +52,18 @@ export async function writeDepositIndexEntries(
   const keys = depositIndexKeys(referenceId, moncashReference);
   const updates: Record<string, DepositIndexEntry> = {};
   for (const key of keys) {
-    updates[`deposit_index/${key}`] = {
+    const entry: DepositIndexEntry = {
       ...data,
       referenceId: data.referenceId ?? referenceId,
-      moncashReference: moncashReference ?? data.moncashReference,
     };
+    
+    // N'inclure moncashReference que s'il a une valeur définie
+    const resolvedMoncashReference = moncashReference ?? data.moncashReference;
+    if (resolvedMoncashReference) {
+      entry.moncashReference = resolvedMoncashReference;
+    }
+    
+    updates[`deposit_index/${key}`] = entry;
   }
   await adminDB.ref().update(updates);
 }
