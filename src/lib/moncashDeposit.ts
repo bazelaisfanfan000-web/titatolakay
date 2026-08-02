@@ -208,21 +208,22 @@ export async function creditWalletWithRetry(
 
   for (let attempt = 1; attempt <= MAX_TX_RETRIES; attempt++) {
     const beforeSnap = await userRef.once("value");
-    
-    if (!beforeSnap.exists()) {
-      console.error("[MONCASH] Utilisateur inexistant:", userId);
-      return { success: false, error: "Utilisateur inexistant" };
-    }
-    
     const oldBalance = Number(beforeSnap.val()?.balance || 0);
 
-    console.log("[MONCASH] Tentative crédit wallet", { userId, amount, attempt, oldBalance });
+    console.log("[MONCASH] Tentative crédit wallet", { userId, amount, attempt, oldBalance, userExists: beforeSnap.exists() });
 
     const result = await userRef.transaction((current: Record<string, unknown> | null) => {
+      // Si l'utilisateur n'existe pas, le créer avec un solde initial
       if (!current) {
-        console.error("[MONCASH] Utilisateur inexistant dans transaction:", userId);
-        return;
+        console.log("[MONCASH] Utilisateur inexistant, création avec solde initial:", userId);
+        const newBalance = amount;
+        return {
+          balance: newBalance,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
       }
+      
       const currentBalance = Number(current.balance || 0);
       const newBalance = currentBalance + amount;
       
