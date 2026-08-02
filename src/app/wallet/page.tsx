@@ -239,10 +239,15 @@ function WalletContent() {
       );
 
 
+    // Timeout de sécurité pour éviter l'écran de chargement infini
+    const timeout = setTimeout(() => {
+      setAuthLoading(false);
+      console.warn("Auth timeout - forcing authLoading to false");
+    }, 10000); // 10 secondes
+
     return () => {
-
+      clearTimeout(timeout);
       unsubscribe();
-
     };
 
   }, []);

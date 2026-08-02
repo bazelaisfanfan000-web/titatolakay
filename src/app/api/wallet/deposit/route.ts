@@ -6,8 +6,8 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDB } from "@/lib/firebaseAdmin";
 import { createMonCashPayment, generateReferenceId, generateIdempotencyKey } from "@/lib/moncash";
-import { atomicDeposit } from "@/lib/atomicTransaction";
 import { transactionExists } from "@/lib/ledger";
+import { writeDepositIndexEntries } from "@/lib/moncashDeposit";
 import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -91,88 +91,81 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Créer le paiement MonCash (avant de créer le dépôt en Firebase)
-    const moncashResponse = await createMonCashPayment(
-      {
-        amount,
-        referenceId,
-        returnUrl: returnUrl || `${process.env.NEXT_PUBLIC_APP_URL}/wallet/deposit-return?referenceId=${referenceId}&amount=${amount}`,
-        customerName,
-        customerEmail
-      },
-      idempotencyKey
-    );
-
-    // 6. Créer le dépôt en pending dans Firebase (seulement si MonCash a réussi)
+    // 5. Créer le dépôt + index AVANT MonCash (webhook peut arriver très tôt)
     const depositPath = `deposits/${userId}/${referenceId}`;
     const depositRef = adminDB.ref(depositPath);
-    
+
     const depositData = {
       id: referenceId,
       referenceId,
       userId,
       amount,
       status: "pending",
-      paymentUrl: moncashResponse.paymentUrl,
-      expiresAt: new Date(moncashResponse.expiresAt).getTime(),
-      moncashReference: moncashResponse.reference,
       idempotencyKey,
-      createdAt: Date.now()
+      createdAt: Date.now(),
     };
 
-    console.log("[DEPOSIT_API] Création du dépôt Firebase:", {
-      depositPath,
-      depositData,
-      moncashReference: moncashResponse.reference,
-      referenceId: referenceId
-    });
+    console.log("[DEPOSIT_API] Création du dépôt Firebase:", { depositPath, referenceId });
 
     await depositRef.set(depositData);
 
-    // Vérifier que le dépôt a bien été créé
+    await writeDepositIndexEntries(referenceId, {
+      userId,
+      depositId: referenceId,
+      referenceId,
+      amount,
+      status: "pending",
+      createdAt: Date.now(),
+    });
+
     const verificationSnapshot = await depositRef.once("value");
     if (!verificationSnapshot.exists()) {
-      console.error("[DEPOSIT_API] ERREUR CRITIQUE: Dépôt non créé dans Firebase:", depositPath);
       throw new Error("Échec de création du dépôt dans Firebase");
     }
 
-    console.log("[DEPOSIT_API] Dépôt vérifié dans Firebase:", {
-      depositPath,
-      storedData: verificationSnapshot.val()
-    });
-
-    // 7. Créer l'index secondaire pour recherche webhook
-    const indexPath = `deposit_index/${moncashResponse.reference}`;
-    const indexRef = adminDB.ref(indexPath);
-    
-    const indexData = {
-      userId,
-      depositId: referenceId,
-      referenceId: referenceId,
-      moncashReference: moncashResponse.reference,
-      amount,
-      status: "pending",
-      createdAt: Date.now()
-    };
-
-    console.log("[DEPOSIT_API] Création de l'index secondaire:", {
-      indexPath,
-      indexData
-    });
-
-    await indexRef.set(indexData);
-
-    // Vérifier que l'index a bien été créé
-    const indexVerification = await indexRef.once("value");
-    if (!indexVerification.exists()) {
-      console.error("[DEPOSIT_API] ERREUR CRITIQUE: Index non créé dans Firebase:", indexPath);
-      throw new Error("Échec de création de l'index dans Firebase");
+    // 6. Créer le paiement MonCash
+    let moncashResponse;
+    try {
+      moncashResponse = await createMonCashPayment(
+        {
+          amount,
+          referenceId,
+          returnUrl:
+            returnUrl ||
+            `${process.env.NEXT_PUBLIC_APP_URL}/wallet/deposit-return?referenceId=${referenceId}&amount=${amount}`,
+          customerName,
+          customerEmail,
+        },
+        idempotencyKey
+      );
+    } catch (moncashErr) {
+      await depositRef.update({
+        status: "failed",
+        failureReason: "Échec création paiement MonCash",
+        failedAt: Date.now(),
+      });
+      throw moncashErr;
     }
 
-    console.log("[DEPOSIT_API] Index vérifié dans Firebase:", {
-      indexPath,
-      storedData: indexVerification.val()
+    await depositRef.update({
+      paymentUrl: moncashResponse.paymentUrl,
+      expiresAt: new Date(moncashResponse.expiresAt).getTime(),
+      moncashReference: moncashResponse.reference,
     });
+
+    await writeDepositIndexEntries(
+      referenceId,
+      {
+        userId,
+        depositId: referenceId,
+        referenceId,
+        moncashReference: moncashResponse.reference,
+        amount,
+        status: "pending",
+        createdAt: depositData.createdAt,
+      },
+      moncashResponse.reference
+    );
 
     console.log("[DEPOSIT_API] Paiement créé:", {
       referenceId,

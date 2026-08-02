@@ -6,6 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebaseAdmin";
+import { completeMonCashDeposit, resolveDepositByReference } from "@/lib/moncashDeposit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,131 +39,55 @@ export async function POST(request: Request) {
     const failedEvent = failedEventSnapshot.val();
     console.log("[RECOVER_DEPOSITS] Événement échoué trouvé:", failedEvent);
 
-    // Rechercher le dépôt via deposit_index
-    const indexRef = adminDB.ref(`deposit_index/${reference}`);
-    const indexSnapshot = await indexRef.once("value");
-
-    if (!indexSnapshot.exists()) {
+    const resolved = await resolveDepositByReference(reference);
+    if (!resolved) {
       return NextResponse.json(
         { success: false, error: "Dépôt non trouvé dans deposit_index" },
         { status: 404 }
       );
     }
 
-    const indexData = indexSnapshot.val();
-    console.log("[RECOVER_DEPOSITS] Index trouvé:", indexData);
-
-    // Récupérer le dépôt complet
-    const depositRef = adminDB.ref(`deposits/${indexData.userId}/${indexData.depositId}`);
-    const depositSnapshot = await depositRef.once("value");
-
-    if (!depositSnapshot.exists()) {
-      return NextResponse.json(
-        { success: false, error: "Dépôt introuvable dans deposits" },
-        { status: 404 }
-      );
-    }
-
-    const depositData = depositSnapshot.val();
+    const depositData = resolved.deposit;
     console.log("[RECOVER_DEPOSITS] Dépôt trouvé:", depositData);
 
-    // Vérifier que le dépôt est en pending
     if (depositData.status !== "pending") {
       return NextResponse.json(
-        { success: false, error: `Dépôt déjà traité avec statut: ${depositData.status}` },
+        { success: false, error: `Dépôt déjà traité avec statut: ${String(depositData.status)}` },
         { status: 400 }
       );
     }
 
-    // Vérifier que le montant correspond
-    if (depositData.amount !== failedEvent.amount) {
+    if (Number(depositData.amount) !== Number(failedEvent.amount)) {
       return NextResponse.json(
         { success: false, error: "Montant mismatch" },
         { status: 400 }
       );
     }
 
-    // Créditer le wallet
-    const userRef = adminDB.ref(`users/${indexData.userId}`);
-    const userSnapshot = await userRef.once("value");
-    const oldBalance = userSnapshot.exists() ? Number(userSnapshot.val()?.balance || 0) : 0;
-
-    console.log("[RECOVER_DEPOSITS] Solde avant crédit:", { userId: indexData.userId, oldBalance });
-
-    const transactionResult = await userRef.transaction((current: any) => {
-      if (!current) {
-        return; // Annuler
-      }
-
-      const currentBalance = Number(current.balance || 0);
-      const newBalance = currentBalance + failedEvent.amount;
-
-      return {
-        ...current,
-        balance: newBalance,
-        updatedAt: Date.now()
-      };
+    const completion = await completeMonCashDeposit({
+      reference,
+      amountFromWebhook: Number(failedEvent.amount),
+      verifyWithMonCashApi: true,
     });
 
-    if (!transactionResult.committed) {
+    if (!completion.ok) {
       return NextResponse.json(
-        { success: false, error: "Transaction Firebase échouée" },
-        { status: 500 }
+        { success: false, error: completion.message },
+        { status: completion.retryable ? 503 : 400 }
       );
     }
 
-    const newBalance = transactionResult.snapshot.val()?.balance || 0;
-    console.log("[RECOVER_DEPOSITS] Crédit réussi:", { userId: indexData.userId, newBalance });
-
-    // Créer wallet_transaction
-    const crypto = require("crypto");
-    const transactionId = `txn_${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
-    
-    await adminDB.ref(`wallet_transactions/${indexData.userId}/${transactionId}`).set({
-      type: "deposit",
-      amount: failedEvent.amount,
-      reference: reference,
-      depositId: indexData.depositId,
-      status: "completed",
-      oldBalance,
-      newBalance,
-      createdAt: Date.now()
-    });
-
-    // Mettre à jour le dépôt
-    await depositRef.update({
-      status: "completed",
-      moncashTransactionId: reference,
-      netAmount: failedEvent.amount,
-      completedAt: Date.now()
-    });
-
-    // Mettre à jour l'index
-    await indexRef.update({
-      status: "completed",
-      completedAt: Date.now()
-    });
-
-    // Supprimer l'événement échoué
     await failedEventRef.remove();
-
-    console.log("[RECOVER_DEPOSITS] Récupération réussie:", {
-      reference,
-      userId: indexData.userId,
-      amount: failedEvent.amount,
-      newBalance
-    });
 
     return NextResponse.json({
       success: true,
       message: "Dépôt récupéré avec succès",
       data: {
         reference,
-        userId: indexData.userId,
+        userId: resolved.userId,
         amount: failedEvent.amount,
-        oldBalance,
-        newBalance
-      }
+        newBalance: completion.newBalance,
+      },
     });
 
   } catch (error) {

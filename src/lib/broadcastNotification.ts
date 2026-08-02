@@ -270,7 +270,27 @@ export async function notifyNewGame(
   creatorName: string
 ) {
   try {
-    console.log("[BROADCAST] Envoi notification via Topic 'new-games'");
+    console.log("[BROADCAST] Vérification de l'existence de la partie avant notification:", roomId);
+
+    // Vérifier que la partie existe réellement dans Firebase
+    const roomRef = adminDB.ref(`rooms/${roomId}`);
+    const roomSnapshot = await roomRef.once("value");
+
+    if (!roomSnapshot.exists()) {
+      console.error("[BROADCAST] Partie non trouvée, notification annulée:", roomId);
+      return {
+        success: false,
+        error: "Partie non trouvée",
+        roomId,
+      };
+    }
+
+    const roomData = roomSnapshot.val();
+    console.log("[BROADCAST] Partie vérifiée, envoi notification via Topic 'new-games':", {
+      roomId,
+      status: roomData.status,
+      bet: roomData.bet,
+    });
 
     const message = {
       notification: {

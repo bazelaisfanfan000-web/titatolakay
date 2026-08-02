@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDB } from "@/lib/firebaseAdmin";
 import { getPaymentStatus } from "@/lib/moncash";
+import { completeMonCashDeposit } from "@/lib/moncashDeposit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,23 +76,30 @@ export async function GET(request: Request) {
 
       // 6. Mettre à jour le statut local si MonCash a changé
       if (moncashStatus.status === "completed" && deposit.status !== "completed") {
-        await depositRef.update({
-          status: "completed",
-          moncashTransactionId: moncashStatus.moncashTransactionId,
-          netAmount: moncashStatus.netAmount,
-          completedAt: moncashStatus.completedAt ? new Date(moncashStatus.completedAt).getTime() : Date.now()
+        const completion = await completeMonCashDeposit({
+          reference: deposit.referenceId || referenceId,
+          amountFromWebhook: Number(deposit.amount),
+          completedAt: moncashStatus.completedAt ?? undefined,
+          verifyWithMonCashApi: false,
         });
+
+        if (!completion.ok && !completion.retryable) {
+          console.error("[DEPOSIT_STATUS] Échec finalisation dépôt:", completion.message);
+        }
+
+        const refreshed = await depositRef.once("value");
+        const updated = refreshed.val() ?? deposit;
 
         return NextResponse.json({
           success: true,
           deposit: {
-            id: deposit.id,
-            amount: deposit.amount,
-            status: "completed",
-            referenceId: deposit.referenceId,
-            completedAt: moncashStatus.completedAt ? new Date(moncashStatus.completedAt).getTime() : Date.now(),
-            netAmount: moncashStatus.netAmount
-          }
+            id: updated.id,
+            amount: updated.amount,
+            status: updated.status,
+            referenceId: updated.referenceId,
+            completedAt: updated.completedAt,
+            netAmount: updated.netAmount,
+          },
         });
       }
 

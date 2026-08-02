@@ -3,6 +3,7 @@
     ".read": "auth != null",
     ".write": "auth != null",
     "users": {
+      ".indexOn": ["referralCode", "referredBy"],
       "$uid": {
         ".read": "auth != null && auth.uid == $uid",
         ".write": "auth != null && (auth.uid == $uid || auth.token.admin == true)",
@@ -45,13 +46,39 @@
     "deposits": {
       "$uid": {
         ".read": "auth != null && auth.uid == $uid",
-        ".write": "auth.token.admin == true"
+        ".write": "auth.token.admin == true",
+        ".indexOn": ["referenceId", "moncashReference", "status", "createdAt"]
       }
     },
     "withdrawals": {
       "$uid": {
         ".read": "auth != null && auth.uid == $uid",
-        ".write": "auth.token.admin == true"
+        ".write": "auth.token.admin == true",
+        ".indexOn": ["moncashReference", "referenceId", "status", "createdAt"]
+      }
+    },
+    "deposit_index": {
+      ".read": "auth.token.admin == true",
+      ".write": "auth.token.admin == true",
+      ".indexOn": ["userId", "referenceId", "moncashReference", "status"]
+    },
+    "processed_webhooks": {
+      ".read": "auth.token.admin == true",
+      ".write": "auth.token.admin == true"
+    },
+    "processed_events": {
+      ".read": "auth.token.admin == true",
+      ".write": "auth.token.admin == true"
+    },
+    "failed_webhook_events": {
+      ".read": "auth.token.admin == true",
+      ".write": "auth.token.admin == true"
+    },
+    "wallet_transactions": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth.token.admin == true",
+        ".indexOn": ["referenceId", "type", "status", "createdAt"]
       }
     },
     "ledger": {

@@ -471,6 +471,28 @@ export async function POST(
       roomId
     );
 
+    /*
+    ================================================
+    11.5. VÉRIFIER QUE LA PARTIE EXISTE RÉELLEMENT
+    ================================================
+    */
+
+    const roomVerification = await newRoomRef.once("value");
+    if (!roomVerification.exists()) {
+      console.error("[GAME CREATE] Partie non créée dans Firebase après set()");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Erreur lors de la création de la partie"
+        },
+        {
+          status: 500
+        }
+      );
+    }
+
+    console.log("[GAME CREATE] Partie vérifiée dans Firebase:", roomId);
+
 
     /*
     ================================================
@@ -588,10 +610,15 @@ export async function POST(
     */
 
     // Envoyer une notification à tous les utilisateurs inscrits
+    // SEULEMENT si la partie existe et est en statut "waiting"
     notificationPromises.push(
       notifyNewGame(roomId, amount, playerName)
         .then(result => {
-          console.log("[BROADCAST] Notification envoyée:", result);
+          if (result.success) {
+            console.log("[BROADCAST] Notification envoyée:", result);
+          } else {
+            console.warn("[BROADCAST] Notification non envoyée:", result.error);
+          }
         })
         .catch(error => {
           console.error("[BROADCAST] Erreur notification:", error);

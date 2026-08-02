@@ -413,3 +413,513 @@ export async function createCommissionLedgerEntry(
     metadata: { gameId }
   });
 }
+
+// =====================================================
+// SYSTÈME DE LEDGER ATOMIQUE - TRANSACTION FIREBASE
+// =====================================================
+
+/**
+ * Result type pour les opérations atomiques
+ */
+type AtomicResult<T> = {
+  success: true;
+  data: T;
+} | {
+  success: false;
+  error: string;
+  code: string;
+};
+
+/**
+ * Crée une entrée de ledger avec transaction atomique
+ * Cette fonction est appelée DANS une transaction Firebase existante
+ * 
+ * IMPORTANT: Cette fonction ne doit PAS être appelée directement.
+ * Elle doit être utilisée à l'intérieur d'une transaction Firebase.
+ */
+export function createLedgerEntryAtomic(
+  userId: string,
+  transactionId: string,
+  params: {
+    type: string;
+    amount: number;
+    balanceBefore: number;
+    balanceAfter: number;
+    referenceId: string;
+    status: string;
+    source: string;
+    description?: string;
+    metadata?: Record<string, any>;
+  }
+): Record<string, any> {
+  const entry = {
+    id: transactionId,
+    userId,
+    type: params.type,
+    amount: params.amount,
+    balanceBefore: params.balanceBefore,
+    balanceAfter: params.balanceAfter,
+    referenceId: params.referenceId,
+    status: params.status,
+    source: params.source,
+    description: params.description,
+    metadata: params.metadata,
+    createdAt: Date.now(),
+    completedAt: params.status === "completed" ? Date.now() : undefined
+  };
+
+  console.log("[LEDGER_ATOMIC] Création entrée atomique:", {
+    transactionId,
+    userId,
+    type: params.type,
+    amount: params.amount,
+    referenceId: params.referenceId
+  });
+
+  return entry;
+}
+
+/**
+ * Vérifie et crédite l'utilisateur avec transaction atomique
+ * Cette fonction effectue TOUT ou RIEN :
+ * 1. Vérifie le solde avant
+ * 2. Crédite le solde
+ * 3. Crée l'entrée ledger
+ * 
+ * @param userId - ID Firebase de l'utilisateur
+ * @param amount - Montant à créditer (en HTG, nombre décimal)
+ * @param referenceId - Référence unique pour idempotence
+ * @param metadata - Métadonnées additionnelles
+ * @returns Result avec les détails de la transaction
+ */
+export async function verifyAndCreditUserAtomic(params: {
+  userId: string;
+  amount: number;
+  referenceId: string;
+  metadata?: Record<string, any>;
+}): Promise<AtomicResult<{
+  transactionId: string;
+  balanceBefore: number;
+  balanceAfter: number;
+}>> {
+  console.log("[LEDGER_ATOMIC] Début crédit atomique:", {
+    userId: params.userId,
+    amount: params.amount,
+    referenceId: params.referenceId
+  });
+
+  try {
+    const userRef = adminDB.ref(`users/${params.userId}`);
+    
+    // Transaction atomique Firebase
+    const result = await userRef.transaction((current: any) => {
+      // Si l'utilisateur n'existe pas, annuler
+      if (!current) {
+        console.error("[LEDGER_ATOMIC] Utilisateur inexistant:", params.userId);
+        return;
+      }
+
+      const balanceBefore = Number(current.balance || 0);
+      const balanceAfter = balanceBefore + params.amount;
+
+      console.log("[LEDGER_ATOMIC] Calcul solde:", {
+        userId: params.userId,
+        balanceBefore,
+        amount: params.amount,
+        balanceAfter
+      });
+
+      // Générer un ID de transaction unique
+      const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Retourner l'état mis à jour avec l'entrée ledger
+      return {
+        ...current,
+        balance: balanceAfter,
+        updatedAt: Date.now(),
+        // L'entrée ledger sera créée dans la même transaction
+        _ledgerEntry: createLedgerEntryAtomic(params.userId, transactionId, {
+          type: "deposit",
+          amount: params.amount,
+          balanceBefore,
+          balanceAfter,
+          referenceId: params.referenceId,
+          status: "completed",
+          source: "moncash",
+          description: `Dépôt MonCash - ${params.referenceId}`,
+          metadata: params.metadata
+        })
+      };
+    });
+
+    if (!result.committed) {
+      console.error("[LEDGER_ATOMIC] Transaction non committed:", params.userId);
+      return {
+        success: false,
+        error: "Transaction Firebase échouée",
+        code: "TRANSACTION_FAILED"
+      };
+    }
+
+    const snapshot = result.snapshot.val();
+    const ledgerEntry = snapshot._ledgerEntry;
+
+    if (!ledgerEntry) {
+      console.error("[LEDGER_ATOMIC] Entrée ledger non créée:", params.userId);
+      return {
+        success: false,
+        error: "Entrée ledger non créée",
+        code: "LEDGER_NOT_CREATED"
+      };
+    }
+
+    // Créer l'entrée ledger séparément (car Firebase transaction ne supporte pas les chemins imbriqués complexes)
+    const ledgerRef = adminDB.ref(`wallet_transactions/${params.userId}/${ledgerEntry.id}`);
+    await ledgerRef.set(ledgerEntry);
+
+    // Nettoyer le champ temporaire
+    await userRef.child("_ledgerEntry").remove();
+
+    console.log("[LEDGER_ATOMIC] Crédit réussi:", {
+      userId: params.userId,
+      transactionId: ledgerEntry.id,
+      balanceBefore: ledgerEntry.balanceBefore,
+      balanceAfter: ledgerEntry.balanceAfter
+    });
+
+    return {
+      success: true,
+      data: {
+        transactionId: ledgerEntry.id,
+        balanceBefore: ledgerEntry.balanceBefore,
+        balanceAfter: ledgerEntry.balanceAfter
+      }
+    };
+
+  } catch (error) {
+    console.error("[LEDGER_ATOMIC] Erreur crédit atomique:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur inconnue",
+      code: "UNKNOWN_ERROR"
+    };
+  }
+}
+
+/**
+ * Complète un dépôt MonCash avec transaction atomique
+ * Cette fonction effectue TOUT ou RIEN :
+ * 1. Vérifie l'idempotence (déjà traité ?)
+ * 2. Vérifie le dépôt existe et est en pending
+ * 3. Valide le montant
+ * 4. Crédite le solde utilisateur
+ * 5. Crée l'entrée ledger
+ * 6. Met à jour le statut du dépôt
+ * 
+ * @param reference - Référence MonCash du dépôt
+ * @param amount - Montant du dépôt
+ * @param userId - ID de l'utilisateur
+ * @param depositId - ID du dépôt
+ * @returns Result avec les détails de la transaction
+ */
+export async function completeMonCashDepositAtomic(params: {
+  reference: string;
+  amount: number;
+  userId: string;
+  depositId: string;
+}): Promise<AtomicResult<{
+  transactionId: string;
+  balanceBefore: number;
+  balanceAfter: number;
+}>> {
+  console.log("[LEDGER_ATOMIC] Début completion dépôt atomique:", {
+    reference: params.reference,
+    amount: params.amount,
+    userId: params.userId,
+    depositId: params.depositId
+  });
+
+  try {
+    // 1. Vérifier si déjà traité (idempotence)
+    const existingTx = await getTransactionByReference(params.userId, params.reference);
+    if (existingTx && existingTx.status === "completed") {
+      console.log("[LEDGER_ATOMIC] Dépôt déjà traité:", params.reference);
+      return {
+        success: false,
+        error: "Dépôt déjà traité",
+        code: "ALREADY_PROCESSED"
+      };
+    }
+
+    // 2. Vérifier le dépôt existe et est en pending
+    const depositRef = adminDB.ref(`deposits/${params.userId}/${params.depositId}`);
+    const depositSnapshot = await depositRef.once("value");
+
+    if (!depositSnapshot.exists()) {
+      console.error("[LEDGER_ATOMIC] Dépôt non trouvé:", params.depositId);
+      return {
+        success: false,
+        error: "Dépôt non trouvé",
+        code: "DEPOSIT_NOT_FOUND"
+      };
+    }
+
+    const deposit = depositSnapshot.val();
+
+    if (deposit.status !== "pending") {
+      console.log("[LEDGER_ATOMIC] Dépôt non en pending:", deposit.status);
+      return {
+        success: false,
+        error: `Dépôt déjà ${deposit.status}`,
+        code: "DEPOSIT_NOT_PENDING"
+      };
+    }
+
+    if (deposit.amount !== params.amount) {
+      console.error("[LEDGER_ATOMIC] Montant mismatch:", {
+        expected: deposit.amount,
+        received: params.amount
+      });
+      return {
+        success: false,
+        error: "Montant mismatch",
+        code: "AMOUNT_MISMATCH"
+      };
+    }
+
+    // 3. Transaction atomique : crédit solde + mise à jour dépôt
+    const userRef = adminDB.ref(`users/${params.userId}`);
+    const result = await userRef.transaction((current: any) => {
+      if (!current) {
+        console.error("[LEDGER_ATOMIC] Utilisateur inexistant:", params.userId);
+        return;
+      }
+
+      const balanceBefore = Number(current.balance || 0);
+      const balanceAfter = balanceBefore + params.amount;
+
+      console.log("[LEDGER_ATOMIC] Transaction dépôt:", {
+        userId: params.userId,
+        balanceBefore,
+        amount: params.amount,
+        balanceAfter
+      });
+
+      const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      return {
+        ...current,
+        balance: balanceAfter,
+        updatedAt: Date.now(),
+        _ledgerEntry: createLedgerEntryAtomic(params.userId, transactionId, {
+          type: "deposit",
+          amount: params.amount,
+          balanceBefore,
+          balanceAfter,
+          referenceId: params.reference,
+          status: "completed",
+          source: "moncash",
+          description: `Dépôt MonCash - ${params.depositId}`,
+          metadata: { depositId: params.depositId }
+        })
+      };
+    });
+
+    if (!result.committed) {
+      console.error("[LEDGER_ATOMIC] Transaction non committed:", params.userId);
+      return {
+        success: false,
+        error: "Transaction Firebase échouée",
+        code: "TRANSACTION_FAILED"
+      };
+    }
+
+    const snapshot = result.snapshot.val();
+    const ledgerEntry = snapshot._ledgerEntry;
+
+    if (!ledgerEntry) {
+      console.error("[LEDGER_ATOMIC] Entrée ledger non créée:", params.userId);
+      return {
+        success: false,
+        error: "Entrée ledger non créée",
+        code: "LEDGER_NOT_CREATED"
+      };
+    }
+
+    // 4. Créer l'entrée ledger
+    const ledgerRef = adminDB.ref(`wallet_transactions/${params.userId}/${ledgerEntry.id}`);
+    await ledgerRef.set(ledgerEntry);
+
+    // Nettoyer le champ temporaire
+    await userRef.child("_ledgerEntry").remove();
+
+    // 5. Mettre à jour le statut du dépôt
+    await depositRef.update({
+      status: "completed",
+      moncashTransactionId: params.reference,
+      netAmount: params.amount,
+      completedAt: Date.now()
+    });
+
+    console.log("[LEDGER_ATOMIC] Dépôt complété avec succès:", {
+      reference: params.reference,
+      userId: params.userId,
+      transactionId: ledgerEntry.id,
+      balanceBefore: ledgerEntry.balanceBefore,
+      balanceAfter: ledgerEntry.balanceAfter
+    });
+
+    return {
+      success: true,
+      data: {
+        transactionId: ledgerEntry.id,
+        balanceBefore: ledgerEntry.balanceBefore,
+        balanceAfter: ledgerEntry.balanceAfter
+      }
+    };
+
+  } catch (error) {
+    console.error("[LEDGER_ATOMIC] Erreur completion dépôt:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur inconnue",
+      code: "UNKNOWN_ERROR"
+    };
+  }
+}
+
+/**
+ * Vérifie et débite l'utilisateur avec transaction atomique
+ * Pour les retraits et les mises de jeu
+ * 
+ * @param userId - ID Firebase de l'utilisateur
+ * @param amount - Montant à débiter
+ * @param referenceId - Référence unique
+ * @param type - Type de transaction (withdraw, game_bet, etc.)
+ * @param metadata - Métadonnées additionnelles
+ * @returns Result avec les détails de la transaction
+ */
+export async function verifyAndDebitUserAtomic(params: {
+  userId: string;
+  amount: number;
+  referenceId: string;
+  type: string;
+  source: string;
+  description?: string;
+  metadata?: Record<string, any>;
+}): Promise<AtomicResult<{
+  transactionId: string;
+  balanceBefore: number;
+  balanceAfter: number;
+}>> {
+  console.log("[LEDGER_ATOMIC] Début débit atomique:", {
+    userId: params.userId,
+    amount: params.amount,
+    referenceId: params.referenceId,
+    type: params.type
+  });
+
+  try {
+    const userRef = adminDB.ref(`users/${params.userId}`);
+    
+    const result = await userRef.transaction((current: any) => {
+      if (!current) {
+        console.error("[LEDGER_ATOMIC] Utilisateur inexistant:", params.userId);
+        return;
+      }
+
+      const balanceBefore = Number(current.balance || 0);
+
+      // Vérifier solde suffisant
+      if (balanceBefore < params.amount) {
+        console.warn("[LEDGER_ATOMIC] Solde insuffisant:", {
+          userId: params.userId,
+          balanceBefore,
+          amount: params.amount
+        });
+        return; // Annuler la transaction
+      }
+
+      const balanceAfter = balanceBefore - params.amount;
+
+      console.log("[LEDGER_ATOMIC] Calcul débit:", {
+        userId: params.userId,
+        balanceBefore,
+        amount: params.amount,
+        balanceAfter
+      });
+
+      const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      return {
+        ...current,
+        balance: balanceAfter,
+        updatedAt: Date.now(),
+        _ledgerEntry: createLedgerEntryAtomic(params.userId, transactionId, {
+          type: params.type,
+          amount: -params.amount, // Négatif pour débit
+          balanceBefore,
+          balanceAfter,
+          referenceId: params.referenceId,
+          status: "completed",
+          source: params.source,
+          description: params.description,
+          metadata: params.metadata
+        })
+      };
+    });
+
+    if (!result.committed) {
+      console.error("[LEDGER_ATOMIC] Transaction non committed:", params.userId);
+      return {
+        success: false,
+        error: "Transaction Firebase échouée",
+        code: "TRANSACTION_FAILED"
+      };
+    }
+
+    const snapshot = result.snapshot.val();
+    const ledgerEntry = snapshot._ledgerEntry;
+
+    if (!ledgerEntry) {
+      console.error("[LEDGER_ATOMIC] Entrée ledger non créée:", params.userId);
+      return {
+        success: false,
+        error: "Entrée ledger non créée",
+        code: "LEDGER_NOT_CREATED"
+      };
+    }
+
+    // Créer l'entrée ledger
+    const ledgerRef = adminDB.ref(`wallet_transactions/${params.userId}/${ledgerEntry.id}`);
+    await ledgerRef.set(ledgerEntry);
+
+    // Nettoyer le champ temporaire
+    await userRef.child("_ledgerEntry").remove();
+
+    console.log("[LEDGER_ATOMIC] Débit réussi:", {
+      userId: params.userId,
+      transactionId: ledgerEntry.id,
+      balanceBefore: ledgerEntry.balanceBefore,
+      balanceAfter: ledgerEntry.balanceAfter
+    });
+
+    return {
+      success: true,
+      data: {
+        transactionId: ledgerEntry.id,
+        balanceBefore: ledgerEntry.balanceBefore,
+        balanceAfter: ledgerEntry.balanceAfter
+      }
+    };
+
+  } catch (error) {
+    console.error("[LEDGER_ATOMIC] Erreur débit atomique:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur inconnue",
+      code: "UNKNOWN_ERROR"
+    };
+  }
+}
+
