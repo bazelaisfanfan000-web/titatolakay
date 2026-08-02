@@ -244,22 +244,15 @@ function RegisterContent() {
 
       /*
       ========================================
-      DEMANDE PERMISSION NOTIFICATIONS
+      DEMANDE PERMISSION NOTIFICATIONS (non bloquante)
       ========================================
       */
 
       if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
-        try {
-          await Notification.requestPermission();
-        } catch (error) {
+        Notification.requestPermission().catch(error => {
           console.error("[REGISTER] Erreur demande notifications:", error);
-        }
+        });
       }
-
-
-
-
-
 
       /*
       ========================================
@@ -267,11 +260,8 @@ function RegisterContent() {
       ========================================
       */
 
-
-      router.push(
-        "/rules"
-      );
-
+      console.log("[REGISTER] Redirection vers /rules");
+      router.push("/rules");
 
 
     } catch (err:any) {
