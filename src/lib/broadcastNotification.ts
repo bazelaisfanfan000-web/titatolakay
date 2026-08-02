@@ -305,8 +305,14 @@ export async function notifyNewGame(
         link: `/join/${roomId}`,
         bet: String(bet),
         creatorName,
+        click_action: `/join/${roomId}`,
       },
       topic: "new-games",
+      webpush: {
+        fcmOptions: {
+          link: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/join/${roomId}`,
+        },
+      },
     };
 
     const messageId = await adminMessaging.send(message);

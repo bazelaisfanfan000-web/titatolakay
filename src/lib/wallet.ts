@@ -267,59 +267,6 @@ export async function unlockBalance(
 }
 
 /**
- * Confirme un retrait en débitant le montant verrouillé
- * Débite balance et déverrouille lockedBalance
- */
-export async function confirmWithdrawal(
-  uid: string,
-  amount: number,
-  referenceId: string
-): Promise<BalanceResult> {
-  if (amount <= 0) {
-    return { success: false, error: "Le montant doit être positif" };
-  }
-
-  const userRef = adminDB.ref(`users/${uid}`);
-
-  const result = await userRef.transaction((current: any) => {
-    if (!current) {
-      return; // Annuler si le wallet n'existe pas
-    }
-
-    const balance = Number(current.balance || 0);
-    const lockedBalance = Number(current.lockedBalance || 0);
-
-    if (lockedBalance < amount) {
-      return; // Annuler si montant verrouillé insuffisant
-    }
-
-    if (balance < amount) {
-      return; // Annuler si balance insuffisante
-    }
-
-    return {
-      ...current,
-      balance: balance - amount,
-      lockedBalance: lockedBalance - amount,
-      updatedAt: Date.now()
-    };
-  });
-
-  if (!result.committed) {
-    return { success: false, error: "Transaction échouée" };
-  }
-
-  const data = result.snapshot.val();
-  console.log("[WALLET] Retrait confirmé:", { uid, amount, referenceId });
-
-  return {
-    success: true,
-    balance: Number(data?.balance || 0),
-    lockedBalance: Number(data?.lockedBalance || 0)
-  };
-}
-
-/**
  * Ajustement administratif du solde (avec audit)
  * À utiliser uniquement par les administrateurs
  */

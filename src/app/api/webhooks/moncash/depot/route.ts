@@ -6,14 +6,17 @@
 import { NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebaseAdmin";
 import { constructEvent, MonCashError } from "@moncashconnect/sdk";
-import { confirmWithdrawalTransaction, cancelWithdrawalTransaction } from "@/lib/atomicTransaction";
-import { createWithdrawalLedgerEntry } from "@/lib/ledger";
 import { sanitizeFirebaseKey } from "@/lib/firebaseUtils";
 import {
   completeMonCashDeposit,
   failMonCashDeposit,
   resolveDepositByReference,
 } from "@/lib/moncashDeposit";
+import {
+  findWithdrawalByPayoutReference,
+  updateWithdrawalStatus,
+} from "@/lib/firebase/withdrawal";
+import { creditWallet } from "@/lib/wallet";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -117,12 +120,12 @@ async function dispatchEvent(event: {
       return { httpSuccess: true, message: "failed_recorded" };
 
     case "payout.completed":
-      console.log("[MONCASH] Retrait complété reçu", { reference: event.reference });
+      console.log("[MONCASH] Payout complété reçu:", { reference: event.reference });
       await handlePayoutCompleted(event);
       return { httpSuccess: true, message: "payout_completed" };
 
     case "payout.failed":
-      console.log("[MONCASH] Retrait échoué reçu", { reference: event.reference });
+      console.log("[MONCASH] Payout échoué reçu:", { reference: event.reference });
       await handlePayoutFailed(event);
       return { httpSuccess: true, message: "payout_failed" };
 
@@ -233,6 +236,13 @@ export async function POST(request: Request) {
   }
 }
 
+// Export pour tests / récupération admin
+export { resolveDepositByReference, completeMonCashDeposit };
+
+/**
+ * Handler pour payout.completed
+ * Le retrait a réussi, on met à jour le statut
+ */
 async function handlePayoutCompleted(event: {
   reference: string;
   amount?: number;
@@ -240,116 +250,88 @@ async function handlePayoutCompleted(event: {
 }) {
   const { reference, amount, completedAt } = event;
 
-  const withdrawalsRef = adminDB.ref("withdrawals");
-  const withdrawalSnapshot = await withdrawalsRef
-    .orderByChild("moncashReference")
-    .equalTo(reference)
-    .once("value");
+  console.log("[PAYOUT] Traitement payout.completed:", { reference, amount });
 
-  if (!withdrawalSnapshot.exists()) {
-    console.error("[MONCASH] Retrait non trouvé:", reference);
+  // Trouver le retrait par référence
+  const withdrawal = await findWithdrawalByPayoutReference(reference);
+  
+  if (!withdrawal) {
+    console.error("[PAYOUT] Retrait non trouvé pour référence:", reference);
     return;
   }
 
-  let withdrawalData: Record<string, unknown> | null = null;
-  let withdrawalUserId = "";
-  let withdrawalKey = "";
+  const { userId, withdrawalId, withdrawal: withdrawalData } = withdrawal;
 
-  withdrawalSnapshot.forEach((childSnapshot) => {
-    const snap = childSnapshot as import("firebase-admin/database").DataSnapshot;
-    withdrawalUserId = snap.ref.parent?.key ?? "";
-    withdrawalKey = snap.key ?? "";
-    withdrawalData = snap.val() as Record<string, unknown>;
-  });
-
-  const data = withdrawalData as Record<string, unknown> | null;
-  if (!data || data.status !== "pending") {
+  // Vérifier que le retrait est en pending
+  if (withdrawalData.status !== "pending") {
+    console.log("[PAYOUT] Retrait déjà traité:", withdrawalData.status);
     return;
   }
 
-  if (Number(data.amount) !== Number(amount)) {
-    console.error("[MONCASH] Montant mismatch retrait", reference);
+  // Vérifier le montant
+  if (amount && Number(amount) !== withdrawalData.amount) {
+    console.error("[PAYOUT] Montant mismatch:", {
+      expected: withdrawalData.amount,
+      received: amount,
+    });
     return;
   }
 
-  const confirmResult = await confirmWithdrawalTransaction({
-    userId: withdrawalUserId,
-    amount: Number(data.amount),
-    referenceId: String(data.id),
-    moncashReference: reference,
-  });
-
-  if (!confirmResult.success) {
-    console.error("[MONCASH] Erreur confirmation retrait:", confirmResult.error);
-    return;
-  }
-
-  await adminDB.ref(`withdrawals/${withdrawalUserId}/${withdrawalKey}`).update({
-    status: "completed",
+  // Mettre à jour le statut à completed
+  await updateWithdrawalStatus(userId, withdrawalId, "completed", {
     completedAt: completedAt ? new Date(completedAt).getTime() : Date.now(),
   });
 
-  const ledgerResult = await createWithdrawalLedgerEntry(
-    withdrawalUserId,
-    Number(amount),
-    confirmResult.newBalance! + Number(amount),
-    confirmResult.newBalance!,
-    reference,
-    withdrawalKey
-  );
-
-  if (!ledgerResult.success) {
-    console.error("[MONCASH] Erreur ledger retrait:", ledgerResult.error);
-  }
+  console.log("[PAYOUT] Retrait marqué comme completed:", { userId, withdrawalId });
 }
 
-async function handlePayoutFailed(event: { reference: string; failureReason?: string }) {
-  const { reference, failureReason } = event;
+/**
+ * Handler pour payout.failed
+ * Le retrait a échoué, on recrédite le solde
+ */
+async function handlePayoutFailed(event: {
+  reference: string;
+  amount?: number;
+  failureReason?: string;
+}) {
+  const { reference, amount, failureReason } = event;
 
-  const withdrawalSnapshot = await adminDB
-    .ref("withdrawals")
-    .orderByChild("moncashReference")
-    .equalTo(reference)
-    .once("value");
+  console.log("[PAYOUT] Traitement payout.failed:", { reference, amount, failureReason });
 
-  if (!withdrawalSnapshot.exists()) {
+  // Trouver le retrait par référence
+  const withdrawal = await findWithdrawalByPayoutReference(reference);
+  
+  if (!withdrawal) {
+    console.error("[PAYOUT] Retrait non trouvé pour référence:", reference);
     return;
   }
 
-  let withdrawalData: Record<string, unknown> | null = null;
-  let withdrawalUserId = "";
-  let withdrawalKey = "";
+  const { userId, withdrawalId, withdrawal: withdrawalData } = withdrawal;
 
-  withdrawalSnapshot.forEach((childSnapshot) => {
-    const snap = childSnapshot as import("firebase-admin/database").DataSnapshot;
-    withdrawalUserId = snap.ref.parent?.key ?? "";
-    withdrawalKey = snap.key ?? "";
-    withdrawalData = snap.val() as Record<string, unknown>;
-  });
-
-  const data = withdrawalData as Record<string, unknown> | null;
-  if (!data || data.status !== "pending") {
+  // Vérifier que le retrait est en pending
+  if (withdrawalData.status !== "pending") {
+    console.log("[PAYOUT] Retrait déjà traité:", withdrawalData.status);
     return;
   }
 
-  const cancelResult = await cancelWithdrawalTransaction({
-    userId: withdrawalUserId,
-    amount: Number(data.amount),
-    referenceId: String(data.id),
-    failureReason: failureReason || "Retrait échoué",
-  });
+  // Recréditer le solde (rollback)
+  console.log("[PAYOUT] Recrédit du solde:", { userId, amount: withdrawalData.amount });
+  const creditResult = await creditWallet(userId, withdrawalData.amount, reference);
 
-  if (!cancelResult.success) {
-    console.error("[MONCASH] Erreur annulation retrait:", cancelResult.error);
+  if (!creditResult.success) {
+    console.error("[PAYOUT] CRITICAL: Recrédit échoué!", creditResult.error);
+    // Envoyer une alerte admin ici
     return;
   }
 
-  await adminDB.ref(`withdrawals/${withdrawalUserId}/${withdrawalKey}`).update({
-    status: "failed",
-    failureReason: failureReason || "Retrait échoué",
+  console.log("[PAYOUT] Solde recrédité avec succès:", creditResult);
+
+  // Mettre à jour le statut à failed
+  await updateWithdrawalStatus(userId, withdrawalId, "failed", {
     failedAt: Date.now(),
+    failureReason: failureReason || "Payout échoué",
+    error: failureReason || "Payout échoué",
   });
-}
 
-// Export pour tests / récupération admin
-export { resolveDepositByReference, completeMonCashDeposit };
+  console.log("[PAYOUT] Retrait marqué comme failed:", { userId, withdrawalId });
+}

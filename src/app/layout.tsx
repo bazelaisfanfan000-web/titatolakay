@@ -10,6 +10,8 @@ import Script from "next/script";
 
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
+import { SessionTimeoutProvider } from "@/context/SessionTimeoutContext";
+
 
 export const metadata: Metadata = {
 
@@ -74,6 +76,9 @@ return (
 <LanguageProvider>
 
 
+<SessionTimeoutProvider>
+
+
 <OnlineTracker />
 
 <ServiceWorkerRegistration />
@@ -93,6 +98,9 @@ strategy="afterInteractive"
 
 
 {children}
+
+
+</SessionTimeoutProvider>
 
 
 </LanguageProvider>

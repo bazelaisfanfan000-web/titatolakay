@@ -13,7 +13,7 @@ import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from "@/lib/rateLimit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MIN_DEPOSIT = 10;
+const MIN_DEPOSIT = 25;
 const MAX_DEPOSIT = 10000;
 
 export async function POST(request: Request) {
