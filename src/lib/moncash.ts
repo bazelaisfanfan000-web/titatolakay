@@ -48,17 +48,8 @@ export function validateMonCashConfig() {
 
   }
 
-
-  if (!API_KEY.startsWith("sk_proj_")) {
-
-    return {
-      valid:false,
-      error:
-      "Clé API invalide. Elle doit commencer par sk_proj_"
-    };
-
-  }
-
+  // Validation supprimée - la clé API MonCash peut avoir différents formats
+  // selon la configuration du compte
 
   return {
     valid:true
