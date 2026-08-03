@@ -367,7 +367,7 @@ export default function ReferralPage() {
                 "
               >
 
-                TiTaTo
+                Wincash
 
               </h1>
 

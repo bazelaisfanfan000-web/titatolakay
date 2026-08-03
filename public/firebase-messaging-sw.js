@@ -1,5 +1,5 @@
 /* =====================================================
-   TITATO - FIREBASE CLOUD MESSAGING SERVICE WORKER
+   Wincash - FIREBASE CLOUD MESSAGING SERVICE WORKER
    Compatible: iOS Safari, Android Chrome, Desktop Chrome/Edge
    ===================================================== */
 
@@ -109,7 +109,7 @@ messaging.onBackgroundMessage(
     const title =
       notification.title ||
       data.title ||
-      "🎮 TiTaTo";
+      "🎮 Wincash";
 
 
     /*
@@ -292,7 +292,7 @@ self.addEventListener(
 
             /*
             =============================================
-            SI TITATO EST DÉJÀ OUVERT
+            SI Wincash EST DÉJÀ OUVERT
             =============================================
             */
 
@@ -322,7 +322,7 @@ self.addEventListener(
 
             /*
             =============================================
-            SINON OUVRIR TITATO
+            SINON OUVRIR Wincash
             =============================================
             */
 

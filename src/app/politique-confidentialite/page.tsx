@@ -48,7 +48,7 @@ Dernière mise à jour : Juillet 2026
 </h2>
 
 <p className="text-gray-300 mt-2">
-Chez Titato, nous accordons une grande importance
+Chez Wincash, nous accordons une grande importance
 à la protection des informations personnelles de nos utilisateurs.
 Cette politique explique comment nous collectons,
 utilisons et protégeons vos données.
@@ -175,7 +175,7 @@ et au respect des obligations applicables.
 <p className="text-gray-300 mt-2">
 Les utilisateurs peuvent demander la correction
 ou la suppression de certaines informations personnelles
-en contactant le support Titato.
+en contactant le support Wincash.
 </p>
 
 </div>
@@ -203,7 +203,7 @@ d'améliorer la transparence et la sécurité du service.
 
 <p className="text-gray-300 mt-2">
 Pour toute question concernant la confidentialité,
-contactez l'équipe Titato.
+contactez l'équipe Wincash.
 </p>
 
 </div>

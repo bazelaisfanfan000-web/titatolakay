@@ -18,7 +18,7 @@ import BackButton
 
 /*
 ========================================
-PAGE CRÉER UNE PARTIE TITATO
+PAGE CRÉER UNE PARTIE Wincash
 ========================================
 */
 
@@ -194,7 +194,7 @@ export default function CreateRoomPage() {
                 name:
                   name.trim()
                     ? name.trim()
-                    : "Partie TiTaTo",
+                    : "Partie Wincash",
 
                 bet:
                   Number(bet),
@@ -377,7 +377,7 @@ export default function CreateRoomPage() {
                     event.target.value
                   )
                 }
-                placeholder="Ex. Duel TiTaTo"
+                placeholder="Ex. Duel Wincash"
                 maxLength={
                   40
                 }

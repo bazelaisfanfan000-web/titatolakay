@@ -11,7 +11,7 @@ Le client ne doit jamais décider du gagnant.
 */
 
 /**
- * Structure du plateau Titato (tableau 2D)
+ * Structure du plateau Wincash (tableau 2D)
  * Le plateau est stocké comme un tableau 2D: board[row][col]
  */
 export type BoardCell = 'X' | 'O' | null;

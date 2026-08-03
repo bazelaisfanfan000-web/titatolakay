@@ -1,6 +1,6 @@
 /*
 ====================================================
-VALIDATION STRICTE DES MISES - TITATO
+VALIDATION STRICTE DES MISES - Wincash
 ====================================================
 Empêche tout contournement de la validation des mises
 */

@@ -1,6 +1,6 @@
 /*
 ====================================================
-TESTS DE SÉCURITÉ - TITATO
+TESTS DE SÉCURITÉ - Wincash
 ====================================================
 
 Ces tests simulent des attaques pour vérifier

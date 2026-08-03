@@ -27,7 +27,7 @@
     {
       "name": "Créer une partie",
       "short_name": "Créer",
-      "description": "Créer une nouvelle partie de TiTaTo",
+      "description": "Créer une nouvelle partie de Wincash",
       "url": "/create-room",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },

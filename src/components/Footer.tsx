@@ -49,7 +49,7 @@ Anti-fraude
 
 
 <p className="text-center mt-5 text-xs">
-© {new Date().getFullYear()} Titato. Tous droits réservés.
+© {new Date().getFullYear()} Wincash. Tous droits réservés.
 </p>
 
 

@@ -618,7 +618,7 @@ export default function RoomPage() {
             >
 
               {room.name ||
-                "Partie TiTaTo"}
+                "Partie Wincash"}
 
             </h3>
 
@@ -631,7 +631,7 @@ export default function RoomPage() {
               "
             >
 
-              ⭕ TiTaTo
+              ⭕ Wincash
               {" • "}
               {room.mode ||
                 "1vs1"}
@@ -1197,7 +1197,7 @@ export default function RoomPage() {
           "
         >
 
-          TiTaTo • Le créateur démarre la partie
+          Wincash • Le créateur démarre la partie
 
         </p>
 

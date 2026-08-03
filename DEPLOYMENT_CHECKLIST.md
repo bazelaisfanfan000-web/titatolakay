@@ -1,4 +1,4 @@
-# TiTaTo Financial System Refactor - Deployment Checklist
+# Wincash Financial System Refactor - Deployment Checklist
 
 ## Pré-déploiement
 

@@ -145,6 +145,18 @@ export default function GamePage() {
   ] = useState(false);
 
 
+  const [
+    showQuitModal,
+    setShowQuitModal,
+  ] = useState(false);
+
+
+  const [
+    quitLoading,
+    setQuitLoading,
+  ] = useState(false);
+
+
   const paymentDone =
     useRef(false);
 
@@ -736,6 +748,52 @@ export default function GamePage() {
 
   /*
   ========================================
+  QUITTER LA PARTIE
+  ========================================
+  */
+
+  async function handleQuitGame() {
+    const user = auth.currentUser;
+
+    if (!user) {
+      setGameMessage("❌ Utilisateur non connecté");
+      setTimeout(() => setGameMessage(""), 3000);
+      return;
+    }
+
+    try {
+      setQuitLoading(true);
+
+      const idToken = await user.getIdToken();
+      const response = await fetch("/api/game/quit", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${idToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ gameId: id })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setShowQuitModal(false);
+        router.push("/dashboard");
+      } else {
+        setGameMessage("❌ " + (data.error || "Erreur lors de l'abandon"));
+        setTimeout(() => setGameMessage(""), 3000);
+      }
+    } catch (error) {
+      setGameMessage("❌ Erreur lors de l'abandon de la partie");
+      setTimeout(() => setGameMessage(""), 3000);
+    } finally {
+      setQuitLoading(false);
+    }
+  }
+
+
+  /*
+  ========================================
   AJOUTER L'ADVERSAIRE COMME AMI VYLO
   ========================================
   */
@@ -1210,6 +1268,49 @@ export default function GamePage() {
 
           </div>
 
+
+          <button
+            type="button"
+            onClick={() => setShowQuitModal(true)}
+            className="
+              ml-3
+              shrink-0
+              rounded-xl
+              border-2
+              border-red-500/40
+              bg-gradient-to-br
+              from-red-500/20
+              to-red-600/10
+              px-4
+              py-2
+              text-center
+              transition-all
+              duration-300
+              hover:scale-105
+              hover:border-red-500/60
+              hover:from-red-500/30
+              hover:to-red-600/20
+              hover:shadow-[0_0_20px_rgba(239,68,68,0.3)]
+              active:scale-95
+              animate-pulse
+            "
+          >
+
+            <p
+              className="
+                text-[8px]
+                font-black
+                text-red-400
+                tracking-wider
+              "
+            >
+
+              ⚠️ QUITTER
+
+            </p>
+
+          </button>
+
         </header>
 
 
@@ -1481,6 +1582,157 @@ export default function GamePage() {
 
           )
         }
+
+
+        {/* MODAL QUITTER LA PARTIE */}
+
+        {showQuitModal && (
+          <div
+            className="
+              fixed
+              inset-0
+              z-[200]
+              flex
+              items-center
+              justify-center
+              bg-black/80
+              px-4
+            "
+          >
+
+            <div
+              className="
+                w-full
+                max-w-[360px]
+                rounded-2xl
+                border
+                border-red-400/30
+                bg-[#0a0a0a]
+                p-5
+                shadow-[0_10px_50px_rgba(0,0,0,0.8)]
+              "
+            >
+
+              <div
+                className="
+                  mb-4
+                  text-center
+                "
+              >
+
+                <div
+                  className="
+                    mx-auto
+                    mb-3
+                    flex
+                    h-14
+                    w-14
+                    items-center
+                    justify-center
+                    rounded-full
+                    border-2
+                    border-red-400/30
+                    bg-red-500/10
+                    text-2xl
+                  "
+                >
+
+                  ⚠️
+
+                </div>
+
+                <h3
+                  className="
+                    text-[15px]
+                    font-black
+                    text-white
+                  "
+                >
+
+                  Quitter la partie ?
+
+                </h3>
+
+                <p
+                  className="
+                    mt-2
+                    text-[10px]
+                    text-white/60
+                    leading-relaxed
+                  "
+                >
+
+                  Si vous quittez la partie, vous perdrez votre mise de {room?.bet?.toLocaleString("fr-FR")} HTG. Votre adversaire gagnera automatiquement.
+
+                </p>
+
+              </div>
+
+              <div
+                className="
+                  flex
+                  gap-3
+                "
+              >
+
+                <button
+                  type="button"
+                  onClick={() => setShowQuitModal(false)}
+                  disabled={quitLoading}
+                  className="
+                    flex-1
+                    rounded-xl
+                    border
+                    border-white/10
+                    bg-white/5
+                    px-4
+                    py-3
+                    text-[11px]
+                    font-bold
+                    text-white/70
+                    transition
+                    hover:bg-white/10
+                    active:scale-95
+                    disabled:opacity-40
+                  "
+                >
+
+                  Annuler
+
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleQuitGame}
+                  disabled={quitLoading}
+                  className="
+                    flex-1
+                    rounded-xl
+                    border
+                    border-red-400/30
+                    bg-red-500/20
+                    px-4
+                    py-3
+                    text-[11px]
+                    font-bold
+                    text-red-400
+                    transition
+                    hover:bg-red-500/30
+                    active:scale-95
+                    disabled:opacity-40
+                  "
+                >
+
+                  {quitLoading ? "Quitter..." : "Quitter"}
+
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+        )}
 
 
         {/* CHARGEMENT DEMANDE AMI */}

@@ -30,7 +30,7 @@ import { Bell, X } from "lucide-react";
 
 /*
 ====================================================
-DASHBOARD TITATO
+DASHBOARD Wincash
 ====================================================
 */
 

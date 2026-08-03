@@ -466,7 +466,7 @@ text-white/30
 
 >
 
-Connecte-toi pour rejoindre TiTaTo et jouer avec tes amis.
+Connecte-toi pour rejoindre Wincash et jouer avec tes amis.
 
 </p>
 

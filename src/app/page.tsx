@@ -91,7 +91,7 @@ export default function Home() {
               </h1>
 
               <p className="mt-2 text-xs leading-5 text-white/35">
-                Crée ton compte ou connecte-toi pour rejoindre l'univers TiTaTo.
+                Crée ton compte ou connecte-toi pour rejoindre l'univers Wincash.
               </p>
             </div>
 
@@ -176,7 +176,7 @@ export default function Home() {
               <div className="h-px flex-1 bg-white/[0.06]" />
 
               <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/20">
-                Pourquoi TiTaTo ?
+                Pourquoi Wincash ?
               </span>
 
               <div className="h-px flex-1 bg-white/[0.06]" />
@@ -223,7 +223,7 @@ export default function Home() {
 
 
           <p className="mt-5 text-center text-[8px] text-white/15">
-            TiTaTo • Version Beta
+           Wincash • Version Beta
           </p>
 
         </motion.section>

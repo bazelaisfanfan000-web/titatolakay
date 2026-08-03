@@ -169,7 +169,7 @@ newBalance;
 notificationPromises.push(
 sendPushNotification(
 uid,
-"📢 Message Titato",
+"📢 Message Wincash",
 message || "Bienvenue dans la nouvelle version",
 {
 type:"system",

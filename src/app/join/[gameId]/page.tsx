@@ -160,7 +160,7 @@ export default function JoinGameById() {
 
       const roomData: Room = {
         id: gameId,
-        name: data.name || "Partie TiTaTo",
+        name: data.name || "Partie Wincash",
         bet: Number(data.bet || 0),
         mode: data.mode || "1v1",
         gameType: data.gameType || "titato",
@@ -459,7 +459,7 @@ export default function JoinGameById() {
             "
           >
 
-            Détails de la partie TiTaTo
+            Détails de la partie wincash
 
           </p>
 
@@ -701,7 +701,7 @@ export default function JoinGameById() {
                     "
                   >
 
-                    TiTaTo · {room.mode.toUpperCase()}
+                    Wincash · {room.mode.toUpperCase()}
 
                   </p>
 

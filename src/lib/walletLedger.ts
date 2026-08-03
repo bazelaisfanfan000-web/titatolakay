@@ -1175,7 +1175,7 @@ export async function creditWin(
         "completed",
 
       description:
-        "Gain de partie TiTaTo",
+        "Gain de partie WincashS",
 
     }
 
@@ -1218,7 +1218,7 @@ export async function debitBet(
         "completed",
 
       description:
-        "Mise de partie TiTaTo",
+        "Mise de partie Wincash",
 
     }
 
@@ -1261,7 +1261,7 @@ export async function addCommission(
         "completed",
 
       description:
-        "Commission TiTaTo",
+        "Commission Wincash",
 
     }
 

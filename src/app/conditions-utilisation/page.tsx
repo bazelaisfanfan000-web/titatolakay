@@ -48,7 +48,7 @@ Dernière mise à jour : Juillet 2026
 </h2>
 
 <p className="text-gray-300 mt-2">
-En créant un compte ou en utilisant Titato,
+En créant un compte ou en utilisant Wincash,
 vous acceptez les présentes conditions d'utilisation.
 Si vous n'acceptez pas ces conditions,
 vous ne devez pas utiliser la plateforme.
@@ -59,7 +59,7 @@ vous ne devez pas utiliser la plateforme.
 
 <div>
 <h2 className="text-xl font-bold text-blue-400">
-2. Présentation de Titato
+2. Présentation de Wincash
 </h2>
 
 <p className="text-gray-300 mt-2">
@@ -198,7 +198,7 @@ la sécurité et le fonctionnement du service.
 
 <p className="text-gray-300 mt-2">
 Pour toute question concernant ces conditions,
-les utilisateurs peuvent contacter le support Titato.
+les utilisateurs peuvent contacter le support Wincash.
 </p>
 </div>
 

@@ -388,7 +388,7 @@ export async function POST(
         typeof name === "string" &&
         name.trim()
           ? name.trim()
-          : "Partie TiTaTo",
+          : "Partie Wincash",
 
 
       bet:

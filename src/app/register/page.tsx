@@ -540,7 +540,7 @@ function RegisterContent() {
               text-white/30
             "
           >
-            Rejoins TiTaTo et commence à jouer avec tes amis.
+            Rejoins Wincash et commence à jouer avec tes amis.
           </p>
 
 
@@ -795,7 +795,7 @@ function RegisterContent() {
             text-white/15
           "
         >
-          TiTaTo • Version Beta
+          Wincash • Version Beta
         </p>
 
 

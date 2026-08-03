@@ -149,7 +149,7 @@ export default function JoinGame() {
 
                 /*
                 ----------------------------------
-                SEULEMENT TITATO
+                SEULEMENT Wincash
                 ----------------------------------
                 */
 
@@ -218,7 +218,7 @@ export default function JoinGame() {
 
                   name:
                     room.name ||
-                    "Partie TiTaTo",
+                    "Partie Wincash",
 
                   bet:
                     Number(
@@ -541,7 +541,7 @@ export default function JoinGame() {
             "
           >
 
-            Trouvez une partie TiTaTo disponible.
+            Trouvez une partie Wincash disponible.
 
           </p>
 
@@ -832,7 +832,7 @@ export default function JoinGame() {
                         "
                       >
 
-                        TiTaTo · 1 VS 1
+                        Wincash · 1 VS 1
 
                       </p>
 

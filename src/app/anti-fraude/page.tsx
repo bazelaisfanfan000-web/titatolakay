@@ -65,7 +65,7 @@ l'équité des parties.
 </h2>
 
 <p className="text-gray-300 mt-2">
-Il est interdit d'utiliser Titato pour :
+Il est interdit d'utiliser Wincash pour :
 </p>
 
 
@@ -113,7 +113,7 @@ les abus ou les tentatives de fraude.
 </h2>
 
 <p className="text-gray-300 mt-2">
-Dans certaines situations, Titato peut demander
+Dans certaines situations, Wincash peut demander
 des informations supplémentaires afin de confirmer
 la sécurité d'un compte ou d'une transaction.
 </p>
@@ -179,7 +179,7 @@ transaction considérée comme suspecte.
 
 <p className="text-gray-300 mt-2">
 Les utilisateurs peuvent signaler tout comportement
-suspect au support Titato afin de maintenir
+suspect au support Wincash afin de maintenir
 une plateforme équitable.
 </p>
 
@@ -195,7 +195,7 @@ une plateforme équitable.
 
 <p className="text-gray-300 mt-2">
 Pour toute question concernant la sécurité,
-contactez l'équipe Titato.
+contactez l'équipe Wincash.
 </p>
 
 </div>

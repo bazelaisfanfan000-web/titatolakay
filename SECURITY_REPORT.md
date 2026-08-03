@@ -1,4 +1,4 @@
-# 🔒 RAPPORT DE SÉCURITÉ - TITATO
+# 🔒 RAPPORT DE SÉCURITÉ - Wincash
 
 **Date :** 30 Juillet 2026  
 **Type d'audit :** Correction complète et hardening  
@@ -175,7 +175,7 @@
 
 ### Le système peut-il gérer de l'argent réel ? **OUI** (avec déploiement Firebase Rules)
 
-Après les corrections appliquées, le système Titato est **significativement plus sécurisé** et prêt pour gérer de l'argent réel, sous réserve de :
+Après les corrections appliquées, le système Wincash est **significativement plus sécurisé** et prêt pour gérer de l'argent réel, sous réserve de :
 
 1. ✅ **DÉPLOIEMENT OBLIGATOIRE** des Firebase Rules
 2. ✅ Configuration correcte des variables d'environnement

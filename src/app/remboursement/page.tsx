@@ -49,7 +49,7 @@ Dernière mise à jour : Juillet 2026
 </h2>
 
 <p className="text-gray-300 mt-2">
-Les dépôts effectués sur Titato sont ajoutés au portefeuille
+Les dépôts effectués sur Wincash sont ajoutés au portefeuille
 de l'utilisateur après confirmation du paiement par le service
 de paiement utilisé.
 </p>
@@ -95,7 +95,7 @@ ne peut généralement pas être annulée.
 
 <p className="text-gray-300 mt-2">
 En cas de problème technique empêchant le bon déroulement
-d'une partie, Titato peut effectuer une analyse afin
+d'une partie, Wincash peut effectuer une analyse afin
 de déterminer la meilleure solution :
 </p>
 
@@ -134,7 +134,7 @@ Les délais peuvent dépendre du service de paiement utilisé.
 
 <p className="text-gray-300 mt-2">
 Si une erreur technique provoque un crédit ou un paiement
-incorrect, Titato peut corriger la transaction après
+incorrect, Wincash peut corriger la transaction après
 vérification.
 </p>
 
@@ -163,7 +163,7 @@ de fraude peut être bloquée pendant une enquête.
 
 <p className="text-gray-300 mt-2">
 Pour toute demande concernant une transaction,
-l'utilisateur peut contacter le support Titato.
+l'utilisateur peut contacter le support Wincash.
 </p>
 
 </div>

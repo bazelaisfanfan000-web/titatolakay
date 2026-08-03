@@ -26,7 +26,7 @@ import {
 
 /*
 ====================================================
-COMPTE À REBOURS TITATO
+COMPTE À REBOURS Wincash
 ====================================================
 */
 
@@ -60,7 +60,7 @@ export default function CountdownPage() {
   const [
     roomName,
     setRoomName,
-  ] = useState("Partie TiTaTo");
+  ] = useState("Partie Wincash");
 
 
   /*
@@ -203,7 +203,7 @@ export default function CountdownPage() {
 
           setRoomName(
             room.name ||
-            "Partie TiTaTo"
+            "Partie Wincash"
           );
 
 
@@ -484,7 +484,7 @@ export default function CountdownPage() {
           "
         >
 
-          TiTaTo
+          Wincash
 
         </h1>
 
