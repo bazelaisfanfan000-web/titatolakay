@@ -1098,7 +1098,7 @@ export default function Dashboard() {
                     text-purple-100
                   "
                 >
-                  inviter et gagnez sans jouer
+                  inviter et gagnez de l'argent
                 </h4>
 
                 <p
