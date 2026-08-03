@@ -605,25 +605,43 @@ export async function POST(
 
     /*
     ================================================
+    DONNÉES NOTIFICATION
+    ================================================
+    */
+
+    const notificationTitle =
+      friendId
+        ? "🎮 Invitation partie"
+        : "🎮 Nouvelle partie disponible";
+
+    const notificationMessage =
+      friendId
+        ? `${playerName} t'invite à rejoindre une partie de ${amount} HTG.`
+        : `${playerName} a créé une partie de ${amount} HTG. Rejoins-la maintenant !`;
+
+    /*
+    ================================================
     NOTIFICATION BROADCAST À TOUS LES UTILISATEURS
     ================================================
     */
 
     // Envoyer une notification à tous les utilisateurs inscrits
-    // SEULEMENT si la partie existe et est en statut "waiting"
-    notificationPromises.push(
-      notifyNewGame(roomId, amount, playerName)
-        .then(result => {
-          if (result.success) {
-            console.log("[BROADCAST] Notification envoyée:", result);
-          } else {
-            console.warn("[BROADCAST] Notification non envoyée:", result.error);
-          }
-        })
-        .catch(error => {
-          console.error("[BROADCAST] Erreur notification:", error);
-        })
-    );
+    // SEULEMENT si c'est une partie publique (pas de friendId)
+    if (!friendId) {
+      notificationPromises.push(
+        notifyNewGame(roomId, amount, playerName)
+          .then(result => {
+            if (result.success) {
+              console.log("[BROADCAST] Notification envoyée:", result);
+            } else {
+              console.warn("[BROADCAST] Notification non envoyée:", result.error);
+            }
+          })
+          .catch(error => {
+            console.error("[BROADCAST] Erreur notification:", error);
+          })
+      );
+    }
 
     /*
     ================================================
@@ -638,52 +656,31 @@ export async function POST(
 
       /*
       ==============================================
-      DONNÉES NOTIFICATION
+      NOTIFICATION INDIVIDUELLE (SEULEMENT POUR PARTIE PRIVÉE)
       ==============================================
       */
 
-      const notificationTitle =
-        friendId
-          ? "🎮 Invitation partie"
-          : "🎮 Nouvelle partie disponible";
-
-
-      const notificationMessage =
-        friendId
-          ? `${playerName} t'invite à rejoindre une partie de ${amount} HTG.`
-          : `${playerName} a créé une partie de ${amount} HTG. Rejoins-la maintenant !`;
-
+      // Envoyer notification individuelle SEULEMENT si c'est une partie privée (friendId)
+      if (friendId) {
+        notificationPromises.push(
+          sendPushNotification(
+            userId,
+            notificationTitle,
+            notificationMessage,
+            {
+              type: "game",
+              roomId,
+              link: `/game/${roomId}`,
+            }
+          )
+        );
+      }
 
       /*
       ==============================================
       NOTIFICATION FIRESTORE
       ==============================================
       */
-
-      notificationPromises.push(
-
-        sendPushNotification(
-
-          userId,
-
-          notificationTitle,
-
-          notificationMessage,
-
-          {
-            type:
-              "game",
-
-            roomId,
-
-            link:
-              `/game/${roomId}`,
-
-          }
-
-        )
-
-      );
 
 
       /*

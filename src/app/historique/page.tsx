@@ -55,44 +55,66 @@ export default function Historique() {
     });
   };
 
-  const getTransactionIcon = (type: string) => {
-    switch (type) {
-      case "GAME_WIN":
-        return "🏆";
-      case "GAME_LOSS":
-        return "😢";
-      case "bet":
-        return "🎮";
-      case "deposit":
-        return "💰";
-      case "withdraw":
-        return "💸";
-      default:
-        return "📋";
+  const getTransactionIcon = (type: string, status?: string) => {
+    if (type === "game_win") return "🏆";
+    if (type === "game_loss") return "😢";
+    if (type === "deposit") {
+      if (status === "completed") return "�";
+      if (status === "failed") return "❌";
+      return "⏳";
     }
+    if (type === "withdraw") {
+      if (status === "completed") return "�";
+      if (status === "failed") return "❌";
+      return "⏳";
+    }
+    if (type === "game_bet") return "🎮";
+    if (type === "referral_commission") return "🎁";
+    return "📋";
   };
 
-  const getTransactionLabel = (type: string) => {
-    switch (type) {
-      case "GAME_WIN":
-        return "Partie gagnée";
-      case "GAME_LOSS":
-        return "Partie perdue";
-      case "bet":
-        return "Mise";
-      case "deposit":
-        return "Dépôt";
-      case "withdraw":
-        return "Retrait";
-      default:
-        return type;
+  const getTransactionLabel = (type: string, status?: string) => {
+    if (type === "game_win") return "Partie gagnée";
+    if (type === "game_loss") return "Partie perdue";
+    if (type === "deposit") {
+      if (status === "completed") return "Dépôt réussi";
+      if (status === "failed") return "Dépôt échoué";
+      return "Dépôt en cours";
     }
+    if (type === "withdraw") {
+      if (status === "completed") return "Retrait réussi";
+      if (status === "failed") return "Retrait échoué";
+      return "Retrait en cours";
+    }
+    if (type === "game_bet") return "Mise";
+    if (type === "referral_commission") return "Commission parrainage";
+    return type;
   };
 
-  const getTransactionColor = (type: string, amount: number) => {
+  const getTransactionColor = (type: string, amount: number, status?: string) => {
+    if (status === "failed") return "text-red-400";
+    if (status === "pending" || status === "processing" || status === "queued") return "text-yellow-400";
     if (amount > 0) return "text-green-400";
     if (amount < 0) return "text-red-400";
     return "text-white/70";
+  };
+
+  const getStatusBadge = (status?: string) => {
+    if (!status) return null;
+    const statusConfig: Record<string, { label: string; color: string }> = {
+      completed: { label: "Réussi", color: "bg-green-500/20 text-green-400" },
+      failed: { label: "Échoué", color: "bg-red-500/20 text-red-400" },
+      pending: { label: "En cours", color: "bg-yellow-500/20 text-yellow-400" },
+      processing: { label: "En cours", color: "bg-yellow-500/20 text-yellow-400" },
+      queued: { label: "En attente", color: "bg-yellow-500/20 text-yellow-400" }
+    };
+    const config = statusConfig[status];
+    if (!config) return null;
+    return (
+      <span className={`px-2 py-0.5 rounded-full text-[8px] font-medium ${config.color}`}>
+        {config.label}
+      </span>
+    );
   };
 
   return (
@@ -142,22 +164,41 @@ export default function Historique() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-xl">
-                      {getTransactionIcon(item.type)}
+                      {getTransactionIcon(item.type, item.status)}
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-[11px] font-bold text-white/90">
-                          {getTransactionLabel(item.type)}
+                          {getTransactionLabel(item.type, item.status)}
                         </p>
-                        <p className={`text-[11px] font-black ${getTransactionColor(item.type, item.amount)}`}>
+                        <p className={`text-[11px] font-black ${getTransactionColor(item.type, item.amount, item.status)}`}>
                           {item.amount > 0 ? "+" : ""}{item.amount.toLocaleString("fr-FR")} HTG
                         </p>
                       </div>
 
-                      {item.bet && (
-                        <p className="mt-1 text-[9px] text-white/40">
-                          Mise: {item.bet.toLocaleString("fr-FR")} HTG
+                      <div className="flex items-center gap-2 mt-1">
+                        {getStatusBadge(item.status)}
+                        {item.bet && (
+                          <p className="text-[9px] text-white/40">
+                            Mise: {item.bet.toLocaleString("fr-FR")} HTG
+                          </p>
+                        )}
+                        {item.netAmount && item.type === "withdraw" && (
+                          <p className="text-[9px] text-white/40">
+                            Net: {item.netAmount.toLocaleString("fr-FR")} HTG
+                          </p>
+                        )}
+                        {item.fee && (
+                          <p className="text-[9px] text-white/40">
+                            Frais: {item.fee.toLocaleString("fr-FR")} HTG
+                          </p>
+                        )}
+                      </div>
+
+                      {item.failureReason && item.status === "failed" && (
+                        <p className="mt-1 text-[9px] text-red-400">
+                          {item.failureReason}
                         </p>
                       )}
 
