@@ -181,6 +181,56 @@ export async function POST(request: Request) {
 
     console.log("[WITHDRAW] Utilisateur authentifié:", userId);
 
+    // Vérification wagering avant retrait
+    const wageringUserSnap = await adminDB.ref(`users/${userId}`).once("value");
+    if (!wageringUserSnap.exists()) {
+      console.error("[WITHDRAW] Utilisateur introuvable:", userId);
+      return NextResponse.json(
+        { success: false, error: "Utilisateur introuvable" },
+        { status: 404 }
+      );
+    }
+
+    const user = wageringUserSnap.val();
+    const totalDeposits = Number(user.totalDeposits || 0);
+    const wageringCompleted = Number(user.wageringCompleted || 0);
+    const wageringRequired = Number(user.wageringRequired || 0);
+
+    // Si l'utilisateur a des dépôts, vérifier le wagering
+    if (totalDeposits > 0) {
+      const calculatedWageringRequired = totalDeposits * 2;
+      const canWithdraw = wageringCompleted >= calculatedWageringRequired;
+      
+      if (!canWithdraw) {
+        const remaining = calculatedWageringRequired - wageringCompleted;
+        const progress = (wageringCompleted / calculatedWageringRequired) * 100;
+        
+        console.log("[WITHDRAW] Wagering non complété:", {
+          userId,
+          totalDeposits,
+          wageringCompleted,
+          wageringRequired: calculatedWageringRequired,
+          progress: progress.toFixed(2) + "%",
+          remaining
+        });
+        
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: `Vous devez encore miser ${remaining} HTG avant de pouvoir retirer (${progress.toFixed(0)}% complété)`,
+            wageringBlocked: true,
+            wageringCompleted,
+            wageringRequired: calculatedWageringRequired,
+            progress: Math.min(progress, 100),
+            remaining
+          },
+          { status: 403 }
+        );
+      }
+      
+      console.log("[WITHDRAW] Wagering complété, retrait autorisé:", { userId });
+    }
+
     const body: WithdrawRequest = await request.json();
     const { amount, moncashNumber } = body;
 

@@ -93,35 +93,52 @@ export async function creditWallet(
 
   const userRef = adminDB.ref(`users/${uid}`);
 
-  const result = await userRef.transaction((current: any) => {
-    if (!current) {
-      // NE PAS créer le wallet s'il n'existe pas
-      // Cela pourrait indiquer un utilisateur supprimé ou invalide
-      console.error("[WALLET] Tentative de crédit pour utilisateur inexistant:", uid);
-      return; // Annuler la transaction
+  // Retry pour les conflits concurrents
+  const maxRetries = 3;
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const result = await userRef.transaction((current: any) => {
+      if (!current) {
+        // Créer le wallet s'il n'existe pas (pour les commissions de parrainage)
+        console.log("[WALLET] Création automatique du wallet pour:", uid);
+        return {
+          balance: amount,
+          lockedBalance: 0,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        };
+      }
+
+      return {
+        ...current,
+        balance: Number(current.balance || 0) + amount,
+        updatedAt: Date.now()
+      };
+    });
+
+    if (result.committed) {
+      const newBalance = result.snapshot.val()?.balance || 0;
+      console.log("[WALLET] Crédit réussi:", { uid, amount, newBalance, referenceId, attempt });
+      return { success: true, balance: newBalance };
     }
 
-    return {
-      ...current,
-      balance: Number(current.balance || 0) + amount,
-      updatedAt: Date.now()
-    };
-  });
-
-  if (!result.committed) {
-    console.error("[WALLET] Transaction non committed - possible conflit concurrent:", {
-      uid,
-      amount,
-      referenceId,
-      snapshot: result.snapshot
-    });
-    return { success: false, error: "Transaction Firebase échouée ou utilisateur inexistant" };
+    lastError = result.snapshot;
+    console.log("[WALLET] Transaction échouée, tentative", attempt + 1, "sur", maxRetries);
+    
+    // Attendre un peu avant de réessayer
+    if (attempt < maxRetries - 1) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   }
 
-  const newBalance = result.snapshot.val()?.balance || 0;
-  console.log("[WALLET] Crédit réussi:", { uid, amount, newBalance, referenceId });
-
-  return { success: true, balance: newBalance };
+  console.error("[WALLET] Transaction échouée après", maxRetries, "tentatives:", {
+    uid,
+    amount,
+    referenceId,
+    lastError
+  });
+  return { success: false, error: "Transaction Firebase échouée après plusieurs tentatives" };
 }
 
 /**

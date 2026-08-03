@@ -21,7 +21,15 @@ const BASE_URL =
   "https://api.moncashconnect.com/v1";
 
 
-const API_KEY =
+const PAYMENT_API_KEY =
+  process.env.MONCASH_PAYMENT_KEY ||
+  process.env.MONCASHCONNECT_SECRET_KEY ||
+  process.env.MONCASH_API_KEY ||
+  "";
+
+
+const PAYOUT_API_KEY =
+  process.env.MONCASH_PAYOUT_KEY ||
   process.env.MONCASHCONNECT_SECRET_KEY ||
   process.env.MONCASH_API_KEY ||
   "";
@@ -36,14 +44,16 @@ const WEBHOOK_SECRET =
 /**
  * Vérification configuration MonCash
  */
-export function validateMonCashConfig() {
+export function validateMonCashConfig(type: 'payment' | 'payout' = 'payment') {
 
-  if (!API_KEY) {
+  const apiKey = type === 'payment' ? PAYMENT_API_KEY : PAYOUT_API_KEY;
+
+  if (!apiKey) {
 
     return {
       valid:false,
       error:
-      "Clé API MonCash manquante"
+      `Clé API MonCash manquante pour ${type}`
     };
 
   }
@@ -109,7 +119,7 @@ export async function createMonCashPayment(
 
 
   const config =
-    validateMonCashConfig();
+    validateMonCashConfig('payment');
 
 
   if(!config.valid){
@@ -148,7 +158,7 @@ export async function createMonCashPayment(
         headers:{
 
           Authorization:
-          `Bearer ${API_KEY}`,
+          `Bearer ${PAYMENT_API_KEY}`,
 
           "Content-Type":
           "application/json",
@@ -211,7 +221,7 @@ export async function getPaymentStatus(
 
 
   const config =
-    validateMonCashConfig();
+    validateMonCashConfig('payment');
 
 
 
@@ -233,7 +243,7 @@ export async function getPaymentStatus(
         headers:{
 
           Authorization:
-          `Bearer ${API_KEY}`
+          `Bearer ${PAYMENT_API_KEY}`
 
         }
 
@@ -272,7 +282,7 @@ export async function createMonCashPayout(
 
 
   const config =
-    validateMonCashConfig();
+    validateMonCashConfig('payout');
 
 
   if (!config.valid) {
@@ -368,7 +378,7 @@ export async function createMonCashPayout(
         headers:{
 
           Authorization:
-          `Bearer ${API_KEY}`,
+          `Bearer ${PAYOUT_API_KEY}`,
 
           "Content-Type":
           "application/json",
@@ -494,7 +504,7 @@ export async function getMerchantBalance()
         headers:{
 
           Authorization:
-          `Bearer ${API_KEY}`
+          `Bearer ${PAYMENT_API_KEY}`
 
         }
 

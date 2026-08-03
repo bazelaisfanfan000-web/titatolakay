@@ -665,6 +665,155 @@ export default function RulesPage() {
           </div>
 
 
+          {/* 🔒 Condition de retrait */}
+
+          <div
+            className="
+              rounded-2xl
+              border
+              border-orange-500/30
+              bg-orange-500/[0.08]
+              backdrop-blur-md
+              p-4
+              shadow-[0_8px_30px_rgba(0,0,0,0.2)]
+            "
+          >
+
+
+            <div
+              className="
+                flex
+                items-center
+                gap-3
+                mb-3
+              "
+            >
+
+
+              <div
+                className="
+                  flex
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-xl
+                  border
+                  border-orange-500/30
+                  bg-orange-500/15
+                  text-lg
+                "
+              >
+
+                🔒
+
+              </div>
+
+
+              <h3
+                className="
+                  text-[13px]
+                  font-black
+                  text-orange-300
+                "
+              >
+
+                Condition de retrait
+
+              </h3>
+
+
+            </div>
+
+
+            <ul
+              className="
+                space-y-2
+                text-[10px]
+                leading-4
+                text-white/70
+              "
+            >
+
+
+              <li
+                className="
+                  flex
+                  items-start
+                  gap-2
+                "
+              >
+
+                <span
+                  className="
+                    mt-1
+                    h-1
+                    w-1
+                    shrink-0
+                    rounded-full
+                    bg-orange-400
+                  "
+                />
+
+                <span className="text-orange-200 font-bold">IMPORTANT :</span> Pour pouvoir effectuer un retrait, vous devez avoir joué un montant total égal à <span className="text-orange-300 font-bold">2 fois le montant de vos dépôts</span>.
+
+              </li>
+
+
+              <li
+                className="
+                  flex
+                  items-start
+                  gap-2
+                "
+              >
+
+                <span
+                  className="
+                    mt-1
+                    h-1
+                    w-1
+                    shrink-0
+                    rounded-full
+                    bg-orange-400
+                  "
+                />
+
+                Exemple : Si vous déposez 100 HTG, vous devez miser 200 HTG dans les parties avant de pouvoir retirer.
+
+              </li>
+
+
+              <li
+                className="
+                  flex
+                  items-start
+                  gap-2
+                "
+              >
+
+                <span
+                  className="
+                    mt-1
+                    h-1
+                    w-1
+                    shrink-0
+                    rounded-full
+                    bg-orange-400
+                  "
+                />
+
+                Cette règle s'applique à tous les dépôts pour garantir l'équité du système.
+
+              </li>
+
+
+            </ul>
+
+
+          </div>
+
+
           {/* 🏦 Frais de plateforme */}
 
           <div

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { auth } from "@/lib/firebase";
+import WageringProgress from "@/components/WageringProgress";
 
 interface WithdrawModalProps {
   isOpen: boolean;
@@ -177,6 +178,13 @@ export default function WithdrawModal({
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               
+              {/* Wagering Progress */}
+              {userId && (
+                <div className="mb-4">
+                  <WageringProgress userId={userId} />
+                </div>
+              )}
+
               {/* Solde actuel */}
               <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3">
                 <p className="text-[9px] text-white/30 mb-1">Solde disponible</p>

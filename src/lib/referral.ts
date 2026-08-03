@@ -223,7 +223,10 @@ export async function processReferralCommission(params: {
   try {
     const { gameId, loserId, lostAmount } = params;
     
-    console.log("[REFERRAL] Début traitement commission:", { gameId, loserId, lostAmount });
+    console.log("[REFERRAL] ==================== DÉBUT TRAITEMENT COMMISSION ====================");
+    console.log("[REFERRAL] Paramètres reçus:", { gameId, loserId, lostAmount });
+    console.log("[REFERRAL] Taux de commission configuré:", REFERRAL_COMMISSION_RATE);
+    console.log("[REFERRAL] Calcul attendu:", `${lostAmount} × ${REFERRAL_COMMISSION_RATE} = ${lostAmount * REFERRAL_COMMISSION_RATE}`);
     
     // Vérifier si le perdant a un parrain actif
     const { hasReferrer, referrerId } = await hasActiveReferrer(loserId);
@@ -250,7 +253,13 @@ export async function processReferralCommission(params: {
     // Calculer la commission (10% de la perte)
     const commission = Math.round((lostAmount * REFERRAL_COMMISSION_RATE) * 100) / 100;
     
-    console.log("[REFERRAL] Commission calculée:", { lostAmount, commission });
+    console.log("[REFERRAL] Détails calcul commission:", { 
+      lostAmount, 
+      rate: REFERRAL_COMMISSION_RATE, 
+      calculation: `${lostAmount} * ${REFERRAL_COMMISSION_RATE} = ${lostAmount * REFERRAL_COMMISSION_RATE}`,
+      commission: commission,
+      expectedCommission: lostAmount * 0.10
+    });
     
     if (commission <= 0) {
       console.log("[REFERRAL] Commission nulle ou négative");

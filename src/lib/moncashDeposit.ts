@@ -374,6 +374,42 @@ export async function completeMonCashDeposit(params: {
       return { ok: false, retryable: true, message: "processing" };
     }
 
+    // Mise à jour des champs wagering après crédit réussi
+    const userRef = adminDB.ref(`users/${resolved.userId}`);
+    const wageringResult = await userRef.transaction((current: Record<string, unknown> | null) => {
+      if (!current) {
+        return; // Annuler si l'utilisateur n'existe pas
+      }
+
+      const currentTotalDeposits = Number(current.totalDeposits || 0);
+      const newTotalDeposits = currentTotalDeposits + expectedAmount;
+      const newWageringRequired = newTotalDeposits * 2;
+      const currentWageringCompleted = Number(current.wageringCompleted || 0);
+      const withdrawalUnlocked = currentWageringCompleted >= newWageringRequired;
+
+      console.log("[MONCASH] Mise à jour wagering:", {
+        currentTotalDeposits,
+        newTotalDeposits,
+        newWageringRequired,
+        currentWageringCompleted,
+        withdrawalUnlocked
+      });
+
+      return {
+        ...current,
+        totalDeposits: newTotalDeposits,
+        wageringRequired: newWageringRequired,
+        withdrawalUnlocked,
+        wageringUpdatedAt: Date.now(),
+      };
+    });
+
+    if (!wageringResult.committed) {
+      console.warn("[MONCASH] Transaction wagering non committed (continuera quand même)");
+    } else {
+      console.log("[MONCASH] Wagering mis à jour avec succès");
+    }
+
     const transactionId = `txn_${Date.now()}_${crypto.randomBytes(8).toString("hex")}`;
     const completedAtMs = completedAt ? new Date(completedAt).getTime() : Date.now();
 

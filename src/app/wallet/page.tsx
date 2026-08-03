@@ -26,6 +26,7 @@ import {
 } from "firebase/database";
 
 import WithdrawModal from "@/components/WithdrawModal";
+import WageringProgress from "@/components/WageringProgress";
 
 
 /*
@@ -988,6 +989,16 @@ function WalletContent() {
 
           </section>
 
+          {/* ========================================
+              WAGERING PROGRESS
+          ======================================== */}
+
+          {currentUser && (
+            <section className="mt-6">
+              <WageringProgress userId={currentUser.uid} />
+            </section>
+          )}
+
 
           {/* ========================================
               INFORMATIONS
@@ -1123,6 +1134,12 @@ function WalletContent() {
                       Ajouter des HTG à votre wallet
                     </p>
 
+                    <div className="mt-2 rounded-lg border border-blue-400/20 bg-blue-500/10 px-3 py-2">
+                      <p className="text-center text-[10px] font-medium text-blue-300">
+                        ⏱️ La vérification des dépôts prend 2 minutes maximum
+                      </p>
+                    </div>
+
                   </div>
 
                 </div>
@@ -1142,6 +1159,23 @@ function WalletContent() {
 
               <div className="px-5 pb-6 pt-5">
 
+                {/* Message wagering */}
+                <div className="mb-4 rounded-lg border border-orange-500/30 bg-orange-500/[0.08] p-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-lg">🔒</span>
+                    <div>
+                      <p className="text-[9px] font-bold text-orange-300">
+                        Condition de retrait
+                      </p>
+                      <p className="mt-1 text-[8px] text-white/70 leading-3">
+                        Pour pouvoir retirer, vous devez miser <span className="text-orange-300 font-bold">2 fois le montant de votre dépôt</span> dans les parties.
+                      </p>
+                      <p className="mt-1 text-[8px] text-white/50 leading-3">
+                        Exemple : Si vous déposez 100 HTG, vous devez miser 200 HTG avant de pouvoir retirer.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 <p className="mb-3 text-[10px] font-bold text-white/45">
                   Choisissez un montant

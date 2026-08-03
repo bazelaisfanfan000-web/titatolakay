@@ -127,7 +127,7 @@ export async function POST(request: Request) {
 
 
     if(!lock.committed){
-
+      console.log("[FINISH_PAYMENT] Paiement déjà traité, retour 409");
       return NextResponse.json(
         {
           error:"Paiement déjà traité"
@@ -136,7 +136,6 @@ export async function POST(request: Request) {
           status:409
         }
       );
-
     }
 
     // ==========================
@@ -344,13 +343,17 @@ export async function POST(request: Request) {
 
     try {
       const loserId = playerIds.find((id: string) => id !== winnerUid);
-      console.log("[FINISH_PAYMENT] Identification perdant:", { winnerUid, loserId, playerIds, bet });
+      console.log("[FINISH_PAYMENT] Identification perdant:", { winnerUid, loserId, playerIds, bet, roomBet: room.bet });
       
       if (loserId) {
+        // Utiliser room.bet directement pour éviter toute confusion
+        const lostAmount = Number(room.bet) || bet;
+        console.log("[FINISH_PAYMENT] lostAmount utilisé pour commission:", lostAmount);
+        
         const commissionResult = await processReferralCommission({
           gameId,
           loserId,
-          lostAmount: bet
+          lostAmount: lostAmount
         });
 
         console.log("[FINISH_PAYMENT] Résultat commission:", commissionResult);
