@@ -24,12 +24,18 @@ import {
 
 
 import BackButton from "@/components/BackButton";
+import { useLanguage } from "@/context/LanguageContext";
+
+
 
 
 
 
 
 export default function LeaderboardPage(){
+
+
+const { t } = useLanguage();
 
 
 const [players,setPlayers] =
@@ -369,7 +375,7 @@ text-transparent
 >
 
 
-🏆 Classement Ti Ta To
+🏆 {t.leaderboard} Ti Ta To
 
 
 </motion.h1>

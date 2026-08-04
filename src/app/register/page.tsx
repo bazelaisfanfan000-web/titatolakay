@@ -29,12 +29,15 @@ import {
   Lock,
 } from "lucide-react";
 
+import { useLanguage } from "@/context/LanguageContext";
+
 
 function RegisterContent() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const referralCode = searchParams.get("ref");
+  const { t } = useLanguage();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -495,7 +498,7 @@ function RegisterContent() {
             icon={
               <User size={13} />
             }
-            placeholder="Nom joueur"
+            placeholder={t.username}
             value={username}
             onChange={setUsername}
           />
@@ -506,7 +509,7 @@ function RegisterContent() {
             icon={
               <Mail size={13} />
             }
-            placeholder="Email"
+            placeholder={t.email}
             type="email"
             value={email}
             onChange={setEmail}
@@ -518,7 +521,7 @@ function RegisterContent() {
             icon={
               <Lock size={13} />
             }
-            placeholder="Mot de passe"
+            placeholder={t.password}
             type="password"
             value={password}
             onChange={setPassword}
@@ -673,8 +676,8 @@ function RegisterContent() {
 
             {
               loading
-                ? "Création..."
-                : "🚀 Créer mon compte"
+                ? `${t.loading}...`
+                : `🚀 ${t.createAccount}`
             }
 
 

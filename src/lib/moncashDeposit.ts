@@ -400,6 +400,8 @@ export async function completeMonCashDeposit(params: {
         totalDeposits: newTotalDeposits,
         wageringRequired: newWageringRequired,
         withdrawalUnlocked,
+        lastDepositAmount: expectedAmount, // Enregistrer le montant du dernier dépôt
+        firstGamePlayed: false, // Réinitialiser après dépôt - le joueur doit jouer 1 partie
         wageringUpdatedAt: Date.now(),
       };
     });

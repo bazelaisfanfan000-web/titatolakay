@@ -31,6 +31,8 @@ import {
   Lock
 } from "lucide-react";
 
+import { useLanguage } from "@/context/LanguageContext";
+
 
 
 
@@ -38,6 +40,7 @@ import {
 export default function Login() {
 
   const router = useRouter();
+  const { t } = useLanguage();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -220,18 +223,18 @@ export default function Login() {
               text-blue-400
             "
           >
-            Connexion
+            {t.login}
           </p>
 
           <h1
             className="
-              mt-1
+              mt-2
               text-center
-              text-lg
+              text-[23px]
               font-black
             "
           >
-            Connexion à ton compte joueur
+            {t.login}
           </h1>
 
           <p
@@ -286,7 +289,7 @@ export default function Login() {
                 focus:border-blue-500/40
                 focus:bg-blue-500/[0.04]
               "
-              placeholder="Email"
+              placeholder={t.email}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -333,7 +336,7 @@ export default function Login() {
                 focus:border-blue-500/40
                 focus:bg-blue-500/[0.04]
               "
-              placeholder="Mot de passe"
+              placeholder={t.password}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -402,8 +405,8 @@ export default function Login() {
             "
           >
             {loading
-              ? "Connexion..."
-              : "🔐 Se connecter"}
+              ? `${t.loading}...`
+              : `🔐 ${t.signIn}`}
           </motion.button>
 
           {/* ========================================

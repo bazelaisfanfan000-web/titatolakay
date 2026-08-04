@@ -182,6 +182,14 @@ export async function POST(request: Request) {
     const playerIds = Object.keys(room.players);
     const loserId = playerIds.find((id) => id !== winnerUid) || null;
 
+    console.log("[FINISH_PAYMENT] Identification des joueurs:", {
+      gameId,
+      playerIds,
+      winnerUid,
+      loserId,
+      playersCount: playerIds.length
+    });
+
     const updates: any = {};
 
     // ============================================================
@@ -192,14 +200,23 @@ export async function POST(request: Request) {
 
     // Mise à jour des stats du perdant (sans toucher à son solde)
     if (loserId) {
-      await adminDB.ref(`users/${loserId}`).transaction((user: any) => {
-        if (!user) return user;
-        user.losses = Number(user.losses || 0) + 1;
-        user.gamesPlayed = Number(user.gamesPlayed || 0) + 1;
-        user.winRate = Math.round(
-          (Number(user.wins || 0) / user.gamesPlayed) * 100
-        );
-        return user;
+      const loserUserSnap = await adminDB.ref(`users/${loserId}`).once("value");
+      const loserData = loserUserSnap.val();
+      
+      updates[`users/${loserId}/losses`] = Number((loserData.losses || 0) + 1);
+      updates[`users/${loserId}/gamesPlayed`] = Number((loserData.gamesPlayed || 0) + 1);
+      updates[`users/${loserId}/firstGamePlayed`] = true;
+      
+      const wins = Number(loserData.wins || 0);
+      const gamesPlayed = Number((loserData.gamesPlayed || 0) + 1);
+      updates[`users/${loserId}/winRate`] = Math.round((wins / gamesPlayed) * 100);
+      
+      console.log("[FINISH_PAYMENT] Mises à jour pour le perdant:", {
+        loserId,
+        losses: updates[`users/${loserId}/losses`],
+        gamesPlayed: updates[`users/${loserId}/gamesPlayed`],
+        firstGamePlayed: updates[`users/${loserId}/firstGamePlayed`],
+        winRate: updates[`users/${loserId}/winRate`]
       });
     }
 
@@ -211,6 +228,10 @@ export async function POST(request: Request) {
 
     updates[`users/${winnerUid}/balance`] = newBalance;
     updates[`users/${winnerUid}/updatedAt`] = Date.now();
+
+    // Marquer la première partie comme jouée pour le gagnant
+    updates[`users/${winnerUid}/firstGamePlayed`] = true;
+    console.log("[FINISH_PAYMENT] Première partie jouée pour le gagnant:", { winnerUid, firstGamePlayed: true });
 
     const transactionId = `${Date.now()}_${winnerUid}`;
     updates[`wallet_transactions/${winnerUid}/${transactionId}`] = {

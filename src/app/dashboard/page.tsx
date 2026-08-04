@@ -27,7 +27,8 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useForegroundNotifications } from "@/hooks/useForegroundNotifications";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useFriendRequestsCount } from "@/hooks/useFriendRequestsCount";
-import { Bell, X } from "lucide-react";
+import { Bell, X, Settings } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 
 /*
@@ -39,6 +40,7 @@ DASHBOARD Wincash
 export default function Dashboard() {
 
   const router = useRouter();
+  const { t } = useLanguage();
 
   // Initialiser les notifications
   useNotifications();
@@ -596,23 +598,58 @@ export default function Dashboard() {
               "
             >
 
-              Salut 👋
+              {t.welcome} 👋
 
             </p>
 
 
-            <h2
+            <div
               className="
-                mt-1
-                text-[23px]
-                font-black
-                tracking-tight
+                flex
+                items-center
+                justify-between
               "
             >
+              <h2
+                className="
+                  mt-1
+                  text-[23px]
+                  font-black
+                  tracking-tight
+                "
+              >
 
-              {username}
+                {username}
 
-            </h2>
+              </h2>
+
+              <button
+                onClick={() => router.push("/settings")}
+                className="
+                  flex
+                  h-8
+                  w-8
+                  items-center
+                  justify-center
+                  rounded-lg
+                  border
+                  border-white/[0.08]
+                  bg-white/[0.05]
+                  text-white/50
+                  transition-all
+                  hover:border-white/[0.15]
+                  hover:bg-white/[0.1]
+                  hover:text-white/80
+                "
+              >
+                <Settings
+                  className="
+                    h-4
+                    w-4
+                  "
+                />
+              </button>
+            </div>
 
           </section>
 
@@ -681,7 +718,7 @@ export default function Dashboard() {
                 "
               >
 
-                Victoires
+                {t.wins}
 
               </p>
 
@@ -788,7 +825,7 @@ export default function Dashboard() {
                 "
               >
 
-                Parties
+                {t.games}
 
               </p>
 
@@ -884,7 +921,7 @@ export default function Dashboard() {
                     "
                   >
 
-                    Créer une partie
+                    {t.createRoom}
 
                   </h4>
 
@@ -995,7 +1032,7 @@ export default function Dashboard() {
                     "
                   >
 
-                    Rejoindre une partie
+                    {t.joinRoom}
 
                   </h4>
 

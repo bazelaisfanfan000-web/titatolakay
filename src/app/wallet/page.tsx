@@ -30,6 +30,7 @@ import {
 
 import WithdrawModal from "@/components/WithdrawModal";
 import WageringProgress from "@/components/WageringProgress";
+import { useLanguage } from "@/context/LanguageContext";
 
 
 /*
@@ -41,6 +42,7 @@ WALLET PAGE
 
 function WalletContent() {
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
 
   /*
   ==================================================
@@ -894,21 +896,6 @@ function WalletContent() {
 
   /*
   ==================================================
-  CALCUL DU SEUIL DE RETRAIT (DYNAMIQUE)
-  ==================================================
-  */
-
-  const now = Date.now();
-  const promoEnd = new Date('2026-09-03T23:59:59').getTime();
-  const isPromo = now < promoEnd;
-  const multiplier = isPromo ? 1.5 : 2;
-  
-  // Le seuil est basé sur le solde actuel du joueur
-  const threshold = balance > 0 ? balance * multiplier : 0;
-  const progress = balance > 0 ? Math.min((balance / threshold) * 100, 100) : 0;
-
-  /*
-  ==================================================
   RENDER
   ==================================================
   */
@@ -994,22 +981,6 @@ function WalletContent() {
 
 
           {/* ========================================
-              BADGE OFFRE DE LANCEMENT
-          ======================================== */}
-
-          {isPromo && (
-            <div className="mb-4 flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-sm">
-              <span className="text-[9px] font-bold text-amber-300">
-                🔥 Offre de lancement : retrait dès ×1,5 jusqu'au 03/09/2026 !
-              </span>
-              <span className="text-[8px] text-amber-400/60">
-                {new Date(promoEnd).toLocaleDateString('fr-FR')}
-              </span>
-            </div>
-          )}
-
-
-          {/* ========================================
               CARTE SOLDE
           ======================================== */}
 
@@ -1030,7 +1001,7 @@ function WalletContent() {
                   </p>
 
                   <p className="mt-1 text-[9px] text-white/25">
-                    Portefeuille
+                    {t.wallet}
                   </p>
 
                 </div>
@@ -1083,47 +1054,6 @@ function WalletContent() {
 
 
           {/* ========================================
-              SEUIL DE RETRAIT (DYNAMIQUE)
-          ======================================== */}
-
-          <section className="mt-4">
-            <div className="overflow-hidden rounded-2xl border border-blue-400/15 bg-blue-600/5 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">🚀</span>
-                  <p className="text-[10px] font-bold text-white/60">
-                    Seuil de retrait
-                  </p>
-                </div>
-                <span className="text-[10px] font-black text-blue-400">
-                  {balance === 0 ? "❌ Aucun dépôt" : balance >= threshold ? "✅ Atteint" : `${threshold.toLocaleString('fr-FR')} HTG`}
-                </span>
-              </div>
-
-              {/* Barre de progression */}
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-500"
-                  style={{
-                    width: `${progress}%`,
-                  }}
-                />
-              </div>
-
-              <p className="mt-1.5 text-[8px] leading-3 text-white/25">
-                {balance === 0 ? (
-                  "💳 Effectuez un premier dépôt pour définir votre seuil de retrait."
-                ) : balance >= threshold ? (
-                  "🎉 Vous pouvez retirer vos gains !"
-                ) : (
-                  `Il vous manque ${(threshold - balance).toLocaleString('fr-FR')} HTG pour atteindre le retrait (×${multiplier}).`
-                )}
-              </p>
-            </div>
-          </section>
-
-
-          {/* ========================================
               ACTIONS
           ======================================== */}
 
@@ -1172,7 +1102,7 @@ function WalletContent() {
             <button
               type="button"
               onClick={() => setWithdrawOpen(true)}
-              disabled={balanceLoading || balance === 0 || balance < threshold}
+              disabled={balanceLoading || balance === 0}
               className="group relative overflow-hidden rounded-xl border border-blue-400/20 bg-white/[0.035] px-3 py-3 text-left shadow-[0_4px_0_rgba(20,60,140,0.25),0_8px_20px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-200 hover:border-blue-400/40 hover:bg-blue-600/10 active:translate-y-[2px] active:shadow-[0_2px_0_rgba(20,60,140,0.25),0_4px_12px_rgba(0,0,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
             >
 
@@ -1193,9 +1123,7 @@ function WalletContent() {
                   <div className="text-[8px] text-white/50">
                     {balance === 0
                       ? "Aucun fonds"
-                      : balance >= threshold
-                      ? "Retirer de l'argent"
-                      : `Minimum ${threshold.toLocaleString('fr-FR')} HTG`}
+                      : "Retirer de l'argent"}
                   </div>
 
                 </div>
@@ -1703,7 +1631,7 @@ function WalletContent() {
                 💼
               </span>
 
-              Portefeuille
+              {t.wallet}
 
             </button>
 

@@ -36,7 +36,50 @@ privacy:"Politique de confidentialité",
 
 logout:"Déconnexion",
 
-logoutQuestion:"Voulez-vous vraiment quitter ?"
+logoutQuestion:"Voulez-vous vraiment quitter ?",
+
+// Dashboard
+welcome:"Bienvenue",
+balance:"Solde",
+wins:"Victoires",
+games:"Parties",
+createRoom:"Créer une partie",
+joinRoom:"Rejoindre une partie",
+leaderboard:"Classement",
+friends:"Amis",
+chat:"Chat",
+wallet:"Portefeuille",
+
+// Game
+bet:"Mise",
+players:"Joueurs",
+spectate:"Regarder",
+leave:"Quitter",
+
+// Wallet
+deposit:"Déposer",
+withdraw:"Retirer",
+history:"Historique",
+
+// Common
+save:"Enregistrer",
+cancel:"Annuler",
+confirm:"Confirmer",
+yes:"Oui",
+no:"Non",
+loading:"Chargement...",
+error:"Erreur",
+success:"Succès",
+
+// Auth
+login:"Connexion",
+loginToAccount:"Connexion à ton compte joueur",
+signIn:"Se connecter",
+email:"Email",
+password:"Mot de passe",
+register:"Inscription",
+createAccount:"Créer un compte",
+username:"Nom d'utilisateur",
 
 },
 
@@ -66,7 +109,50 @@ privacy:"Règleman vi prive",
 
 logout:"Dekonekte",
 
-logoutQuestion:"Èske ou vle soti vre ?"
+logoutQuestion:"Èske ou vle soti vre ?",
+
+// Dashboard
+welcome:"Byenvini",
+balance:"Balans",
+wins:"Viktwa",
+games:"Pati",
+createRoom:"Kreye yon pati",
+joinRoom:"Rejwenn yon pati",
+leaderboard:"Klasman",
+friends:"Zanmi",
+chat:"Chat",
+wallet:"Pòch la",
+
+// Game
+bet:"Miz",
+players:"Jwè yo",
+spectate:"Gade",
+leave:"Kite",
+
+// Wallet
+deposit:"Depoze",
+withdraw:"Retire",
+history:"Istwa",
+
+// Common
+save:"Anrejistre",
+cancel:"Anile",
+confirm:"Konfime",
+yes:"Wi",
+no:"Non",
+loading:"Chajman...",
+error:"Erè",
+success:"Siksè",
+
+// Auth
+login:"Koneksyon",
+loginToAccount:"Koneksyon nan kont jwè ou",
+signIn:"Konekte",
+email:"Imèl",
+password:"Modpas",
+register:"Enskripsyon",
+createAccount:"Kreye yon kont",
+username:"Non itilizatè",
 
 }
 

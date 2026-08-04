@@ -14,6 +14,7 @@ import {
 
 import BackButton
   from "@/components/BackButton";
+import { useLanguage } from "@/context/LanguageContext";
 
 
 /*
@@ -23,6 +24,8 @@ PAGE CRÉER UNE PARTIE Wincash
 */
 
 export default function CreateRoomPage() {
+
+  const { t } = useLanguage();
 
   /*
   ======================================
@@ -340,7 +343,7 @@ export default function CreateRoomPage() {
 
           <h1 className="mb-6 text-center text-[21px] font-black tracking-tight">
 
-            Créer une partie
+            {t.createRoom}
 
           </h1>
 
@@ -550,8 +553,8 @@ export default function CreateRoomPage() {
             >
 
               {loading
-                ? "Création..."
-                : "🎮 Créer la partie"}
+                ? t.loading
+                : `🎮 ${t.createRoom}`}
 
             </button>
 

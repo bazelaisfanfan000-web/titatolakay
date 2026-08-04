@@ -23,13 +23,14 @@ import {
   auth
 } from "@/lib/firebase";
 
+import { useLanguage } from "@/context/LanguageContext";
+
 
 
 export default function FriendsPage(){
 
-
 const router = useRouter();
-
+const { t } = useLanguage();
 
 const [userId,setUserId] =
 useState("");
@@ -526,7 +527,7 @@ font-black
 
 >
 
-👥 Mes amis
+👥 {t.friends}
 
 </h1>
 

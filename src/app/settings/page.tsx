@@ -67,11 +67,15 @@ const [uid,setUid]=useState("");
 
 const [username,setUsername]=useState("Joueur");
 
+const [email,setEmail]=useState("");
+
 const [newUsername,setNewUsername]=useState("");
 
 const [oldPassword,setOldPassword]=useState("");
 
 const [newPassword,setNewPassword]=useState("");
+
+const [confirmPassword,setConfirmPassword]=useState("");
 
 const [showProfile,setShowProfile]=useState(false);
 
@@ -109,6 +113,8 @@ return;
 
 setUid(user.uid);
 
+setEmail(user.email || "");
+
 
 
 
@@ -141,8 +147,6 @@ setUsername(
 data.username || "Joueur"
 
 );
-
-
 
 setNotifications(
 
@@ -264,10 +268,20 @@ return;
 
 
 
-if(!oldPassword || !newPassword){
+if(!oldPassword || !newPassword || !confirmPassword){
 
 setMessage(
 "Remplir tous les champs"
+);
+
+return;
+
+}
+
+if(newPassword !== confirmPassword){
+
+setMessage(
+"Les mots de passe ne correspondent pas"
 );
 
 return;
@@ -317,6 +331,8 @@ newPassword
 setOldPassword("");
 
 setNewPassword("");
+
+setConfirmPassword("");
 
 setShowPassword(false);
 
@@ -567,10 +583,20 @@ p-5
 <p className="
 text-gray-300
 text-sm
-mb-4
+mb-2
 ">
 
 👤 {username}
+
+</p>
+
+<p className="
+text-gray-400
+text-xs
+mb-4
+">
+
+📧 {email}
 
 </p>
 
@@ -587,13 +613,12 @@ w-full
 py-3
 rounded-xl
 font-black
-bg-gradient-to-b
-from-cyan-300
-via-blue-500
-to-blue-800
+bg-blue-500/20
 border
-border-blue-300/50
-shadow-[0_6px_0_#082f75]
+border-blue-400/50
+text-blue-300
+hover:bg-blue-500/30
+transition-all
 "
 
 >
@@ -644,13 +669,12 @@ w-full
 py-3
 rounded-xl
 font-black
-bg-gradient-to-b
-from-purple-300
-via-purple-500
-to-purple-800
+bg-purple-500/20
 border
-border-purple-300/50
-shadow-[0_6px_0_#4c1d95]
+border-purple-400/50
+text-purple-300
+hover:bg-purple-500/30
+transition-all
 "
 
 >
@@ -806,11 +830,12 @@ w-full
 py-3
 rounded-xl
 font-black
-bg-gradient-to-b
-from-red-400
-via-red-600
-to-red-900
-shadow-[0_6px_0_#450a0a]
+bg-red-500/20
+border
+border-red-400/50
+text-red-300
+hover:bg-red-500/30
+transition-all
 "
 
 >
@@ -1042,6 +1067,34 @@ setNewPassword(e.target.value)
 }
 
 placeholder="Nouveau mot de passe"
+
+className="
+w-full
+bg-black/30
+border
+border-white/20
+rounded-xl
+p-3
+mb-3
+"
+
+/>
+
+
+
+<input
+
+type="password"
+
+value={confirmPassword}
+
+onChange={(e)=>
+
+setConfirmPassword(e.target.value)
+
+}
+
+placeholder="Confirmer nouveau mot de passe"
 
 className="
 w-full

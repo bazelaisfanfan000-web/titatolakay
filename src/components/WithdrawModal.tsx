@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
-import WageringProgress from "@/components/WageringProgress";
 
 interface WithdrawModalProps {
   isOpen: boolean;
@@ -31,9 +30,40 @@ export default function WithdrawModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [gameStatus, setGameStatus] = useState<{ 
+    firstGamePlayed: boolean; 
+    canWithdraw: boolean; 
+    minimumBet: number | null;
+    currentBalance: number;
+  } | null>(null);
 
   const MIN_WITHDRAWAL = 100; // HTG - Minimum requis par MonCash
   const MAX_WITHDRAWAL = 10000; // HTG - Maximum autorisé
+
+  // Récupérer le statut de la première partie
+  useEffect(() => {
+    async function fetchGameStatus() {
+      if (!userId) return;
+      
+      try {
+        const response = await fetch(`/api/user/games-status?userId=${userId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setGameStatus({
+            firstGamePlayed: data.firstGamePlayed,
+            canWithdraw: data.canWithdraw,
+            minimumBet: data.minimumBet ?? null,
+            currentBalance: data.currentBalance ?? 0
+          });
+        }
+      } catch (err) {
+        console.error("Erreur récupération statut partie:", err);
+      }
+    }
+    
+    fetchGameStatus();
+  }, [userId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +76,7 @@ export default function WithdrawModal({
     }
 
     const amountNum = Number(amount);
+    
     if (!amountNum || amountNum < MIN_WITHDRAWAL || amountNum > MAX_WITHDRAWAL) {
       setError(`Le montant doit être entre ${MIN_WITHDRAWAL} et ${MAX_WITHDRAWAL} HTG`);
       return;
@@ -177,11 +208,31 @@ export default function WithdrawModal({
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
-              
-              {/* Wagering Progress */}
-              {userId && (
-                <div className="mb-4">
-                  <WageringProgress userId={userId} />
+              {/* Statut de la première partie */}
+              {gameStatus && (
+                <div className={`rounded-xl border px-4 py-3 ${
+                  gameStatus.canWithdraw 
+                    ? 'border-green-500/20 bg-green-500/[0.08]' 
+                    : 'border-yellow-500/20 bg-yellow-500/[0.08]'
+                }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[9px] font-bold text-white/70">
+                      Statut de retrait
+                    </p>
+                    <p className="text-[10px] font-bold text-white">
+                      {gameStatus.canWithdraw ? "LIBRE" : "BLOQUÉ"}
+                    </p>
+                  </div>
+                  
+                  {!gameStatus.canWithdraw ? (
+                    <p className="text-[8px] text-yellow-400">
+                      🔒 Vous devez jouer 1 partie avec une mise de {gameStatus.minimumBet} HTG (50% de votre solde) avant de retirer !
+                    </p>
+                  ) : (
+                    <p className="text-[8px] text-green-400">
+                      🔥 VOUS ÊTES MAINTENANT LIBRE ! Plus de minimum imposé !
+                    </p>
+                  )}
                 </div>
               )}
 

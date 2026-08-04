@@ -936,7 +936,9 @@ export default function RulesPage() {
           </div>
 
 
-          {/* Conditions de retrait (OFFRE DE LANCEMENT) */}
+          {/* ============================================================
+              CONDITIONS DE RETRAIT - NOUVELLE RÈGLE
+              ============================================================ */}
 
           <div
             className="
@@ -981,76 +983,518 @@ export default function RulesPage() {
                   text-orange-300
                 "
               >
-                Conditions de retrait (OFFRE DE LANCEMENT)
+                Règle de retrait
               </h3>
             </div>
 
-            <ul
+            <div
               className="
-                space-y-2
-                text-[10px]
-                leading-4
-                text-white/70
+                space-y-3
               "
             >
-              <li
+              <div
+                className="
+                  rounded-lg
+                  border
+                  border-orange-500/20
+                  bg-orange-500/[0.06]
+                  p-3
+                "
+              >
+                <p
+                  className="
+                    text-[10px]
+                    font-bold
+                    text-orange-200
+                  "
+                >
+                  🔒 Après chaque dépôt :
+                </p>
+                <p
+                  className="
+                    text-[10px]
+                    leading-relaxed
+                    text-white/70
+                  "
+                >
+                  Vous devez jouer <strong className="text-white">1 partie</strong> avec une mise <strong className="text-white">≥ 50% de votre solde</strong> avant de pouvoir retirer.
+                </p>
+              </div>
+
+              <div
+                className="
+                  rounded-lg
+                  border
+                  border-orange-500/20
+                  bg-orange-500/[0.06]
+                  p-3
+                "
+              >
+                <p
+                  className="
+                    text-[10px]
+                    font-bold
+                    text-green-300
+                  "
+                >
+                  🔓 Une fois la partie jouée :
+                </p>
+                <p
+                  className="
+                    text-[10px]
+                    leading-relaxed
+                    text-white/70
+                  "
+                >
+                  Vous êtes <strong className="text-green-300">LIBRE</strong> !
+                </p>
+                <ul
+                  className="
+                    mt-1
+                    space-y-1
+                    text-[10px]
+                    text-white/70
+                  "
+                >
+                  <li
+                    className="
+                      flex
+                      items-center
+                      gap-2
+                    "
+                  >
+                    <span
+                      className="
+                        text-green-400
+                      "
+                    >
+                      ✅
+                    </span>
+                    Retirer <strong className="text-white">tout votre argent</strong> (pas de limite)
+                  </li>
+                  <li
+                    className="
+                      flex
+                      items-center
+                      gap-2
+                    "
+                  >
+                    <span
+                      className="
+                        text-green-400
+                      "
+                    >
+                      ✅
+                    </span>
+                    Rejouer avec <strong className="text-white">n'importe quelle mise</strong> (pas de minimum)
+                  </li>
+                </ul>
+              </div>
+
+              <div
+                className="
+                  rounded-lg
+                  border
+                  border-orange-500/20
+                  bg-orange-500/[0.06]
+                  p-3
+                "
+              >
+                <p
+                  className="
+                    text-[10px]
+                    font-bold
+                    text-orange-200
+                  "
+                >
+                  🔄 Réactivation :
+                </p>
+                <p
+                  className="
+                    text-[10px]
+                    leading-relaxed
+                    text-white/70
+                  "
+                >
+                  Le "piège" se réactive <strong className="text-white">après chaque nouveau dépôt</strong>.
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+
+          {/* ============================================================
+              EXEMPLE CONCRET
+              ============================================================ */}
+
+          <div
+            className="
+              rounded-2xl
+              border
+              border-white/[0.06]
+              bg-white/[0.02]
+              backdrop-blur-md
+              p-4
+              shadow-[0_8px_30px_rgba(0,0,0,0.2)]
+            "
+          >
+
+            <div
+              className="
+                flex
+                items-center
+                gap-3
+                mb-3
+              "
+            >
+              <div
                 className="
                   flex
-                  items-start
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-xl
+                  border
+                  border-white/[0.08]
+                  bg-white/[0.05]
+                  text-lg
+                "
+              >
+                📋
+              </div>
+              <h3
+                className="
+                  text-[13px]
+                  font-black
+                  text-white/60
+                "
+              >
+                Exemple concret
+              </h3>
+            </div>
+
+            <div
+              className="
+                space-y-1
+                text-[10px]
+                text-white/60
+              "
+            >
+              <p
+                className="
+                  flex
+                  items-center
                   gap-2
                 "
               >
                 <span
                   className="
-                    mt-1
-                    h-1
-                    w-1
-                    shrink-0
-                    rounded-full
-                    bg-orange-400
+                    text-orange-400
                   "
-                />
-                Du 03/07/2026 au 03/09/2026 : Vous pouvez retirer dès que votre solde atteint ×1,5 votre dernier dépôt.
-              </li>
-              <li
+                >
+                  1.
+                </span>
+                Dépôt : <strong className="text-white">100 HTG</strong>
+              </p>
+              <p
                 className="
                   flex
-                  items-start
+                  items-center
                   gap-2
                 "
               >
                 <span
                   className="
-                    mt-1
-                    h-1
-                    w-1
-                    shrink-0
-                    rounded-full
-                    bg-orange-400
+                    text-orange-400
                   "
-                />
-                (Exemple : Vous déposez 100 HTG, vous gagnez 1 partie, votre solde est à 150 HTG → vous pouvez retirer !) 🚀
-              </li>
-              <li
+                >
+                  2.
+                </span>
+                Mise minimum : <strong className="text-orange-300">50 HTG</strong> (50% du solde)
+              </p>
+              <p
                 className="
                   flex
-                  items-start
+                  items-center
                   gap-2
                 "
               >
                 <span
                   className="
-                    mt-1
-                    h-1
-                    w-1
-                    shrink-0
-                    rounded-full
-                    bg-orange-400
+                    text-orange-400
                   "
-                />
-                À partir du 04/09/2026 : Le seuil de retrait passera à ×2 (comme sur les autres plateformes).
-              </li>
-            </ul>
+                >
+                  3.
+                </span>
+                Jouez 1 partie avec <strong className="text-white">50 HTG</strong>
+              </p>
+              <p
+                className="
+                  flex
+                  items-center
+                  gap-2
+                "
+              >
+                <span
+                  className="
+                    text-green-400
+                  "
+                >
+                  4.
+                </span>
+                <strong className="text-green-300">LIBRE !</strong> Retirez <strong className="text-white">tout votre solde</strong>
+              </p>
+            </div>
+
+          </div>
+
+
+          {/* ============================================================
+              RÉSUMÉ DU CYCLE
+              ============================================================ */}
+
+          <div
+            className="
+              rounded-2xl
+              border
+              border-white/[0.06]
+              bg-white/[0.02]
+              backdrop-blur-md
+              p-4
+              shadow-[0_8px_30px_rgba(0,0,0,0.2)]
+            "
+          >
+
+            <div
+              className="
+                flex
+                items-center
+                gap-3
+                mb-3
+              "
+            >
+              <div
+                className="
+                  flex
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-xl
+                  border
+                  border-white/[0.08]
+                  bg-white/[0.05]
+                  text-lg
+                "
+              >
+                ⚡
+              </div>
+              <h3
+                className="
+                  text-[13px]
+                  font-black
+                  text-white/60
+                "
+              >
+                Résumé du cycle
+              </h3>
+            </div>
+
+            <div
+              className="
+                grid
+                grid-cols-5
+                gap-1
+                text-[8px]
+              "
+            >
+              <div
+                className="
+                  flex
+                  flex-col
+                  items-center
+                  rounded-lg
+                  border
+                  border-white/[0.05]
+                  bg-white/[0.02]
+                  px-1
+                  py-2
+                "
+              >
+                <span
+                  className="
+                    text-base
+                  "
+                >
+                  💰
+                </span>
+                <span
+                  className="
+                    text-white/50
+                  "
+                >
+                  Dépôt
+                </span>
+              </div>
+              <div
+                className="
+                  flex
+                  items-center
+                  justify-center
+                  text-white/20
+                  text-sm
+                "
+              >
+                →
+              </div>
+              <div
+                className="
+                  flex
+                  flex-col
+                  items-center
+                  rounded-lg
+                  border
+                  border-orange-500/20
+                  bg-orange-500/[0.08]
+                  px-1
+                  py-2
+                "
+              >
+                <span
+                  className="
+                    text-base
+                  "
+                >
+                  🔒
+                </span>
+                <span
+                  className="
+                    text-orange-300/80
+                  "
+                >
+                  Bloqué
+                </span>
+              </div>
+              <div
+                className="
+                  flex
+                  items-center
+                  justify-center
+                  text-white/20
+                  text-sm
+                "
+              >
+                →
+              </div>
+              <div
+                className="
+                  flex
+                  flex-col
+                  items-center
+                  rounded-lg
+                  border
+                  border-blue-500/20
+                  bg-blue-500/[0.08]
+                  px-1
+                  py-2
+                "
+              >
+                <span
+                  className="
+                    text-base
+                  "
+                >
+                  🎮
+                </span>
+                <span
+                  className="
+                    text-blue-300/80
+                  "
+                >
+                  1 Partie
+                </span>
+              </div>
+              <div
+                className="
+                  flex
+                  items-center
+                  justify-center
+                  text-white/20
+                  text-sm
+                "
+              >
+                →
+              </div>
+              <div
+                className="
+                  flex
+                  flex-col
+                  items-center
+                  rounded-lg
+                  border
+                  border-green-500/20
+                  bg-green-500/[0.08]
+                  px-1
+                  py-2
+                "
+              >
+                <span
+                  className="
+                    text-base
+                  "
+                >
+                  🔓
+                </span>
+                <span
+                  className="
+                    text-green-300/80
+                  "
+                >
+                  Libre
+                </span>
+              </div>
+              <div
+                className="
+                  flex
+                  items-center
+                  justify-center
+                  text-white/20
+                  text-sm
+                "
+              >
+                →
+              </div>
+              <div
+                className="
+                  flex
+                  flex-col
+                  items-center
+                  rounded-lg
+                  border
+                  border-white/[0.05]
+                  bg-white/[0.02]
+                  px-1
+                  py-2
+                "
+              >
+                <span
+                  className="
+                    text-base
+                  "
+                >
+                  💳
+                </span>
+                <span
+                  className="
+                    text-white/50
+                  "
+                >
+                  Retrait
+                </span>
+              </div>
+            </div>
 
           </div>
 
