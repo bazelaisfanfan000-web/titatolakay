@@ -57,9 +57,10 @@ const firebaseConfig = {
 const app =
   getApps().length > 0
     ? getApps()[0]
-    : initializeApp(
-        firebaseConfig
-      );
+    : initializeApp(firebaseConfig);
+
+console.log("[FIREBASE] App initialized:", app.name);
+console.log("[FIREBASE] Config:", firebaseConfig);
 
 
 // =========================================
@@ -87,6 +88,8 @@ export const analytics =
 
 export const auth =
   getAuth(app);
+
+console.log("[FIREBASE] Auth initialized:", auth.app.name);
 
 
 // =========================================

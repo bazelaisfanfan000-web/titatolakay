@@ -383,7 +383,7 @@ export async function completeMonCashDeposit(params: {
 
       const currentTotalDeposits = Number(current.totalDeposits || 0);
       const newTotalDeposits = currentTotalDeposits + expectedAmount;
-      const newWageringRequired = newTotalDeposits * 2;
+      const newWageringRequired = newTotalDeposits * 1.5;
       const currentWageringCompleted = Number(current.wageringCompleted || 0);
       const withdrawalUnlocked = currentWageringCompleted >= newWageringRequired;
 

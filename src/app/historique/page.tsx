@@ -2,26 +2,43 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
+import { auth, database } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { onValue, ref } from "firebase/database";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useFriendRequestsCount } from "@/hooks/useFriendRequestsCount";
 
 export default function Historique() {
   const router = useRouter();
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
+  const [balance, setBalance] = useState(0);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const unreadCount = useUnreadMessages(currentUser?.uid || null);
+  const friendRequestCount = useFriendRequestsCount(currentUser?.uid || null);
+  const totalNotifications = unreadCount + friendRequestCount;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
+        setCurrentUser(null);
         router.push("/login");
         return;
       }
 
+      setCurrentUser(user);
+
+      // Écouter le solde en temps réel
+      const balanceRef = ref(database, `users/${user.uid}/balance`);
+      const unsubscribeBalance = onValue(balanceRef, (snapshot) => {
+        const val = snapshot.val();
+        setBalance(Number(val) || 0);
+      });
+
       const idToken = await user.getIdToken();
       setToken(idToken);
 
-      // Récupérer l'historique
       try {
         const response = await fetch("/api/history", {
           headers: {
@@ -38,6 +55,10 @@ export default function Historique() {
       } finally {
         setLoading(false);
       }
+
+      return () => {
+        unsubscribeBalance();
+      };
     });
 
     return () => unsubscribe();
@@ -59,12 +80,12 @@ export default function Historique() {
     if (type === "game_win") return "🏆";
     if (type === "game_loss") return "😢";
     if (type === "deposit") {
-      if (status === "completed") return "�";
+      if (status === "completed") return "📥";
       if (status === "failed") return "❌";
       return "⏳";
     }
     if (type === "withdraw") {
-      if (status === "completed") return "�";
+      if (status === "completed") return "📤";
       if (status === "failed") return "❌";
       return "⏳";
     }
@@ -117,53 +138,88 @@ export default function Historique() {
     );
   };
 
-  return (
-    <main className="relative min-h-screen overflow-hidden bg-[#020617] text-white">
-      {/* Décorations */}
-      <div className="pointer-events-none fixed -left-24 top-20 h-64 w-64 rounded-full bg-blue-600/10 blur-3xl" />
-      <div className="pointer-events-none fixed -right-24 bottom-24 h-64 w-64 rounded-full bg-purple-600/10 blur-3xl" />
+  const formattedBalance = balance.toLocaleString("fr-FR");
 
-      {/* Conteneur mobile */}
-      <div className="relative mx-auto min-h-screen w-full max-w-[430px] overflow-x-hidden pb-28">
-        {/* Header fixe */}
-        <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/[0.08] bg-[#020617]/95 backdrop-blur-2xl">
-          <div className="mx-auto flex h-[64px] w-full max-w-[430px] items-center justify-between px-4">
+  // Offre de lancement
+  const now = Date.now();
+  const promoEnd = new Date('2026-09-03T23:59:59').getTime();
+  const isPromo = now < promoEnd;
+
+  return (
+    <main className="min-h-screen bg-[#030303] text-white">
+
+      <div className="mx-auto w-full max-w-[430px] min-h-screen flex flex-col px-5 py-4">
+
+        {/* ==========================================
+            HEADER (identique au wallet)
+        ========================================== */}
+
+        <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-black/90 backdrop-blur-xl">
+
+          <div className="flex h-[58px] items-center justify-between px-4">
+
             <button
               type="button"
               onClick={() => router.back()}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.025] text-white/70 transition hover:bg-white/[0.05]"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.025] text-white/70 transition hover:bg-white/[0.05]"
             >
               ←
             </button>
 
-            <h1 className="text-[17px] font-black tracking-tight text-white">
-              Historique
-            </h1>
+            <div className="text-center">
+              <h1 className="text-[18px] font-black tracking-tight">
+                Historique
+              </h1>
+              <p className="mt-0.5 text-[9px] text-white/30">
+                {formattedBalance} HTG
+              </p>
+            </div>
 
-            <div className="w-10" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-500/30 bg-blue-600/15 text-sm shadow-[0_3px_0_rgba(30,100,255,0.35)]">
+              📜
+            </div>
+
           </div>
+
         </header>
 
-        {/* Contenu */}
-        <div className="px-4 pb-10 pt-[88px]">
+
+        {/* ==========================================
+            CONTENU
+        ========================================== */}
+
+        <div className="px-4 pb-[90px] pt-5">
+
+          {/* Badge offre de lancement (cohérent avec wallet) */}
+          {isPromo && (
+            <div className="mb-4 flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-sm">
+              <span className="text-[9px] font-bold text-amber-300">
+                🔥 Offre de lancement : retrait dès ×1,5 jusqu'au 03/09/2026 !
+              </span>
+              <span className="text-[8px] text-amber-400/60">
+                {new Date(promoEnd).toLocaleDateString('fr-FR')}
+              </span>
+            </div>
+          )}
+
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <p className="text-white/50">Chargement...</p>
+              <p className="text-white/30 text-[10px]">Chargement...</p>
             </div>
           ) : history.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <p className="text-4xl mb-4">📜</p>
-              <p className="text-white/50">Aucun historique</p>
+              <span className="text-4xl mb-4">📭</span>
+              <p className="text-white/30 text-[10px]">Aucune transaction</p>
             </div>
           ) : (
             <div className="space-y-3">
               {history.map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3"
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-xl">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-lg">
                       {getTransactionIcon(item.type, item.status)}
                     </div>
 
@@ -177,7 +233,7 @@ export default function Historique() {
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
                         {getStatusBadge(item.status)}
                         {item.bet && (
                           <p className="text-[9px] text-white/40">
@@ -213,53 +269,67 @@ export default function Historique() {
           )}
         </div>
 
-        {/* Navigation bas */}
-        <nav className="fixed bottom-3 left-1/2 z-50 flex h-[64px] w-[calc(100%-24px)] max-w-[406px] -translate-x-1/2 items-center justify-around rounded-2xl border border-blue-400/20 bg-[#050914]/95 px-2 shadow-[0_10px_40px_rgba(0,0,0,0.5),0_3px_0_rgba(30,64,175,0.35)] backdrop-blur-xl">
-          <button
-            type="button"
-            onClick={() => router.push("/dashboard")}
-            className="flex min-w-[60px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 text-[8px] text-white/35 transition active:translate-y-[2px]"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl text-[18px]">
-              🏠
-            </span>
-            Accueil
-          </button>
 
-          <button
-            type="button"
-            onClick={() => router.push("/wallet")}
-            className="flex min-w-[60px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 text-[8px] text-white/35 transition active:translate-y-[2px]"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl text-[18px]">
-              💼
-            </span>
-            Portefeuille
-          </button>
+        {/* ==========================================
+            NAVIGATION (identique au wallet)
+        ========================================== */}
 
-          <button
-            type="button"
-            onClick={() => router.push("/historique")}
-            className="flex min-w-[60px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 text-[8px] font-bold text-blue-400 transition active:translate-y-[2px]"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-blue-400/25 bg-blue-500/[0.10] shadow-[0_2px_0_rgba(30,64,175,0.5)] text-[18px]">
-              📜
-            </span>
-            Historique
-          </button>
+        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.06] bg-black/95 backdrop-blur-xl">
 
-          <button
-            type="button"
-            onClick={() => router.push("/vylo")}
-            className="flex min-w-[60px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 text-[8px] text-white/35 transition active:translate-y-[2px]"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl text-[18px]">
-              👥
-            </span>
-            VYLO
-          </button>
+          <div className="mx-auto flex h-[62px] w-full max-w-[430px] items-center justify-around px-4">
+
+            {/* ACCUEIL */}
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard")}
+              className="flex min-w-[55px] flex-col items-center justify-center gap-1 text-[8px] text-white/30 transition active:scale-95"
+            >
+              <span className="text-[18px]">🏠</span>
+              Accueil
+            </button>
+
+            {/* PORTEFEUILLE */}
+            <button
+              type="button"
+              onClick={() => router.push("/wallet")}
+              className="flex min-w-[55px] flex-col items-center justify-center gap-1 text-[8px] text-white/30 transition active:scale-95"
+            >
+              <span className="text-[18px]">💼</span>
+              Portefeuille
+            </button>
+
+            {/* HISTORIQUE (actif) */}
+            <button
+              type="button"
+              className="flex min-w-[55px] flex-col items-center justify-center gap-1 text-[8px] font-bold text-blue-400"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-blue-500/25 bg-blue-600/15 text-[17px] shadow-[0_3px_0_rgba(20,70,200,0.35)]">
+                📜
+              </span>
+              Historique
+            </button>
+
+            {/* VYLO */}
+            <button
+              type="button"
+              onClick={() => router.push("/vylo")}
+              className="relative flex min-w-[55px] flex-col items-center justify-center gap-1 text-[8px] text-white/30 transition active:scale-95"
+            >
+              <span className="text-[18px]">👥</span>
+              {totalNotifications > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 text-[10px] font-black text-white shadow-lg">
+                  {totalNotifications > 99 ? "99+" : totalNotifications}
+                </span>
+              )}
+              VYLO
+            </button>
+
+          </div>
+
         </nav>
+
       </div>
+
     </main>
   );
 }

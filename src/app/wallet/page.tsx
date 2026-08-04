@@ -23,6 +23,9 @@ import {
 import {
   onValue,
   ref,
+  query,
+  orderByChild,
+  limitToLast,
 } from "firebase/database";
 
 import WithdrawModal from "@/components/WithdrawModal";
@@ -31,28 +34,7 @@ import WageringProgress from "@/components/WageringProgress";
 
 /*
 ====================================================
-TiTaTo - WALLET PAGE
-====================================================
-
-Fonctions :
-
-- Affichage du solde Firebase en temps réel
-- Dépôt MonCash
-- Retrait MonCash
-- Authentification Firebase
-- Token Firebase envoyé au serveur
-- Numéro MonCash local : 31114949
-- Numéro envoyé au serveur : +50931114949
-
-Le serveur doit toujours vérifier :
-
-- UID Firebase
-- Solde réel
-- Montant
-- Numéro MonCash
-- Retrait actif
-- Verrou atomique
-- Idempotence
+WALLET PAGE
 ====================================================
 */
 
@@ -100,6 +82,23 @@ function WalletContent() {
     error,
     setError,
   ] = useState<string | null>(null);
+
+
+  /*
+  ==================================================
+  TRANSACTIONS (HISTORIQUE)
+  ==================================================
+  */
+
+  const [
+    transactions,
+    setTransactions,
+  ] = useState<any[]>([]);
+
+  const [
+    transactionsLoading,
+    setTransactionsLoading,
+  ] = useState(true);
 
 
   /*
@@ -195,7 +194,7 @@ function WalletContent() {
     const timeout = setTimeout(() => {
       setAuthLoading(false);
       console.warn("Auth timeout - forcing authLoading to false");
-    }, 10000); // 10 secondes
+    }, 10000);
 
     return () => {
       clearTimeout(timeout);
@@ -296,6 +295,153 @@ function WalletContent() {
 
           setError(
             "Impossible de charger votre solde."
+          );
+
+        }
+
+      );
+
+
+    return () => {
+
+      unsubscribe();
+
+    };
+
+  }, [
+    currentUser,
+  ]);
+
+
+  /*
+  ==================================================
+  TRANSACTIONS EN TEMPS RÉEL
+  ==================================================
+  */
+
+  useEffect(() => {
+
+    if (!currentUser) {
+
+      setTransactions(
+        []
+      );
+
+      setTransactionsLoading(
+        false
+      );
+
+      return;
+
+    }
+
+
+    setTransactionsLoading(
+      true
+    );
+
+
+    const transactionsRef =
+      query(
+        ref(
+          database,
+          `users/${currentUser.uid}/transactions`
+        ),
+        orderByChild(
+          "timestamp"
+        ),
+        limitToLast(
+          5
+        )
+      );
+
+
+    const unsubscribe =
+      onValue(
+
+        transactionsRef,
+
+        (snapshot) => {
+
+          const data =
+            snapshot.val();
+
+
+          if (!data) {
+
+            setTransactions(
+              []
+            );
+
+            setTransactionsLoading(
+              false
+            );
+
+            return;
+
+          }
+
+
+          const list =
+            Object
+              .keys(
+                data
+              )
+              .map(
+                (
+                  key
+                ) => ({
+
+                  id:
+                    key,
+
+                  ...data[
+                    key
+                  ],
+
+                })
+              )
+              .sort(
+                (
+                  a,
+                  b
+                ) =>
+                  b
+                    .timestamp -
+                  a
+                    .timestamp
+              )
+              .slice(
+                0,
+                5
+              );
+
+
+          setTransactions(
+            list
+          );
+
+          setTransactionsLoading(
+            false
+          );
+
+        },
+
+        (
+          firebaseError
+        ) => {
+
+          console.error(
+            "Erreur chargement transactions :",
+            firebaseError
+          );
+
+          setTransactions(
+            []
+          );
+
+          setTransactionsLoading(
+            false
           );
 
         }
@@ -746,6 +892,20 @@ function WalletContent() {
       "fr-FR"
     );
 
+  /*
+  ==================================================
+  CALCUL DU SEUIL DE RETRAIT (DYNAMIQUE)
+  ==================================================
+  */
+
+  const now = Date.now();
+  const promoEnd = new Date('2026-09-03T23:59:59').getTime();
+  const isPromo = now < promoEnd;
+  const multiplier = isPromo ? 1.5 : 2;
+  
+  // Le seuil est basé sur le solde actuel du joueur
+  const threshold = balance > 0 ? balance * multiplier : 0;
+  const progress = balance > 0 ? Math.min((balance / threshold) * 100, 100) : 0;
 
   /*
   ==================================================
@@ -834,6 +994,22 @@ function WalletContent() {
 
 
           {/* ========================================
+              BADGE OFFRE DE LANCEMENT
+          ======================================== */}
+
+          {isPromo && (
+            <div className="mb-4 flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-sm">
+              <span className="text-[9px] font-bold text-amber-300">
+                🔥 Offre de lancement : retrait dès ×1,5 jusqu'au 03/09/2026 !
+              </span>
+              <span className="text-[8px] text-amber-400/60">
+                {new Date(promoEnd).toLocaleDateString('fr-FR')}
+              </span>
+            </div>
+          )}
+
+
+          {/* ========================================
               CARTE SOLDE
           ======================================== */}
 
@@ -907,6 +1083,47 @@ function WalletContent() {
 
 
           {/* ========================================
+              SEUIL DE RETRAIT (DYNAMIQUE)
+          ======================================== */}
+
+          <section className="mt-4">
+            <div className="overflow-hidden rounded-2xl border border-blue-400/15 bg-blue-600/5 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">🚀</span>
+                  <p className="text-[10px] font-bold text-white/60">
+                    Seuil de retrait
+                  </p>
+                </div>
+                <span className="text-[10px] font-black text-blue-400">
+                  {balance === 0 ? "❌ Aucun dépôt" : balance >= threshold ? "✅ Atteint" : `${threshold.toLocaleString('fr-FR')} HTG`}
+                </span>
+              </div>
+
+              {/* Barre de progression */}
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-500"
+                  style={{
+                    width: `${progress}%`,
+                  }}
+                />
+              </div>
+
+              <p className="mt-1.5 text-[8px] leading-3 text-white/25">
+                {balance === 0 ? (
+                  "💳 Effectuez un premier dépôt pour définir votre seuil de retrait."
+                ) : balance >= threshold ? (
+                  "🎉 Vous pouvez retirer vos gains !"
+                ) : (
+                  `Il vous manque ${(threshold - balance).toLocaleString('fr-FR')} HTG pour atteindre le retrait (×${multiplier}).`
+                )}
+              </p>
+            </div>
+          </section>
+
+
+          {/* ========================================
               ACTIONS
           ======================================== */}
 
@@ -955,7 +1172,7 @@ function WalletContent() {
             <button
               type="button"
               onClick={() => setWithdrawOpen(true)}
-              disabled={balanceLoading}
+              disabled={balanceLoading || balance === 0 || balance < threshold}
               className="group relative overflow-hidden rounded-xl border border-blue-400/20 bg-white/[0.035] px-3 py-3 text-left shadow-[0_4px_0_rgba(20,60,140,0.25),0_8px_20px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-200 hover:border-blue-400/40 hover:bg-blue-600/10 active:translate-y-[2px] active:shadow-[0_2px_0_rgba(20,60,140,0.25),0_4px_12px_rgba(0,0,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
             >
 
@@ -974,7 +1191,11 @@ function WalletContent() {
                   </div>
 
                   <div className="text-[8px] text-white/50">
-                    Retirer de l'argent
+                    {balance === 0
+                      ? "Aucun fonds"
+                      : balance >= threshold
+                      ? "Retirer de l'argent"
+                      : `Minimum ${threshold.toLocaleString('fr-FR')} HTG`}
                   </div>
 
                 </div>
@@ -998,6 +1219,122 @@ function WalletContent() {
               <WageringProgress userId={currentUser.uid} />
             </section>
           )}
+
+
+          {/* ========================================
+              HISTORIQUE DES TRANSACTIONS
+          ======================================== */}
+
+          <section className="mt-6">
+
+            <div className="mb-3 flex items-center justify-between">
+
+              <h3 className="text-[14px] font-black">
+                Dernières transactions
+              </h3>
+
+              <span className="text-[8px] text-white/20">
+                {transactionsLoading ? "..." : transactions.length}
+              </span>
+
+            </div>
+
+
+            <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025]">
+
+              {transactionsLoading ? (
+
+                <div className="flex items-center justify-center py-4 text-[9px] text-white/20">
+                  Chargement...
+                </div>
+
+              ) : transactions.length === 0 ? (
+
+                <div className="flex flex-col items-center justify-center py-6 text-[9px] text-white/20">
+
+                  <span className="mb-1 text-2xl">
+                    📭
+                  </span>
+
+                  Aucune transaction récente
+
+                </div>
+
+              ) : (
+
+                <div className="divide-y divide-white/[0.05]">
+
+                  {transactions.map(
+                    (
+                      tx
+                    ) => {
+
+                      const isDeposit = tx.type === "deposit";
+                      const isWithdraw = tx.type === "withdraw";
+                      const isWin = tx.type === "win";
+
+                      let prefix = "";
+                      let color = "";
+
+                      if (isDeposit) {
+                        prefix = "+";
+                        color = "text-green-400";
+                      } else if (isWithdraw) {
+                        prefix = "−";
+                        color = "text-red-400";
+                      } else if (isWin) {
+                        prefix = "+";
+                        color = "text-amber-400";
+                      } else {
+                        prefix = "";
+                        color = "text-white/40";
+                      }
+
+                      const amount = Number(tx.amount) || 0;
+                      const label = tx.label || tx.type || "Transaction";
+                      const date = new Date(tx.timestamp || Date.now());
+
+                      return (
+
+                        <div
+                          key={tx.id}
+                          className="flex items-center gap-3 px-4 py-3"
+                        >
+
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-sm">
+                            {isDeposit ? "📥" : isWithdraw ? "📤" : isWin ? "🏆" : "💱"}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+
+                            <p className="text-[9px] font-bold leading-tight text-white/80">
+                              {label}
+                            </p>
+
+                            <p className="mt-0.5 text-[8px] text-white/25">
+                              {date.toLocaleDateString('fr-FR')} à {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+
+                          </div>
+
+                          <span className={`text-[10px] font-black ${color}`}>
+                            {prefix}{amount.toLocaleString('fr-FR')} HTG
+                          </span>
+
+                        </div>
+
+                      );
+
+                    }
+                  )}
+
+                </div>
+
+              )}
+
+            </div>
+
+          </section>
 
 
           {/* ========================================
@@ -1159,24 +1496,6 @@ function WalletContent() {
 
               <div className="px-5 pb-6 pt-5">
 
-                {/* Message wagering */}
-                <div className="mb-4 rounded-lg border border-orange-500/30 bg-orange-500/[0.08] p-3">
-                  <div className="flex items-start gap-2">
-                    <span className="text-lg">🔒</span>
-                    <div>
-                      <p className="text-[9px] font-bold text-orange-300">
-                        Condition de retrait
-                      </p>
-                      <p className="mt-1 text-[8px] text-white/70 leading-3">
-                        Pour pouvoir retirer, vous devez miser <span className="text-orange-300 font-bold">2 fois le montant de votre dépôt</span> dans les parties.
-                      </p>
-                      <p className="mt-1 text-[8px] text-white/50 leading-3">
-                        Exemple : Si vous déposez 100 HTG, vous devez miser 200 HTG avant de pouvoir retirer.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 <p className="mb-3 text-[10px] font-bold text-white/45">
                   Choisissez un montant
                 </p>
@@ -1308,7 +1627,11 @@ function WalletContent() {
 
                       💳
 
-                      Continuer avec MonCash
+                      Continuer avec
+
+                      <span className="font-bold text-blue-300">
+                        MonCash
+                      </span>
 
                       <span className="text-blue-300">
                         ›
@@ -1339,7 +1662,7 @@ function WalletContent() {
 
 
         {/* ==========================================
-            NAVIGATION
+            NAVIGATION (avec Historique à la place de Notifications)
         ========================================== */}
 
         <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.06] bg-black/95 backdrop-blur-xl">
@@ -1385,24 +1708,24 @@ function WalletContent() {
             </button>
 
 
-            {/* NOTIFICATIONS */}
+            {/* 🔄 HISTORIQUE (remplace Notifications) */}
 
             <button
               type="button"
               onClick={() => {
 
                 window.location.href =
-                  "/notifications";
+                  "/historique";
 
               }}
               className="flex min-w-[55px] flex-col items-center justify-center gap-1 text-[8px] text-white/30 transition active:scale-95"
             >
 
               <span className="text-[18px]">
-                🔔
+                📜
               </span>
 
-              Notifications
+              Historique
 
             </button>
 
@@ -1441,7 +1764,6 @@ function WalletContent() {
           currentBalance={balance}
           onWithdrawSuccess={() => {
             // Rafraîchir le solde après un retrait réussi
-            // Le solde est déjà mis à jour en temps réel via Firebase
           }}
         />
 

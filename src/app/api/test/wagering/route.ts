@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       await adminDB.ref(`users/${testUserId}`).set({
         balance: 150,
         totalDeposits: 100,
-        wageringRequired: 200,
+        wageringRequired: 150,
         wageringCompleted: 0,
         withdrawalUnlocked: false,
         currency: 'HTG'
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
       await adminDB.ref(`users/${testUserId}`).transaction((current: Record<string, unknown> | null) => {
         if (!current) return;
         const newWageringCompleted = (Number(current.wageringCompleted || 0) + 100);
-        const newWageringRequired = Number(current.totalDeposits || 0) * 2;
+        const newWageringRequired = Number(current.totalDeposits || 0) * 1.5;
         return {
           ...current,
           wageringCompleted: newWageringCompleted,
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
       await adminDB.ref(`users/${testUserId}`).transaction((current: Record<string, unknown> | null) => {
         if (!current) return;
         const newWageringCompleted = (Number(current.wageringCompleted || 0) + 100);
-        const newWageringRequired = Number(current.totalDeposits || 0) * 2;
+        const newWageringRequired = Number(current.totalDeposits || 0) * 1.5;
         return {
           ...current,
           wageringCompleted: newWageringCompleted,
@@ -107,8 +107,8 @@ export async function GET(request: Request) {
       await adminDB.ref(`users/${testUserId}`).set({
         balance: 150,
         totalDeposits: 100,
-        wageringRequired: 200,
-        wageringCompleted: 50,
+        wageringRequired: 150,
+        wageringCompleted: 75,
         withdrawalUnlocked: false,
         currency: 'HTG'
       });
@@ -148,8 +148,8 @@ export async function GET(request: Request) {
       await adminDB.ref(`users/${testUserId}`).set({
         balance: 150,
         totalDeposits: 100,
-        wageringRequired: 200,
-        wageringCompleted: 100,
+        wageringRequired: 150,
+        wageringCompleted: 150,
         withdrawalUnlocked: false,
         currency: 'HTG'
       });
@@ -243,8 +243,8 @@ export async function GET(request: Request) {
       await adminDB.ref(`users/${testUserId}`).set({
         balance: 150,
         totalDeposits: 100,
-        wageringRequired: 200,
-        wageringCompleted: 150,
+        wageringRequired: 150,
+        wageringCompleted: 225,
         withdrawalUnlocked: false,
         currency: 'HTG'
       });

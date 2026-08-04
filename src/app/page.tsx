@@ -1,9 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { motion } from "framer-motion";
-import { Trophy, Zap, Gamepad2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useNotifications } from "@/hooks/useNotifications";
@@ -43,50 +41,65 @@ export default function Home() {
           className="w-full max-w-[460px]"
         >
 
-          {/* Header */}
-          <div className="mb-5 flex items-center justify-between rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 backdrop-blur-xl">
+          {/* Single Block */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/[0.12] to-yellow-500/[0.08] p-4 backdrop-blur-xl sm:p-6"
+          >
+            <div className="mb-4 flex items-center gap-2">
+              <span className="text-xl">🥳</span>
+              <p className="text-xs font-black text-orange-300">
+                BIENVENUE SUR WINCASH - LA PLATEFORME QUI TE FAIT GAGNER !
+              </p>
+            </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04]">
-                <Image
-                  src="/titato-logo.svg"
-                  alt="TiTaTo"
-                  width={30}
-                  height={30}
-                  priority
-                />
-              </div>
+            <div className="mb-4 rounded-lg border border-orange-500/20 bg-orange-500/[0.08] px-3 py-2">
+              <p className="text-[10px] font-bold text-orange-200">
+                Pour fêter notre MOIS DE LANCEMENT, on te réserve une CONDITION DE RETRAIT EXCEPTIONNELLE :
+              </p>
+              <p className="mt-1 text-sm font-black text-orange-300">
+                🔥 ×1,5 SEULEMENT pour retirer tes gains !
+              </p>
+            </div>
 
-              <div>
-                <p className="text-sm font-black tracking-[0.18em]">
-                  TI TA TO
+            <div className="mb-4 space-y-1.5 rounded-lg border border-white/[0.05] bg-white/[0.02] px-3 py-2">
+              <p className="text-[9px] font-bold text-white/50">
+                Exemple concret :
+              </p>
+              <div className="space-y-1">
+                <p className="text-[9px] text-white/70">
+                  ✅ Tu déposes 100 HTG
                 </p>
-
-                <p className="text-[9px] text-white/30">
-                  Jeu • Stratégie • Victoire
+                <p className="text-[9px] text-white/70">
+                  ✅ Tu gagnes 1 match
+                </p>
+                <p className="text-[9px] text-white/70">
+                  ✅ Tu retires 150 HTG directement !
                 </p>
               </div>
             </div>
 
-            <span className="rounded-full border border-blue-400/10 bg-blue-500/[0.07] px-2.5 py-1.5 text-[9px] font-bold text-blue-300">
-              ● BETA
-            </span>
-          </div>
+            <div className="mb-4 rounded-lg border border-yellow-500/20 bg-yellow-500/[0.08] px-3 py-2">
+              <p className="text-[9px] text-yellow-200/80">
+                🕒 Offre valable du 03/07/2026 au 03/09/2026.
+              </p>
+              <p className="text-[9px] text-white/50">
+                Après cette date, les conditions passeront à ×2, comme partout ailleurs.
+              </p>
+            </div>
 
-
-          {/* Main Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-3xl border border-white/[0.08] bg-[#0a0d13]/90 p-5 shadow-[0_25px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:p-6"
-          >
+            <div className="mb-4 text-center">
+              <p className="text-[10px] font-black text-orange-300">
+                NE MANQUE PAS CETTE OPPORTUNITÉ UNIQUE !
+              </p>
+              <p className="mt-1 text-[9px] text-white/60">
+                👉 Inscris-toi maintenant et profite de cette offre de lancement !
+              </p>
+            </div>
 
             <div className="mb-6">
-              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-blue-400">
-                Bienvenue 👋
-              </p>
-
-              <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
+              <h1 className="text-xl font-black tracking-tight sm:text-2xl">
                 Prêt à jouer ?
               </h1>
 
@@ -94,7 +107,6 @@ export default function Home() {
                 Crée ton compte ou connecte-toi pour rejoindre l'univers Wincash.
               </p>
             </div>
-
 
             {/* Register */}
             <motion.button
@@ -131,7 +143,6 @@ export default function Home() {
                 </p>
               </div>
             </motion.button>
-
 
             {/* Login */}
             <motion.button
@@ -170,96 +181,20 @@ export default function Home() {
               </div>
             </motion.button>
 
-
-            {/* Features */}
-            <div className="my-6 flex items-center gap-3">
-              <div className="h-px flex-1 bg-white/[0.06]" />
-
-              <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/20">
-                Pourquoi Wincash ?
-              </span>
-
-              <div className="h-px flex-1 bg-white/[0.06]" />
-            </div>
-
-
-            <div className="grid grid-cols-3 gap-2">
-
-              <Feature
-                icon={<Zap size={16} />}
-                title="Rapide"
-                text="En temps réel"
-              />
-
-              <Feature
-                icon={<Trophy size={16} />}
-                title="Défis"
-                text="Avec tes amis"
-              />
-
-              <Feature
-                icon={<Gamepad2 size={16} />}
-                title="Jeu"
-                text="Joue et gagne"
-              />
-
+            <div className="mt-6 text-center">
+              <p className="text-[10px] font-black text-white/80">
+                🚀💎 WINCASH - LÀ OÙ TES GAINS PRENNENT LEUR VRAIE VALEUR !
+              </p>
+              <p className="mt-2 text-[9px] text-white/50">
+                💳 Déposer et retirer par Moncash en toute sécurité
+              </p>
             </div>
 
           </motion.div>
 
 
-          {/* Bottom Message */}
-          <div className="mt-4 rounded-2xl border border-white/[0.05] bg-white/[0.018] px-4 py-3 text-center">
-
-            <p className="text-[10px] font-bold text-blue-400/80">
-              🎮 Joue avec tes amis en temps réel
-            </p>
-
-            <p className="mt-1 text-[9px] text-white/25">
-              💬 Discute pendant tes parties
-            </p>
-
-          </div>
-
-
-          <p className="mt-5 text-center text-[8px] text-white/15">
-           Wincash • Version Beta
-          </p>
-
         </motion.section>
       </div>
     </main>
-  );
-}
-
-
-function Feature({
-  icon,
-  title,
-  text,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}) {
-  return (
-    <motion.div
-      whileTap={{ scale: 0.97 }}
-      className="flex min-h-[78px] flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.025] px-2 py-3 text-center transition hover:bg-blue-500/[0.035]"
-    >
-
-      <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/[0.08] text-blue-400">
-        {icon}
-      </div>
-
-      <span className="text-[9px] font-black text-white/65">
-        {title}
-      </span>
-
-      <span className="mt-0.5 text-[7px] text-white/20">
-        {text}
-      </span>
-
-    </motion.div>
   );
 }

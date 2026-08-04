@@ -259,159 +259,19 @@ max-w-[300px]
 
 
 {/* ========================================
-    HEADER
-======================================== */}
-
-<div
-
-className="
-mb-3
-flex
-items-center
-justify-between
-rounded-xl
-border
-border-white/[0.07]
-bg-white/[0.025]
-px-3
-py-2
-backdrop-blur-xl
-"
-
->
-
-
-<div
-
-className="
-flex
-items-center
-gap-2
-"
-
->
-
-
-<div
-
-className="
-flex
-h-8
-w-8
-items-center
-justify-center
-rounded-lg
-border
-border-blue-400/10
-bg-blue-500/[0.06]
-"
-
->
-
-
-<span
-
-className="
-text-[10px]
-font-black
-tracking-tight
-text-blue-400
-"
-
->
-
-XO
-
-</span>
-
-
-</div>
-
-
-
-<div>
-
-
-<p
-
-className="
-text-[11px]
-font-black
-tracking-[0.15em]
-"
-
->
-
-TI TA TO
-
-</p>
-
-
-<p
-
-className="
-text-[7px]
-text-white/30
-"
-
->
-
-Jeu • Stratégie • Victoire
-
-</p>
-
-
-</div>
-
-
-</div>
-
-
-
-
-<span
-
-className="
-rounded-full
-border
-border-blue-400/10
-bg-blue-500/[0.07]
-px-2
-py-1
-text-[7px]
-font-bold
-text-blue-300
-"
-
->
-
-● BETA
-
-</span>
-
-
-</div>
-
-
-
-
-
-{/* ========================================
     GRANDE CARTE
 ======================================== */}
 
 <div
-
-className="
-rounded-2xl
-border
-border-white/[0.08]
-bg-[#0a0d13]/95
-p-3
-shadow-[0_20px_60px_rgba(0,0,0,0.45)]
-backdrop-blur-2xl
-"
-
+  className="
+    rounded-2xl
+    border
+    border-white/[0.08]
+    bg-[#0a0d13]/95
+    p-3
+    shadow-[0_20px_60px_rgba(0,0,0,0.45)]
+    backdrop-blur-2xl
+  "
 >
 
 

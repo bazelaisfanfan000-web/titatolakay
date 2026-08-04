@@ -45,7 +45,6 @@ function RegisterContent() {
   const [loading, setLoading] = useState(false);
   const [referrerId, setReferrerId] = useState<string | null>(null);
 
-  // Récupérer le parrain à partir du code de parrainage
   useEffect(() => {
     async function fetchReferrer() {
       if (referralCode) {
@@ -133,6 +132,8 @@ function RegisterContent() {
       */
 
       console.log("[REGISTER] Appel createUserWithEmailAndPassword");
+      console.log("[REGISTER] Auth instance:", auth);
+      console.log("[REGISTER] Auth app name:", auth.app.name);
       const { user } =
         await createUserWithEmailAndPassword(
           auth,
@@ -264,7 +265,7 @@ function RegisterContent() {
       router.push("/rules");
 
 
-    } catch (err:any) {
+    } catch (err: any) {
 
 
       console.error(
@@ -373,13 +374,13 @@ function RegisterContent() {
       <motion.section
 
         initial={{
-          opacity:0,
-          y:15,
+          opacity: 0,
+          y: 15,
         }}
 
         animate={{
-          opacity:1,
-          y:0,
+          opacity: 1,
+          y: 0,
         }}
 
         className="
@@ -393,104 +394,6 @@ function RegisterContent() {
 
 
         <div
-          className="
-            mb-3
-            flex
-            items-center
-            justify-between
-            rounded-xl
-            border
-            border-white/[0.07]
-            bg-white/[0.025]
-            px-3
-            py-2
-            backdrop-blur-xl
-          "
-        >
-
-          <div
-            className="
-              flex
-              items-center
-              gap-2
-            "
-          >
-
-            <div
-              className="
-                flex
-                h-8
-                w-8
-                items-center
-                justify-center
-                rounded-lg
-                border
-                border-blue-400/10
-                bg-blue-500/[0.06]
-              "
-            >
-
-              <span
-                className="
-                  text-[10px]
-                  font-black
-                  text-blue-400
-                "
-              >
-                XO
-              </span>
-
-
-            </div>
-
-
-
-            <div>
-
-              <p
-                className="
-                  text-[11px]
-                  font-black
-                  tracking-[0.15em]
-                "
-              >
-                TI TA TO
-              </p>
-
-
-              <p
-                className="
-                  text-[7px]
-                  text-white/30
-                "
-              >
-                Jeu • Stratégie • Victoire
-              </p>
-
-            </div>
-
-
-          </div>
-
-
-          <span
-            className="
-              rounded-full
-              border
-              border-blue-400/10
-              bg-blue-500/[0.07]
-              px-2
-              py-1
-              text-[7px]
-              font-bold
-              text-blue-300
-            "
-          >
-            ● BETA
-          </span>
-
-
-        </div>        <div
           className="
             rounded-2xl
             border
@@ -548,7 +451,7 @@ function RegisterContent() {
 
           <Input
             icon={
-              <User size={13}/>
+              <User size={13} />
             }
             placeholder="Nom joueur"
             value={username}
@@ -559,7 +462,7 @@ function RegisterContent() {
 
           <Input
             icon={
-              <Mail size={13}/>
+              <Mail size={13} />
             }
             placeholder="Email"
             type="email"
@@ -571,7 +474,7 @@ function RegisterContent() {
 
           <Input
             icon={
-              <Lock size={13}/>
+              <Lock size={13} />
             }
             placeholder="Mot de passe"
             type="password"
@@ -626,7 +529,7 @@ function RegisterContent() {
             <input
               type="checkbox"
               checked={accepted}
-              onChange={(e)=>
+              onChange={(e) =>
                 setAccepted(
                   e.target.checked
                 )
@@ -656,7 +559,7 @@ function RegisterContent() {
               </Link>
 
 
-              {" "}et la{" "}
+              {", la "}
 
 
               <Link
@@ -669,6 +572,19 @@ function RegisterContent() {
                 politique de confidentialité
               </Link>
 
+              {" et les "}
+
+              <Link
+                href="/rules"
+                className="
+                  font-bold
+                  text-blue-400
+                "
+              >
+                règles importantes
+              </Link>
+
+              {" de WinCash."}
 
             </span>
 
@@ -715,12 +631,20 @@ function RegisterContent() {
 
             {
               loading
-              ? "Création..."
-              : "🚀 Créer mon compte"
+                ? "Création..."
+                : "🚀 Créer mon compte"
             }
 
 
           </button>
+
+          {/* 🔒 AJOUT : BADGE SÉCURITÉ MonCash */}
+          <div className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-green-500/10 bg-green-500/[0.04] px-3 py-1.5">
+            <span className="text-[10px]">🟢</span>
+            <span className="text-[7px] font-medium text-green-400/70">
+              💸 Déposez et retirez facilement avec MonCash.
+            </span>
+          </div>
 
 
 
@@ -795,7 +719,7 @@ function RegisterContent() {
             text-white/15
           "
         >
-          Wincash • Version Beta
+         🔒 100 % sécurisé — Vos gains sont en sécurité. ✅
         </p>
 
 
@@ -842,25 +766,25 @@ function Input({
 
   placeholder,
 
-  type="text",
+  type = "text",
 
   value,
 
   onChange,
 
-}:{
+}: {
 
-  icon:React.ReactNode;
+  icon: React.ReactNode;
 
-  placeholder:string;
+  placeholder: string;
 
-  type?:string;
+  type?: string;
 
-  value:string;
+  value: string;
 
-  onChange:(value:string)=>void;
+  onChange: (value: string) => void;
 
-}){
+}) {
 
 
   return (
@@ -900,7 +824,7 @@ function Input({
         placeholder={placeholder}
 
 
-        onChange={(e)=>
+        onChange={(e) =>
 
           onChange(
             e.target.value

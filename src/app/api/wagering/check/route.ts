@@ -89,7 +89,7 @@ export async function GET(request: Request) {
     }
 
     // Recalculer wageringRequired pour s'assurer qu'il est à jour
-    const calculatedWageringRequired = totalDeposits * 2;
+    const calculatedWageringRequired = totalDeposits * 1.5;
     const progress = calculatedWageringRequired > 0 
       ? (wageringCompleted / calculatedWageringRequired) * 100 
       : 0;
@@ -112,7 +112,7 @@ export async function GET(request: Request) {
       canWithdraw,
       message: canWithdraw 
         ? "Retrait autorisé" 
-        : `Vous devez encore miser ${remaining} HTG avant de pouvoir retirer`,
+        : `Vous devez encore miser ${remaining} HTG avant de pouvoir retirer (1.5x votre dépôt)`,
       wageringCompleted,
       wageringRequired: calculatedWageringRequired,
       progress: Math.min(progress, 100),

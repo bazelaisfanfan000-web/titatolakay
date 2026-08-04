@@ -198,7 +198,7 @@ export async function POST(request: Request) {
 
     // Si l'utilisateur a des dépôts, vérifier le wagering
     if (totalDeposits > 0) {
-      const calculatedWageringRequired = totalDeposits * 2;
+      const calculatedWageringRequired = totalDeposits * 1.5;
       const canWithdraw = wageringCompleted >= calculatedWageringRequired;
       
       if (!canWithdraw) {

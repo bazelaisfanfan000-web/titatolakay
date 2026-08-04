@@ -15,6 +15,7 @@ type RevengeRequest = {
   createdAt: number;
   requesterName?: string;
   requesterAvatar?: string;
+  
 };
 
 type Props = {

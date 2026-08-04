@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       const currentWageringRequired = Number(current.wageringRequired || 0);
 
       const newWageringCompleted = currentWageringCompleted + betAmount;
-      const newWageringRequired = currentTotalDeposits * 2;
+      const newWageringRequired = currentTotalDeposits * 1.5;
       const withdrawalUnlocked = newWageringCompleted >= newWageringRequired;
 
       console.log("[WAGERING] Transaction:", {

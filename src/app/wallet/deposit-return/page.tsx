@@ -2,8 +2,8 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { database } from "@/lib/firebase";
-import { ref, onValue } from "firebase/database";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 function DepositReturnContent() {
   const searchParams = useSearchParams();
@@ -11,10 +11,19 @@ function DepositReturnContent() {
   const [status, setStatus] = useState<"loading" | "success" | "pending" | "failed">("loading");
   const [amount, setAmount] = useState<number>(0);
   const [showAnimation, setShowAnimation] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const referenceId = searchParams.get("referenceId");
   const orderId = searchParams.get("orderId");
   const amountParam = searchParams.get("amount");
+
+  // Récupérer l'utilisateur connecté
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (amountParam) {
@@ -26,19 +35,62 @@ function DepositReturnContent() {
       return;
     }
 
-    // Simuler un succès pour l'UX (le webhook traitera réellement le dépôt)
-    setTimeout(() => {
-      setStatus("success");
-      setShowAnimation(true);
-    }, 1000);
+    // Vérifier le statut réel du dépôt
+    async function checkDepositStatus() {
+      try {
+        if (!currentUser) {
+          setTimeout(() => router.push("/login"), 3000);
+          return;
+        }
 
-    // Redirection automatique vers le dashboard après 5 secondes
+        const token = await currentUser.getIdToken(true);
+
+        const response = await fetch(
+          `/api/wallet/deposit/status?referenceId=${referenceId}`,
+          {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (result.success && result.deposit) {
+          const depositStatus = result.deposit.status;
+          if (depositStatus === "completed") {
+            setStatus("success");
+            setShowAnimation(true);
+          } else if (depositStatus === "pending" || depositStatus === "processing") {
+            setStatus("pending");
+          } else if (depositStatus === "failed") {
+            setStatus("failed");
+          } else {
+            setStatus("loading");
+          }
+        } else {
+          setStatus("failed");
+        }
+      } catch (error) {
+        console.error("Erreur vérification statut dépôt:", error);
+        setStatus("failed");
+      }
+    }
+
+    if (currentUser !== null) {
+      checkDepositStatus();
+    }
+
+    // Redirection automatique après 5 secondes (uniquement si succès)
     const redirectTimer = setTimeout(() => {
-      router.push("/dashboard");
+      if (status === "success") {
+        router.push("/dashboard");
+      }
     }, 5000);
 
     return () => clearTimeout(redirectTimer);
-  }, [referenceId, amountParam, router]);
+  }, [referenceId, amountParam, router, currentUser, status]);
 
   const handleGoToDashboard = () => {
     router.push("/dashboard");
@@ -47,7 +99,7 @@ function DepositReturnContent() {
   return (
     <div className="min-h-screen bg-[#020617] flex items-center justify-center p-5">
       <div className="w-full max-w-md bg-[#0D1224] border border-white/10 rounded-3xl p-8 shadow-2xl">
-        {/* Animation V vert */}
+        {/* Animation */}
         <div className="flex justify-center mb-8">
           <div className={`relative w-32 h-32 rounded-full flex items-center justify-center transition-all duration-500 ${
             status === "success" ? "bg-green-600/20 border-4 border-green-500 scale-110" :
@@ -82,13 +134,13 @@ function DepositReturnContent() {
 
         {/* Message */}
         <p className="text-center text-gray-400 mb-8">
-          {status === "loading" && "Veuillez patienter pendant que nous traitons votre dépôt..."}
-          {status === "success" && "Votre dépôt a été reçu avec succès. Le solde sera mis à jour automatiquement."}
-          {status === "pending" && "Votre paiement est en cours de traitement."}
-          {status === "failed" && "Une erreur s'est produite. Veuillez réessayer."}
+          {status === "loading" && "Veuillez patienter pendant que nous vérifions votre dépôt..."}
+          {status === "success" && "Votre dépôt a été reçu avec succès. Le solde a été mis à jour."}
+          {status === "pending" && "Votre paiement est en cours de traitement. Cela peut prendre quelques minutes."}
+          {status === "failed" && "Une erreur s'est produite. Veuillez réessayer ou contacter le support."}
         </p>
 
-        {/* Détails du dépôt */}
+        {/* Détails du dépôt (uniquement en succès) */}
         {status === "success" && (
           <div className="space-y-4 mb-8">
             <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
@@ -110,23 +162,68 @@ function DepositReturnContent() {
           </div>
         )}
 
-        {/* Bouton Dashboard */}
+        {/* ========================================
+            BOUTONS : RETOUR AU DASHBOARD POUR TOUS LES CAS
+        ======================================== */}
+
         {status === "success" && (
-          <button
-            onClick={handleGoToDashboard}
-            className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg shadow-green-600/30"
-          >
-            Aller au Dashboard
-          </button>
+          <>
+            <button
+              onClick={handleGoToDashboard}
+              className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg shadow-green-600/30"
+            >
+              Aller au Dashboard
+            </button>
+            <div className="text-center mt-4">
+              <p className="text-xs text-gray-500">
+                Redirection automatique dans 5 secondes...
+              </p>
+            </div>
+          </>
         )}
 
-        {/* Message de redirection automatique */}
-        {status === "success" && (
-          <div className="text-center mt-4">
-            <p className="text-xs text-gray-500">
-              Redirection automatique dans 5 secondes...
-            </p>
-          </div>
+        {status === "pending" && (
+          <>
+            <button
+              onClick={handleGoToDashboard}
+              className="w-full bg-yellow-600/20 hover:bg-yellow-600/30 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 border border-yellow-500/30"
+            >
+              Retourner au Dashboard
+            </button>
+            <div className="text-center mt-4">
+              <p className="text-xs text-yellow-500/60">
+                ⏳ Vous serez notifié quand le dépôt sera confirmé.
+              </p>
+            </div>
+          </>
+        )}
+
+        {status === "failed" && (
+          <>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleGoToDashboard}
+                className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 border border-white/10"
+              >
+                Retourner au Dashboard
+              </button>
+              <button
+                onClick={() => router.push("/wallet")}
+                className="w-full bg-red-600/30 hover:bg-red-600/50 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 border border-red-500/30"
+              >
+                Réessayer le dépôt
+              </button>
+            </div>
+          </>
+        )}
+
+        {status === "loading" && (
+          <button
+            onClick={handleGoToDashboard}
+            className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 border border-white/10"
+          >
+            Retourner au Dashboard
+          </button>
         )}
       </div>
     </div>

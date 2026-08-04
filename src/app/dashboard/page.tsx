@@ -25,6 +25,8 @@ import {
 
 import { useNotifications } from "@/hooks/useNotifications";
 import { useForegroundNotifications } from "@/hooks/useForegroundNotifications";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useFriendRequestsCount } from "@/hooks/useFriendRequestsCount";
 import { Bell, X } from "lucide-react";
 
 
@@ -41,6 +43,12 @@ export default function Dashboard() {
   // Initialiser les notifications
   useNotifications();
   useForegroundNotifications();
+
+  // Compteur de messages non lus
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const unreadCount = useUnreadMessages(currentUser?.uid || null);
+  const friendRequestCount = useFriendRequestsCount(currentUser?.uid || null);
+  const totalNotifications = unreadCount + friendRequestCount;
 
 
   /*
@@ -141,7 +149,7 @@ export default function Dashboard() {
         (user) => {
 
           if (!user) {
-
+            setCurrentUser(null);
             setBalance(0);
 
             setBalanceLoading(false);
@@ -151,6 +159,8 @@ export default function Dashboard() {
             return;
 
           }
+
+          setCurrentUser(user);
 
 
           /*
@@ -410,7 +420,7 @@ export default function Dashboard() {
                 "
               >
 
-                TiTaTo
+                Wincash
 
               </h1>
 
@@ -1211,6 +1221,7 @@ export default function Dashboard() {
                 "/vylo"
               )
             }
+            badgeCount={totalNotifications}
           />
 
         </nav>
@@ -1241,6 +1252,8 @@ function DashboardNavItem({
 
   onClick,
 
+  badgeCount = 0,
+
 }: {
 
   icon: string;
@@ -1250,6 +1263,8 @@ function DashboardNavItem({
   active?: boolean;
 
   onClick: () => void;
+
+  badgeCount?: number;
 
 }) {
 
@@ -1278,26 +1293,51 @@ function DashboardNavItem({
       `}
     >
 
-      <span
-        className={`
-          flex
-          h-8
-          w-8
-          items-center
-          justify-center
-          rounded-xl
-          text-[18px]
-          ${
-            active
-              ? "border border-blue-400/25 bg-blue-500/[0.10] shadow-[0_2px_0_rgba(30,64,175,0.5)]"
-              : ""
-          }
-        `}
-      >
+      <div className="relative">
+        <span
+          className={`
+            flex
+            h-8
+            w-8
+            items-center
+            justify-center
+            rounded-xl
+            text-[18px]
+            ${
+              active
+                ? "border border-blue-400/25 bg-blue-500/[0.10] shadow-[0_2px_0_rgba(30,64,175,0.5)]"
+                : ""
+            }
+          `}
+        >
 
-        {icon}
+          {icon}
 
-      </span>
+        </span>
+
+        {badgeCount > 0 && (
+          <span
+            className="
+              absolute
+              -right-1
+              -top-1
+              flex
+              h-5
+              min-w-[20px]
+              items-center
+              justify-center
+              rounded-full
+              bg-red-500
+              text-[10px]
+              font-black
+              text-white
+              shadow-lg
+            "
+          >
+            {badgeCount > 99 ? "99+" : badgeCount}
+          </span>
+        )}
+      </div>
 
 
       {label}

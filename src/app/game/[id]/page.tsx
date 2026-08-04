@@ -762,29 +762,10 @@ export default function GamePage() {
     }
 
     try {
-      setQuitLoading(true);
-
-      const idToken = await user.getIdToken();
-      const response = await fetch("/api/game/quit", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${idToken}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ gameId: id })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setShowQuitModal(false);
-        router.push("/dashboard");
-      } else {
-        setGameMessage("❌ " + (data.error || "Erreur lors de l'abandon"));
-        setTimeout(() => setGameMessage(""), 3000);
-      }
-    } catch (error) {
-      setGameMessage("❌ Erreur lors de l'abandon de la partie");
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Erreur quit game:", error);
+      setGameMessage("❌ " + (error?.message || "Impossible de quitter la partie"));
       setTimeout(() => setGameMessage(""), 3000);
     } finally {
       setQuitLoading(false);
@@ -956,10 +937,24 @@ export default function GamePage() {
       }
 
 
-      await sendVyloFriendRequest(
-        user.uid,
-        opponentId
-      );
+      const token = await user.getIdToken(true);
+
+      const response = await fetch("/api/friends/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          targetUid: opponentId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Erreur lors de l'envoi de la demande");
+      }
 
 
       setFriendStatus(

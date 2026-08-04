@@ -25,6 +25,15 @@ import {
   database,
 } from "@/lib/firebase";
 
+import {
+  markMessagesAsRead,
+} from "@/hooks/useUnreadMessages";
+
+import {
+  useBlockUser,
+  checkIfBlocked,
+} from "@/hooks/useBlockUser";
+
 
 /*
 ========================================
@@ -57,6 +66,7 @@ type ChatMessage = {
   receiverId: string;
   text: string;
   createdAt: number;
+  readStatus?: "1V" | "2V"; // 1V = non lu, 2V = lu
 };
 
 
@@ -114,6 +124,16 @@ export default function VyloPrivateChatPage() {
     areFriends,
     setAreFriends,
   ] = useState(false);
+
+
+  /*
+  ======================================
+  BLOCAGE
+  ======================================
+  */
+
+  const { isBlocked, blockUser, unblockUser } = useBlockUser(currentUser?.uid || null);
+  const [isUserBlocked, setIsUserBlocked] = useState(false);
 
 
   /*
@@ -327,17 +347,17 @@ export default function VyloPrivateChatPage() {
 
           });
 
+          // Vérifier si l'utilisateur est bloqué
+          if (currentUser) {
+            const blocked = await checkIfBlocked(currentUser.uid, friendId);
+            setIsUserBlocked(blocked);
+          }
+
         } else {
 
-          setFriend({
-
-            uid:
-              friendId,
-
-            username:
-              "Utilisateur",
-
-          });
+          setError(
+            "Utilisateur introuvable."
+          );
 
         }
 
@@ -498,6 +518,9 @@ export default function VyloPrivateChatPage() {
       true
     );
 
+    // Marquer les messages comme lus lors de l'ouverture du chat
+    markMessagesAsRead(chatId, currentUser.uid);
+
 
     const messagesRef =
       ref(
@@ -574,6 +597,10 @@ export default function VyloPrivateChatPage() {
                 createdAt:
                   message.createdAt ||
                   0,
+
+                readStatus:
+                  message.readStatus ||
+                  "1V",
 
               });
 
@@ -712,6 +739,13 @@ export default function VyloPrivateChatPage() {
     }
 
 
+    // Vérifier si l'utilisateur est bloqué
+    if (isUserBlocked) {
+      setError("Vous avez bloqué cet utilisateur.");
+      return;
+    }
+
+
     try {
 
       setSending(
@@ -773,6 +807,9 @@ export default function VyloPrivateChatPage() {
 
         createdAt:
           now,
+
+        readStatus:
+          "1V", // Non lu par défaut
 
       };
 
@@ -1688,6 +1725,39 @@ export default function VyloPrivateChatPage() {
           >
             VYLO
           </div>
+
+          {/* BOUTON BLOCAGE */}
+          <button
+            type="button"
+            onClick={async () => {
+              if (isUserBlocked) {
+                await unblockUser(friendId);
+                setIsUserBlocked(false);
+              } else {
+                await blockUser(friendId);
+                setIsUserBlocked(true);
+              }
+            }}
+            className="
+              ml-2
+              rounded-lg
+              border
+              px-2
+              py-1.5
+              text-[9px]
+              font-black
+              transition
+              active:scale-95
+              sm:ml-3
+            "
+            style={{
+              borderColor: isUserBlocked ? "#22c55e" : "#ef4444",
+              backgroundColor: isUserBlocked ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
+              color: isUserBlocked ? "#22c55e" : "#ef4444",
+            }}
+          >
+            {isUserBlocked ? "🔓 Débloquer" : "🚫 Bloquer"}
+          </button>
 
         </div>
 
