@@ -391,8 +391,8 @@ const freeMessagesRef = ref(rtdb, `rooms/${roomId}/freeMessagesUsed/${user.uid}`
 await set(freeMessagesRef, messageCount + 1);
 }
 
-// Si c'était un message payant après acceptation, déduire le montant
-if(hasAcceptedPayment && messageCount >= 4){
+// Si le joueur a déjà accepté le paiement, déduire le montant pour TOUS les messages suivants
+if(hasAcceptedPayment){
 try{
 if(user){
 const token = await user.getIdToken(true);
@@ -408,10 +408,17 @@ body: JSON.stringify({ amount: selectedAmount }),
 const data = await response.json();
 if(!data.success){
 console.error("Erreur déduction:", data.error);
+// Si erreur de déduction, afficher un message d'erreur
+setErrorMessage("Erreur lors de la déduction. Veuillez réessayer.");
+setTimeout(() => setErrorMessage(""), 3000);
+}else{
+console.log("Déduction réussie:", data);
 }
 }
 }catch(deductError){
 console.error("Erreur déduction solde:", deductError);
+setErrorMessage("Erreur lors de la déduction. Veuillez réessayer.");
+setTimeout(() => setErrorMessage(""), 3000);
 }
 }
 

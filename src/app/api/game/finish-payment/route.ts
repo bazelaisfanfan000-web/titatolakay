@@ -2,18 +2,14 @@ import { NextResponse } from "next/server";
 import { adminDB, adminAuth } from "@/lib/firebaseAdmin";
 import { sendPushNotification } from "@/lib/broadcastNotification";
 import { addMonthlyPoints } from "@/lib/monthlyChampion";
-import { validateWinner, determineWinner } from "@/lib/gameValidation";
 import { validateBet } from "@/lib/validation";
 import { processReferralCommission, hasActiveReferrer } from "@/lib/referral";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-
 export async function POST(request: Request) {
-
   try {
-
     const { gameId } = await request.json();
 
     if (!gameId) {
@@ -22,7 +18,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
 
     // ==========================
     // AUTH
@@ -33,198 +28,115 @@ export async function POST(request: Request) {
     if (!authHeader) {
       return NextResponse.json(
         { error: "Non connecté" },
-        { status:401 }
+        { status: 401 }
       );
     }
 
-
     const token = authHeader.replace("Bearer ", "");
-
     const decoded = await adminAuth.verifyIdToken(token);
-
     const callerUid = decoded.uid;
-
-
 
     // ==========================
     // LOAD ROOM
     // ==========================
 
-    const roomRef =
-      adminDB.ref(`rooms/${gameId}`);
-
-
+    const roomRef = adminDB.ref(`rooms/${gameId}`);
     const snap = await roomRef.get();
 
-
-    if(!snap.exists()){
-
+    if (!snap.exists()) {
       return NextResponse.json(
-        {error:"Partie introuvable"},
-        {status:404}
+        { error: "Partie introuvable" },
+        { status: 404 }
       );
-
     }
-
 
     const room = snap.val();
 
-
-
-    if(room.game?.status !== "finished"){
-
+    if (room.game?.status !== "finished") {
       return NextResponse.json(
-        {error:"Partie non terminée"},
-        {status:400}
+        { error: "Partie non terminée" },
+        { status: 400 }
       );
-
     }
-
-
 
     // ==========================
     // SECURITY
     // ==========================
 
-    if(!room.players?.[callerUid]){
-
+    if (!room.players?.[callerUid]) {
       return NextResponse.json(
-        {error:"Vous ne participez pas à cette partie"},
-        {status:403}
+        { error: "Vous ne participez pas à cette partie" },
+        { status: 403 }
       );
-
     }
-
-
 
     // ==========================
     // LOCK PAYMENT
     // ==========================
 
+    const paymentRef = adminDB.ref(`rooms/${gameId}/game/paymentStatus`);
+    const lock = await paymentRef.transaction((current) => {
+      if (current === "processing" || current === "completed") {
+        return;
+      }
+      return "processing";
+    });
 
-    const paymentRef =
-      adminDB.ref(
-        `rooms/${gameId}/game/paymentStatus`
-      );
-
-
-    const lock =
-      await paymentRef.transaction(
-        (current)=>{
-
-          if(
-            current === "processing" ||
-            current === "completed"
-          ){
-            return;
-          }
-
-
-          return "processing";
-
-        }
-      );
-
-
-    if(!lock.committed){
+    if (!lock.committed) {
       console.log("[FINISH_PAYMENT] Paiement déjà traité, retour 409");
       return NextResponse.json(
-        {
-          error:"Paiement déjà traité"
-        },
-        {
-          status:409
-        }
+        { error: "Paiement déjà traité" },
+        { status: 409 }
       );
     }
 
     // ==========================
-    // VALIDATE WINNER
+    // VALIDATE WINNER (AMÉLIORÉ)
     // ==========================
 
-    const board =
-      room.game.board || {};
+    const winnerValue = room.game.winner;
 
-    const winnerSymbol =
-      room.game.winner;
-
-    if (!winnerSymbol) {
-
+    if (!winnerValue) {
       await paymentRef.set(null);
-
       return NextResponse.json(
         { error: "Aucun gagnant" },
         { status: 400 }
       );
-
     }
 
-    const realWinner =
-      determineWinner(board);
+    let winnerUid: string | null = null;
 
-    console.log("[VALIDATION_DEBUG] Validation du gagnant:", {
-      gameId,
-      winnerSymbol,
-      realWinner,
-      boardKeys: Object.keys(board),
-      boardSample: Object.entries(board).slice(0, 5),
-      boardSize: Object.keys(board).length
-    });
-
-    // Validation plus permissive: vérifier seulement si le gagnant déclaré a une victoire valide
-    // Si determineWinner retourne null (match nul ou plateau vide), on accepte le gagnant déclaré
-    // car le client a déjà validé la victoire
-    if (realWinner && realWinner !== winnerSymbol) {
-      console.error("[SECURITY] Gagnant invalide détecté", {
-        gameId,
-        declared: winnerSymbol,
-        actual: realWinner
-      });
-
-      await paymentRef.set(null);
-
-      return NextResponse.json(
-        {
-          error: "Résultat invalide"
-        },
-        {
-          status: 400
-        }
+    // 1. Si winnerValue est un UID (présent dans players)
+    if (room.players[winnerValue]) {
+      winnerUid = winnerValue;
+    } else {
+      // 2. Sinon, chercher le joueur dont le symbole correspond
+      const entry = Object.entries(room.players).find(
+        ([, player]: any) => player.symbol === winnerValue
       );
+      if (entry) {
+        winnerUid = entry[0];
+      }
     }
-
-    // ==========================
-    // FIND WINNER UID
-    // ==========================
-
-    const playerIds = Object.keys(room.players);
-    let winnerUid = "";
-
-    Object.entries(room.players)
-      .forEach(
-        ([uid, player]: any) => {
-
-          if (
-            player.symbol === winnerSymbol
-          ) {
-
-            winnerUid = uid;
-
-          }
-
-        }
-      );
 
     if (!winnerUid) {
-
+      console.error("[FINISH_PAYMENT] Gagnant invalide:", {
+        winnerValue,
+        players: room.players,
+      });
       await paymentRef.set(null);
-
       return NextResponse.json(
-        { error: "Gagnant introuvable" },
+        { error: "Gagnant invalide" },
         { status: 400 }
       );
-
     }
+
+    console.log("[FINISH_PAYMENT] ✅ Gagnant validé:", {
+      gameId,
+      winnerValue,
+      winnerUid,
+      playerIds: Object.keys(room.players),
+    });
 
     // ==========================
     // CALCUL DU GAIN (NOUVEAU SYSTÈME)
@@ -234,6 +146,7 @@ export async function POST(request: Request) {
 
     if (!betValidation.valid) {
       console.error("[FINISH_PAYMENT] Mise invalide:", room.bet);
+      await paymentRef.set(null);
       return NextResponse.json(
         { error: "Mise de la partie invalide" },
         { status: 400 }
@@ -242,63 +155,65 @@ export async function POST(request: Request) {
 
     const bet = betValidation.value!;
 
-    // NOUVEAU SYSTÈME:
     // Commission = 50% de la mise du perdant
     // Crédit gagnant = sa mise + (50% de la mise du perdant)
-    // Exemple: mise 100 HTG
-    // Commission = 50 HTG
-    // Crédit gagnant = 100 + 50 = 150 HTG
-
-    const commission = Math.round((bet * 0.5) * 100) / 100; // Précision 2 décimales
-    const winnerCredit = Math.round((bet + commission) * 100) / 100; // Sa mise + la commission
+    const commission = Math.round((bet * 0.5) * 100) / 100;
+    const winnerCredit = Math.round((bet + commission) * 100) / 100;
 
     console.log("[NEW_PAYMENT_SYSTEM] Calcul du gain:", {
       bet,
       commission,
       winnerCredit,
-      formula: `${bet} + (${bet} * 0.5) = ${winnerCredit}`
+      formula: `${bet} + (${bet} * 0.5) = ${winnerCredit}`,
     });
 
     if (winnerCredit <= 0) {
-
       await paymentRef.set(null);
-
       return NextResponse.json(
         { error: "Gain invalide" },
         { status: 400 }
       );
-
     }
 
     // ==========================
     // TRANSACTION ATOMIQUE FINALE
     // ==========================
 
-    const winnerBalanceRef =
-      adminDB.ref(`users/${winnerUid}/balance`);
-
-    const balanceSnap =
-      await winnerBalanceRef.get();
-
-    const oldBalance =
-      Number(balanceSnap.val() || 0);
-
-    const newBalance =
-      Math.round((oldBalance + winnerCredit) * 100) / 100;
+    const playerIds = Object.keys(room.players);
+    const loserId = playerIds.find((id) => id !== winnerUid) || null;
 
     const updates: any = {};
 
-    updates[
-      `users/${winnerUid}/balance`
-    ] = newBalance;
-    updates[
-      `users/${winnerUid}/updatedAt`
-    ] = Date.now();
+    // ============================================================
+    // ⚠️ DÉDUCTION DU PERDANT SUPPRIMÉE
+    // La mise du perdant est déjà déduite lors de la création/rejointe.
+    // On ne fait que créditer le gagnant et mettre à jour les stats.
+    // ============================================================
+
+    // Mise à jour des stats du perdant (sans toucher à son solde)
+    if (loserId) {
+      await adminDB.ref(`users/${loserId}`).transaction((user: any) => {
+        if (!user) return user;
+        user.losses = Number(user.losses || 0) + 1;
+        user.gamesPlayed = Number(user.gamesPlayed || 0) + 1;
+        user.winRate = Math.round(
+          (Number(user.wins || 0) / user.gamesPlayed) * 100
+        );
+        return user;
+      });
+    }
+
+    // Créditer le gagnant
+    const winnerBalanceRef = adminDB.ref(`users/${winnerUid}/balance`);
+    const balanceSnap = await winnerBalanceRef.get();
+    const oldBalance = Number(balanceSnap.val() || 0);
+    const newBalance = Math.round((oldBalance + winnerCredit) * 100) / 100;
+
+    updates[`users/${winnerUid}/balance`] = newBalance;
+    updates[`users/${winnerUid}/updatedAt`] = Date.now();
 
     const transactionId = `${Date.now()}_${winnerUid}`;
-    updates[
-      `wallet_transactions/${winnerUid}/${transactionId}`
-    ] = {
+    updates[`wallet_transactions/${winnerUid}/${transactionId}`] = {
       id: transactionId,
       userId: winnerUid,
       type: "game_win",
@@ -311,61 +226,38 @@ export async function POST(request: Request) {
       description: `Gain de jeu - ${gameId}`,
       metadata: { gameId, bet, commission },
       createdAt: Date.now(),
-      completedAt: Date.now()
+      completedAt: Date.now(),
     };
 
-    updates[
-      `rooms/${gameId}/game/paymentStatus`
-    ] = "completed";
-    updates[
-      `rooms/${gameId}/game/winnerUid`
-    ] = winnerUid;
-    updates[
-      `rooms/${gameId}/game/reward`
-    ] = winnerCredit;
-    updates[
-      `rooms/${gameId}/game/commission`
-    ] = commission;
-    updates[
-      `rooms/${gameId}/game/paidAt`
-    ] = Date.now();
-    updates[
-      `rooms/${gameId}/game/rewardProcessed`
-    ] = true;
+    updates[`rooms/${gameId}/game/paymentStatus`] = "completed";
+    updates[`rooms/${gameId}/game/winnerUid`] = winnerUid;
+    updates[`rooms/${gameId}/game/reward`] = winnerCredit;
+    updates[`rooms/${gameId}/game/commission`] = commission;
+    updates[`rooms/${gameId}/game/paidAt`] = Date.now();
+    updates[`rooms/${gameId}/game/rewardProcessed`] = true;
 
-    await adminDB
-      .ref()
-      .update(updates);
+    await adminDB.ref().update(updates);
 
     // ==========================
     // COMMISSION DE PARRAINAGE
     // ==========================
 
     try {
-      const loserId = playerIds.find((id: string) => id !== winnerUid);
-      console.log("[FINISH_PAYMENT] Identification perdant:", { winnerUid, loserId, playerIds, bet, roomBet: room.bet });
-      
       if (loserId) {
-        // Utiliser room.bet directement pour éviter toute confusion
         const lostAmount = Number(room.bet) || bet;
-        console.log("[FINISH_PAYMENT] lostAmount utilisé pour commission:", lostAmount);
-        
         const commissionResult = await processReferralCommission({
           gameId,
           loserId,
-          lostAmount: lostAmount
+          lostAmount,
         });
-
-        console.log("[FINISH_PAYMENT] Résultat commission:", commissionResult);
 
         if (commissionResult.success && commissionResult.commission && commissionResult.commission > 0) {
           console.log("[FINISH_PAYMENT] Commission parrainage versée:", {
             gameId,
             loserId,
-            commission: commissionResult.commission
+            commission: commissionResult.commission,
           });
-          
-          // Envoyer notification au parrain
+
           try {
             const { hasReferrer, referrerId } = await hasActiveReferrer(loserId);
             if (hasReferrer && referrerId) {
@@ -377,7 +269,7 @@ export async function POST(request: Request) {
                   type: "referral_commission",
                   amount: commissionResult.commission,
                   gameId,
-                  referredUserId: loserId
+                  referredUserId: loserId,
                 }
               );
             }
@@ -394,39 +286,20 @@ export async function POST(request: Request) {
     }
 
     // ==========================
-    // STATS
+    // STATS GAGNANT
     // ==========================
 
-    await adminDB
-      .ref(`users/${winnerUid}`)
-      .transaction(
-        (user: any) => {
-
-          if (!user)
-            return user;
-
-          user.wins =
-            Number(user.wins || 0) + 1;
-
-          user.gamesPlayed =
-            Number(user.gamesPlayed || 0) + 1;
-
-          user.winRate =
-            Math.round(
-              user.wins /
-              user.gamesPlayed *
-              100
-            );
-
-          return user;
-
-        }
+    await adminDB.ref(`users/${winnerUid}`).transaction((user: any) => {
+      if (!user) return user;
+      user.wins = Number(user.wins || 0) + 1;
+      user.gamesPlayed = Number(user.gamesPlayed || 0) + 1;
+      user.winRate = Math.round(
+        (Number(user.wins || 0) / user.gamesPlayed) * 100
       );
+      return user;
+    });
 
-    await addMonthlyPoints(
-      winnerUid,
-      10
-    );
+    await addMonthlyPoints(winnerUid, 10);
 
     await sendPushNotification(
       winnerUid,
@@ -434,45 +307,25 @@ export async function POST(request: Request) {
       `Tu as gagné ${winnerCredit} HTG`,
       {
         type: "win",
-        amount: winnerCredit
+        amount: winnerCredit,
       }
     );
 
     return NextResponse.json({
-
       success: true,
-
       winnerUid,
-
       reward: winnerCredit,
-
       commission,
-
       oldBalance,
-
-      newBalance
-
+      newBalance,
     });
-
-  }
-  catch (error: any) {
-
-    console.error(
-      "FINISH PAYMENT ERROR",
-      error
-    );
-
+  } catch (error: any) {
+    console.error("FINISH PAYMENT ERROR", error);
     return NextResponse.json(
       {
-        error:
-          error.message ||
-          "Erreur serveur"
+        error: error.message || "Erreur serveur",
       },
-      {
-        status: 500
-      }
+      { status: 500 }
     );
-
   }
-
 }

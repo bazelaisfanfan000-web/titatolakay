@@ -15,6 +15,7 @@ import {
   onValue,
   ref,
   remove,
+  update,
 } from "firebase/database";
 
 import {
@@ -97,6 +98,20 @@ export default function GamePage() {
   );
 
 
+  // ✅ UID du gagnant
+  const [
+    winnerUid,
+    setWinnerUid,
+  ] = useState<string | null>(null);
+
+
+  // ✅ Indicateur de forfait
+  const [
+    isForfeit,
+    setIsForfeit,
+  ] = useState(false);
+
+
   const [
     mySymbol,
     setMySymbol,
@@ -163,6 +178,10 @@ export default function GamePage() {
 
   const friendStatusChecked =
     useRef<string | null>(null);
+
+
+  const abandonProcessed =
+    useRef(false);
 
 
   /*
@@ -242,6 +261,29 @@ export default function GamePage() {
           );
 
 
+          // ================================
+          // UNIFORMISATION DU GAGNANT EN UID
+          // ================================
+          let computedWinnerUid: string | null = null;
+          if (data.game?.winner) {
+            const w = data.game.winner;
+            if (data.players && data.players[w]) {
+              computedWinnerUid = w;
+            } else {
+              const entry = Object.entries(data.players || {}).find(
+                ([, p]: any) => p.symbol === w
+              );
+              if (entry) {
+                computedWinnerUid = entry[0];
+              }
+            }
+          }
+          setWinnerUid(computedWinnerUid);
+
+          // ✅ Récupérer le flag isForfeit
+          setIsForfeit(data.game?.isForfeit || false);
+
+
           setTurnStartedAt(
             data.game?.turnStartedAt ||
               0
@@ -266,6 +308,74 @@ export default function GamePage() {
           }
 
 
+          // ==========================================
+          // DÉTECTION AUTOMATIQUE DU FORFAIT
+          // ==========================================
+          if (
+            data.game?.status !== "finished" &&
+            data.players
+          ) {
+
+            const playerIds =
+              Object.keys(
+                data.players
+              );
+
+            if (
+              playerIds.length === 1 &&
+              !abandonProcessed.current
+            ) {
+
+              abandonProcessed.current =
+                true;
+
+              const winnerId =
+                playerIds[0];
+
+              const gameRef =
+                ref(
+                  database,
+                  `rooms/${id}/game`
+                );
+
+              update(
+                gameRef,
+                {
+                  winner:
+                    winnerId,
+
+                  finished:
+                    true,
+
+                  finishedAt:
+                    Date.now(),
+
+                  status:
+                    "finished",
+
+                  // ✅ Marquer comme forfait
+                  isForfeit:
+                    true,
+                }
+              ).catch(
+                (err) => {
+
+                  console.error(
+                    "Erreur forfait :",
+                    err
+                  );
+
+                  abandonProcessed.current =
+                    false;
+
+                }
+              );
+
+            }
+
+          }
+
+
           /*
           ==========================================
           DÉTECTER MATCH NUL (plateau vidé)
@@ -286,7 +396,6 @@ export default function GamePage() {
               previousDrawCount
             ) {
 
-              // Nouveau match nul détecté
               setDrawMessage(true);
 
               setTimeout(
@@ -306,6 +415,7 @@ export default function GamePage() {
 
     return () => {
       unsubscribe();
+      abandonProcessed.current = false;
     };
 
   }, [
@@ -561,19 +671,19 @@ export default function GamePage() {
           await res.json();
 
 
-        /*
-        Si le paiement est déjà en cours ou terminé,
-        on considère que c'est un succès (idempotence)
-        */
-
+        // ==========================================
+        // CORRECTION 409 : on arrête les appels
+        // ==========================================
         if (
-          res.status === 409 &&
-          result?.error === "Paiement déjà traité"
+          res.status === 409
         ) {
 
           console.log(
-            "Paiement déjà traité, ignoré"
+            "Paiement déjà traité, on arrête."
           );
+
+          paymentDone.current =
+            true;
 
           return;
 
@@ -748,7 +858,7 @@ export default function GamePage() {
 
   /*
   ========================================
-  QUITTER LA PARTIE
+  QUITTER LA PARTIE (volontaire)
   ========================================
   */
 
@@ -762,6 +872,21 @@ export default function GamePage() {
     }
 
     try {
+      const opponentId = getOpponentId();
+      if (opponentId && room && !winner) {
+        const roomRef = ref(database, `rooms/${id}/game`);
+        await update(roomRef, {
+          winner: opponentId,
+          finished: true,
+          finishedAt: Date.now(),
+          status: "finished",
+          isForfeit: true,
+        });
+
+        await addPlayerWin(opponentId);
+        await addPlayerLose(user.uid);
+      }
+
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Erreur quit game:", error);
@@ -1442,33 +1567,26 @@ export default function GamePage() {
         </div>
 
 
-        {/* MODAL GAGNANT */}
+        {/* ========================================
+            MODAL GAGNANT AVEC MESSAGE FORFAIT
+        ======================================== */}
 
-        {
-          winner && (
-
-            <WinnerModal
-              winner={winner}
-              mySymbol={mySymbol}
-              reward={reward}
-              bet={bet}
-              pot={pot}
-              commission={commission}
-              friendStatus={
-                friendStatus
-              }
-              onAddFriend={
-                handleAddFriend
-              }
-              onClose={() => {
-                router.push(
-                  "/dashboard"
-                );
-              }}
-            />
-
-          )
-        }
+        {winnerUid && (
+          <WinnerModal
+            winnerUid={winnerUid}
+            myUid={user?.uid || ""}
+            reward={reward}
+            bet={bet}
+            pot={pot}
+            commission={commission}
+            friendStatus={friendStatus}
+            onAddFriend={handleAddFriend}
+            onClose={() => {
+              router.push("/dashboard");
+            }}
+            isForfeit={isForfeit}
+          />
+        )}
 
 
         {/* MESSAGE AMI */}

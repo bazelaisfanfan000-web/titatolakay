@@ -11,6 +11,7 @@ import {
 
 import {
   createUserWithEmailAndPassword,
+  onAuthStateChanged,
 } from "firebase/auth";
 
 import {
@@ -45,6 +46,29 @@ function RegisterContent() {
   const [loading, setLoading] = useState(false);
   const [referrerId, setReferrerId] = useState<string | null>(null);
 
+  // ========================================
+  // NOUVEAU : ÉTAT DE CHARGEMENT AUTH
+  // ========================================
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // ========================================
+  // VÉRIFIER SI L'UTILISATEUR EST DÉJÀ CONNECTÉ
+  // ========================================
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // Si déjà connecté, rediriger vers le dashboard
+        router.replace("/dashboard");
+      } else {
+        setAuthLoading(false);
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
+
+  // ========================================
+  // RÉCUPÉRER LE PARRAIN (inchangé)
+  // ========================================
   useEffect(() => {
     async function fetchReferrer() {
       if (referralCode) {
@@ -232,16 +256,20 @@ function RegisterContent() {
 
       console.log("[REGISTER] Utilisateur créé avec referredBy:", referrerId);
 
+      // ========================================
+      // NOUVEAU : DÉFINIR LE COOKIE POUR LE MIDDLEWARE
+      // ========================================
+      const token = await user.getIdToken();
+      const cookieRes = await fetch("/api/auth/set-cookie", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
 
-
-
-
-
-
-
-
-
-
+      if (!cookieRes.ok) {
+        console.error("[REGISTER] Erreur lors de la définition du cookie");
+        // On continue quand même, mais log
+      }
 
       /*
       ========================================
@@ -337,6 +365,20 @@ function RegisterContent() {
 
   }
 
+
+  // ========================================
+  // AFFICHAGE DE CHARGEMENT PENDANT LA VÉRIFICATION
+  // ========================================
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#05070b] text-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4" />
+          <p className="text-sm text-white/50">Vérification...</p>
+        </div>
+      </div>
+    );
+  }
 
 
   return (

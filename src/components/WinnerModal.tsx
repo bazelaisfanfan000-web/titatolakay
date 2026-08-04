@@ -6,28 +6,21 @@ type FriendStatus =
   | "friend";
 
 type Props = {
-  winner: string;
-
-  mySymbol: "X" | "O" | "";
-
+  winnerUid: string;
+  myUid: string;
   reward: number;
-
   bet: number;
-
   pot: number;
-
   commission: number;
-
   friendStatus: FriendStatus;
-
   onAddFriend: () => void;
-
   onClose: () => void;
+  isForfeit?: boolean;   // ✅ NOUVEAU
 };
 
 export default function WinnerModal({
-  winner,
-  mySymbol,
+  winnerUid,
+  myUid,
   reward,
   bet,
   pot,
@@ -35,9 +28,9 @@ export default function WinnerModal({
   friendStatus,
   onAddFriend,
   onClose,
+  isForfeit = false,   // ✅ NOUVEAU
 }: Props) {
-  const isWinner =
-    winner === mySymbol;
+  const isWinner = winnerUid === myUid;
 
   const isPending =
     friendStatus === "pending";
@@ -127,9 +120,7 @@ export default function WinnerModal({
             sm:text-6xl
           "
         >
-          {isWinner
-            ? "🏆"
-            : "😢"}
+          {isWinner ? "🏆" : "😢"}
         </div>
 
         {/* ========================================
@@ -147,12 +138,14 @@ export default function WinnerModal({
           "
         >
           {isWinner
-            ? "VICTOIRE !"
+            ? isForfeit
+              ? "ABANDON !"
+              : "VICTOIRE !"
             : "DÉFAITE"}
         </h2>
 
         {/* ========================================
-            MESSAGE
+            MESSAGE (avec personnalisation forfait)
         ======================================== */}
 
         <p
@@ -165,7 +158,9 @@ export default function WinnerModal({
           "
         >
           {isWinner
-            ? "Félicitations, vous avez gagné 🎉"
+            ? isForfeit
+              ? "Votre adversaire a abandonné, vous êtes le gagnant 🏆"
+              : "Félicitations, vous avez gagné 🎉"
             : "Votre adversaire a gagné"}
         </p>
 
@@ -383,18 +378,13 @@ export default function WinnerModal({
 
         {/* ========================================
             DEMANDER EN AMI
-            BOUTON 3D TRANSPARENT BLEU
         ======================================== */}
 
         {!isFriend ? (
           <button
             type="button"
-            onClick={
-              onAddFriend
-            }
-            disabled={
-              isPending
-            }
+            onClick={onAddFriend}
+            disabled={isPending}
             className="
               group
               relative
@@ -435,16 +425,12 @@ export default function WinnerModal({
             {isPending ? (
               <>
                 📩
-                <span>
-                  Demande envoyée
-                </span>
+                <span>Demande envoyée</span>
               </>
             ) : (
               <>
                 🤝
-                <span>
-                  Demander en ami
-                </span>
+                <span>Demander en ami</span>
               </>
             )}
           </button>
@@ -471,23 +457,17 @@ export default function WinnerModal({
             "
           >
             👥
-            <span>
-              Vous êtes maintenant amis
-            </span>
+            <span>Vous êtes maintenant amis</span>
           </div>
         )}
 
-
         {/* ========================================
             RETOUR AU TABLEAU DE BORD
-            BOUTON 3D TRANSPARENT BLEU
         ======================================== */}
 
         <button
           type="button"
-          onClick={
-            onClose
-          }
+          onClick={onClose}
           className="
             group
             relative
@@ -522,23 +502,14 @@ export default function WinnerModal({
           "
         >
           ⬅️
-
-          <span className="ml-2">
-            Retour au tableau de bord
-          </span>
+          <span className="ml-2">Retour au tableau de bord</span>
         </button>
 
         {/* ========================================
             ESPACE POUR LES PETITS ÉCRANS
         ======================================== */}
 
-        <div
-          className="
-            h-[env(safe-area-inset-bottom)]
-            sm:hidden
-          "
-        />
-
+        <div className="h-[env(safe-area-inset-bottom)] sm:hidden" />
       </div>
     </div>
   );
