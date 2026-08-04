@@ -1215,7 +1215,7 @@ export default function Dashboard() {
 
           <DashboardNavItem
             icon="👥"
-            label="VYLO"
+            label="amie"
             onClick={() =>
               router.push(
                 "/vylo"
