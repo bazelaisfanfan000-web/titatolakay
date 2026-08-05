@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
     }
 
     // Transaction atomique : terminer le match et répartir la cagnotte
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Mettre à jour le match
       const updatedMatch = await tx.match.update({
         where: { id: matchId },
