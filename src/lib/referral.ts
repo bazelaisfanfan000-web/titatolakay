@@ -7,7 +7,8 @@ import { adminDB } from "./firebaseAdmin";
 import { creditWallet } from "./wallet";
 import { createLedgerEntry } from "./ledger";
 
-const REFERRAL_COMMISSION_RATE = 0.10; // 10%
+// ✅ TAUX DE COMMISSION PASSÉ DE 10% À 5%
+const REFERRAL_COMMISSION_RATE = 0.05; // 5%
 const REFERRAL_DURATION_MONTHS = 6;
 
 /**
@@ -250,7 +251,7 @@ export async function processReferralCommission(params: {
       return { success: true, commission: 0 }; // Déjà traité
     }
     
-    // Calculer la commission (10% de la perte)
+    // Calculer la commission (5% de la perte)
     const commission = Math.round((lostAmount * REFERRAL_COMMISSION_RATE) * 100) / 100;
     
     console.log("[REFERRAL] Détails calcul commission:", { 
@@ -258,7 +259,7 @@ export async function processReferralCommission(params: {
       rate: REFERRAL_COMMISSION_RATE, 
       calculation: `${lostAmount} * ${REFERRAL_COMMISSION_RATE} = ${lostAmount * REFERRAL_COMMISSION_RATE}`,
       commission: commission,
-      expectedCommission: lostAmount * 0.10
+      expectedCommission: lostAmount * 0.05  // ✅ mis à jour pour cohérence
     });
     
     if (commission <= 0) {

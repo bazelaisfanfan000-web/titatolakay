@@ -1157,7 +1157,7 @@ export default function Dashboard() {
                     text-purple-100/40
                   "
                 >
-                  Invitez vos amis et gagnez 10% de leurs pertes
+                  Invitez vos amis et gagnez 5% de leurs pertes
                 </p>
               </div>
 

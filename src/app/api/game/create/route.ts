@@ -321,50 +321,7 @@ export async function POST(
 
     /*
     ================================================
-    6. VÉRIFIER MISE MINIMUM (50% du solde) SI PREMIÈRE PARTIE
-    ================================================
-    */
-
-    const userSnap = await adminDB.ref(`users/${uid}`).once("value");
-    const userData = userSnap.val();
-    const firstGamePlayed = userData.firstGamePlayed === true;
-
-    console.log("[CREATE ROOM] Vérification mise minimum:", {
-      uid,
-      balance,
-      amount,
-      firstGamePlayed,
-      firstGamePlayedRaw: userData.firstGamePlayed
-    });
-
-    // Si le joueur n'a pas encore joué sa première partie après le dépôt
-    if (!firstGamePlayed) {
-      const minimumBet = Math.round(balance * 0.5);
-      
-      if (amount < minimumBet) {
-        console.log("[CREATE ROOM] Mise insuffisante (doit être >= 50% du solde):", {
-          uid,
-          amount,
-          minimumBet,
-          balance,
-          firstGamePlayed
-        });
-        
-        return NextResponse.json(
-          {
-            success: false,
-            error: `La mise minimum est de ${minimumBet} HTG (50% de votre solde de ${balance} HTG) !`
-          },
-          {
-            status: 400,
-          }
-        );
-      }
-    }
-
-    /*
-    ================================================
-    7. CONFIGURATION PARTIE
+    6. CONFIGURATION PARTIE
     ================================================
     */
 

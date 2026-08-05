@@ -76,10 +76,6 @@ export async function detectAbandonedGames() {
 REMBOURSER LES JOUEURS D'UNE PARTIE
 ====================================================
 */
-// DÉSACTIVÉ: Avec le nouveau système WinCash, aucun remboursement automatique
-// Les mises restent bloquées même si la partie est abandonnée
-// Seul le gagnant reçoit un crédit à la fin de la partie
-/*
 export async function refundGamePlayers(
   roomId: string,
   players: Record<string, any>,
@@ -89,11 +85,18 @@ export async function refundGamePlayers(
     if (!player.betPaid) return;
 
     const userRef = adminDB.ref(`users/${uid}`);
-    
+
     const result = await userRef.transaction((current: any) => {
       if (!current) return;
-      
+
       const currentBalance = Number(current.balance || 0);
+
+      console.log("[REFUND] Remboursement:", {
+        uid,
+        bet,
+        currentBalance,
+      });
+
       return {
         ...current,
         balance: currentBalance + bet,
@@ -107,7 +110,7 @@ export async function refundGamePlayers(
     }
 
     // Enregistrer la transaction de remboursement
-    await adminDB.ref(`transactions/${uid}`).push({
+    await adminDB.ref(`wallet_transactions/${uid}`).push({
       type: "refund",
       reason: "abandoned_game",
       gameId: roomId,
@@ -120,7 +123,6 @@ export async function refundGamePlayers(
   await Promise.allSettled(refundPromises);
   return true;
 }
-*/
 
 /*
 ====================================================

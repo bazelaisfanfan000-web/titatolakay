@@ -204,13 +204,13 @@ export async function creditWalletWithRetry(
   const userRef = adminDB.ref(`users/${userId}`);
   let lastError = "Transaction Firebase échouée";
 
-  console.log("[MONCASH] Début crédit wallet avec retry:", { userId, amount, maxRetries: MAX_TX_RETRIES });
+  console.log("[MONCASH] Début crédit wallet avec retry:", { userId, maxRetries: MAX_TX_RETRIES });
 
   for (let attempt = 1; attempt <= MAX_TX_RETRIES; attempt++) {
     const beforeSnap = await userRef.once("value");
     const oldBalance = Number(beforeSnap.val()?.balance || 0);
 
-    console.log("[MONCASH] Tentative crédit wallet", { userId, amount, attempt, oldBalance, userExists: beforeSnap.exists() });
+    console.log("[MONCASH] Tentative crédit wallet", { userId, attempt, userExists: beforeSnap.exists() });
 
     const result = await userRef.transaction((current: Record<string, unknown> | null) => {
       // Si l'utilisateur n'existe pas, le créer avec un solde initial
@@ -223,16 +223,10 @@ export async function creditWalletWithRetry(
           updatedAt: Date.now(),
         };
       }
-      
+
       const currentBalance = Number(current.balance || 0);
       const newBalance = currentBalance + amount;
-      
-      console.log("[MONCASH] Transaction - Calcul solde:", { 
-        currentBalance, 
-        amount, 
-        newBalance 
-      });
-      
+
       return {
         ...current,
         balance: newBalance,
@@ -242,27 +236,20 @@ export async function creditWalletWithRetry(
 
     if (result.committed) {
       const newBalance = Number(result.snapshot.val()?.balance || 0);
-      console.log("[MONCASH] Wallet crédité avec succès", { 
-        userId, 
-        amount, 
-        oldBalance, 
-        newBalance, 
-        attempt 
-      });
+      console.log("[MONCASH] Wallet crédité avec succès", { userId, attempt });
       return { success: true, newBalance, oldBalance };
     }
 
     lastError = "Transaction Firebase échouée - possible conflit concurrent";
     console.warn("[MONCASH] Transaction non committed (tentative " + attempt + "/" + MAX_TX_RETRIES + ")", { userId });
-    
+
     if (attempt < MAX_TX_RETRIES) {
       const delay = TX_RETRY_DELAY_MS * attempt;
-      console.log("[MONCASH] Attente avant retry:", delay + "ms");
       await sleep(delay);
     }
   }
 
-  console.error("[MONCASH] Échec crédit wallet après toutes les tentatives:", { userId, amount, lastError });
+  console.error("[MONCASH] Échec crédit wallet après toutes les tentatives:", { userId, lastError });
   return { success: false, error: lastError };
 }
 
@@ -308,7 +295,6 @@ export async function completeMonCashDeposit(params: {
     console.log("[MONCASH] Reference trouvée", {
       reference,
       userId: resolved.userId,
-      depositId: resolved.depositId,
     });
 
     const deposit = resolved.deposit;
@@ -332,11 +318,7 @@ export async function completeMonCashDeposit(params: {
 
     const receivedAmount = Number(amountFromWebhook);
     if (receivedAmount !== expectedAmount) {
-      console.error("[MONCASH] Montant mismatch", {
-        expected: expectedAmount,
-        received: receivedAmount,
-        reference,
-      });
+      console.error("[MONCASH] Montant mismatch", { reference });
       await releaseWebhookProcessing(reference);
       return { ok: false, retryable: false, message: "amount_mismatch" };
     }
@@ -372,44 +354,6 @@ export async function completeMonCashDeposit(params: {
     if (!credit.success) {
       await releaseWebhookProcessing(reference);
       return { ok: false, retryable: true, message: "processing" };
-    }
-
-    // Mise à jour des champs wagering après crédit réussi
-    const userRef = adminDB.ref(`users/${resolved.userId}`);
-    const wageringResult = await userRef.transaction((current: Record<string, unknown> | null) => {
-      if (!current) {
-        return; // Annuler si l'utilisateur n'existe pas
-      }
-
-      const currentTotalDeposits = Number(current.totalDeposits || 0);
-      const newTotalDeposits = currentTotalDeposits + expectedAmount;
-      const newWageringRequired = newTotalDeposits * 1.5;
-      const currentWageringCompleted = Number(current.wageringCompleted || 0);
-      const withdrawalUnlocked = currentWageringCompleted >= newWageringRequired;
-
-      console.log("[MONCASH] Mise à jour wagering:", {
-        currentTotalDeposits,
-        newTotalDeposits,
-        newWageringRequired,
-        currentWageringCompleted,
-        withdrawalUnlocked
-      });
-
-      return {
-        ...current,
-        totalDeposits: newTotalDeposits,
-        wageringRequired: newWageringRequired,
-        withdrawalUnlocked,
-        lastDepositAmount: expectedAmount, // Enregistrer le montant du dernier dépôt
-        firstGamePlayed: false, // Réinitialiser après dépôt - le joueur doit jouer 1 partie
-        wageringUpdatedAt: Date.now(),
-      };
-    });
-
-    if (!wageringResult.committed) {
-      console.warn("[MONCASH] Transaction wagering non committed (continuera quand même)");
-    } else {
-      console.log("[MONCASH] Wagering mis à jour avec succès");
     }
 
     const transactionId = `txn_${Date.now()}_${crypto.randomBytes(8).toString("hex")}`;

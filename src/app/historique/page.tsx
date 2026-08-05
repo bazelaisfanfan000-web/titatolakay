@@ -11,10 +11,12 @@ import { useFriendRequestsCount } from "@/hooks/useFriendRequestsCount";
 export default function Historique() {
   const router = useRouter();
   const [history, setHistory] = useState<any[]>([]);
+  const [filteredHistory, setFilteredHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
   const [balance, setBalance] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [filter, setFilter] = useState<string>("tous"); // "tous", "depots", "retraits", "parties", "commissions", "echecs", "encours"
   const unreadCount = useUnreadMessages(currentUser?.uid || null);
   const friendRequestCount = useFriendRequestsCount(currentUser?.uid || null);
   const totalNotifications = unreadCount + friendRequestCount;
@@ -63,6 +65,49 @@ export default function Historique() {
 
     return () => unsubscribe();
   }, [router]);
+
+  // Filtrage à chaque changement de filtre ou d'historique
+  useEffect(() => {
+    if (!history.length) {
+      setFilteredHistory([]);
+      return;
+    }
+
+    let filtered = [...history];
+
+    switch (filter) {
+      case "depots":
+        filtered = filtered.filter(item => item.type === "deposit");
+        break;
+      case "retraits":
+        filtered = filtered.filter(item => item.type === "withdraw");
+        break;
+      case "parties":
+        filtered = filtered.filter(item => 
+          item.type === "game_win" || 
+          item.type === "game_loss" || 
+          item.type === "game_bet"
+        );
+        break;
+      case "commissions":
+        filtered = filtered.filter(item => item.type === "referral_commission");
+        break;
+      case "echecs":
+        filtered = filtered.filter(item => item.status === "failed");
+        break;
+      case "encours":
+        filtered = filtered.filter(item => 
+          item.status === "pending" || 
+          item.status === "processing" || 
+          item.status === "queued"
+        );
+        break;
+      default: // "tous"
+        break;
+    }
+
+    setFilteredHistory(filtered);
+  }, [history, filter]);
 
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -145,13 +190,38 @@ export default function Historique() {
   const promoEnd = new Date('2026-09-03T23:59:59').getTime();
   const isPromo = now < promoEnd;
 
+  // Fonction pour compter les transactions par catégorie (pour les badges)
+  const countByCategory = (category: string) => {
+    if (!history.length) return 0;
+    switch (category) {
+      case "depots":
+        return history.filter(item => item.type === "deposit").length;
+      case "retraits":
+        return history.filter(item => item.type === "withdraw").length;
+      case "parties":
+        return history.filter(item => 
+          item.type === "game_win" || item.type === "game_loss" || item.type === "game_bet"
+        ).length;
+      case "commissions":
+        return history.filter(item => item.type === "referral_commission").length;
+      case "echecs":
+        return history.filter(item => item.status === "failed").length;
+      case "encours":
+        return history.filter(item => 
+          item.status === "pending" || item.status === "processing" || item.status === "queued"
+        ).length;
+      default:
+        return history.length;
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#030303] text-white">
 
       <div className="mx-auto w-full max-w-[430px] min-h-screen flex flex-col px-5 py-4">
 
         {/* ==========================================
-            HEADER (identique au wallet)
+            HEADER
         ========================================== */}
 
         <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-black/90 backdrop-blur-xl">
@@ -185,12 +255,55 @@ export default function Historique() {
 
 
         {/* ==========================================
+            FILTRES
+        ========================================== */}
+
+        <div className="px-4 pt-3 pb-2 overflow-x-auto">
+          <div className="flex gap-2 min-w-max">
+            {[
+              { key: "tous", label: "Tous" },
+              { key: "depots", label: "Dépôts" },
+              { key: "retraits", label: "Retraits" },
+              { key: "parties", label: "Parties" },
+              { key: "commissions", label: "Commissions" },
+              { key: "echecs", label: "Échecs" },
+              { key: "encours", label: "En cours" },
+            ].map((f) => {
+              const isActive = filter === f.key;
+              const count = f.key === "tous" ? history.length : countByCategory(f.key);
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => setFilter(f.key)}
+                  className={`
+                    shrink-0 rounded-full px-3 py-1.5 text-[9px] font-bold transition-all
+                    ${isActive
+                      ? "bg-blue-600/30 border border-blue-400/40 text-blue-300 shadow-[0_0_12px_rgba(30,100,255,0.2)]"
+                      : "bg-white/[0.04] border border-white/[0.06] text-white/50 hover:text-white/80 hover:bg-white/[0.08]"
+                    }
+                  `}
+                >
+                  {f.label}
+                  {count > 0 && (
+                    <span className={`ml-1.5 ${isActive ? "text-blue-300" : "text-white/30"}`}>
+                      ({count})
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+
+        {/* ==========================================
             CONTENU
         ========================================== */}
 
         <div className="px-4 pb-[90px] pt-5">
 
-          {/* Badge offre de lancement (cohérent avec wallet) */}
+          {/* Badge offre de lancement */}
           {isPromo && (
             <div className="mb-4 flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-sm">
               <span className="text-[9px] font-bold text-amber-300">
@@ -206,14 +319,18 @@ export default function Historique() {
             <div className="flex items-center justify-center py-20">
               <p className="text-white/30 text-[10px]">Chargement...</p>
             </div>
-          ) : history.length === 0 ? (
+          ) : filteredHistory.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <span className="text-4xl mb-4">📭</span>
-              <p className="text-white/30 text-[10px]">Aucune transaction</p>
+              <span className="text-4xl mb-4">🔍</span>
+              <p className="text-white/30 text-[10px]">
+                {filter === "tous"
+                  ? "Aucune transaction"
+                  : `Aucune transaction dans cette catégorie`}
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {history.map((item) => (
+              {filteredHistory.map((item) => (
                 <div
                   key={item.id}
                   className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4"
@@ -271,14 +388,13 @@ export default function Historique() {
 
 
         {/* ==========================================
-            NAVIGATION (identique au wallet)
+            NAVIGATION
         ========================================== */}
 
         <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.06] bg-black/95 backdrop-blur-xl">
 
           <div className="mx-auto flex h-[62px] w-full max-w-[430px] items-center justify-around px-4">
 
-            {/* ACCUEIL */}
             <button
               type="button"
               onClick={() => router.push("/dashboard")}
@@ -288,7 +404,6 @@ export default function Historique() {
               Accueil
             </button>
 
-            {/* PORTEFEUILLE */}
             <button
               type="button"
               onClick={() => router.push("/wallet")}
@@ -298,7 +413,6 @@ export default function Historique() {
               Portefeuille
             </button>
 
-            {/* HISTORIQUE (actif) */}
             <button
               type="button"
               className="flex min-w-[55px] flex-col items-center justify-center gap-1 text-[8px] font-bold text-blue-400"
@@ -309,7 +423,6 @@ export default function Historique() {
               Historique
             </button>
 
-            {/* VYLO */}
             <button
               type="button"
               onClick={() => router.push("/vylo")}

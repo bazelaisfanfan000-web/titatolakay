@@ -30,7 +30,6 @@ export async function POST(request: Request) {
     const adminPassword = process.env.ADMIN_PASSWORD;
 
     if (!adminPassword) {
-      console.error('[ADMIN_LOGIN] ADMIN_PASSWORD non configuré');
       return NextResponse.json(
         { success: false, error: 'Configuration serveur incorrecte' },
         { status: 500 }

@@ -87,13 +87,13 @@ async function dispatchEvent(event: {
       if (!Number.isFinite(amount) || amount <= 0) {
         return { httpSuccess: false, message: "invalid_amount" };
       }
-      console.log("[MONCASH] Paiement validé", { reference: event.reference, amount });
+      console.log("[MONCASH] Paiement validé", { reference: event.reference });
       
       const result = await completeMonCashDeposit({
         reference: event.reference,
         amountFromWebhook: amount,
         completedAt: event.completedAt,
-        verifyWithMonCashApi: false, // Désactivé pour éviter timeout
+        verifyWithMonCashApi: true, // Activé pour vérification avec API MonCash
       });
       
       if (!result.ok) {
@@ -143,46 +143,20 @@ export async function POST(request: Request) {
     const signature = request.headers.get("x-mcc-signature");
     const timestamp = request.headers.get("x-mcc-timestamp");
 
-    // Mode test : accepter sans signature si body contient "test" ou si signature manquante
-    const isTestMode = !signature || body.includes("test") || body.includes("sandbox");
-    console.log("[MONCASH] Mode test:", isTestMode, { hasSignature: !!signature, hasTimestamp: !!timestamp });
-
-    if (isTestMode) {
-      console.log("[MONCASH] Traitement en mode test (sans signature)");
-      
-      // Parser le body manuellement en mode test
-      let event: {
-        event: string;
-        reference: string;
-        amount?: number;
-        completedAt?: string;
-        failureReason?: string;
-        recipient_account_masked?: string;
-      };
-
-      try {
-        event = JSON.parse(body) as typeof event;
-        console.log("[MONCASH] Événement test parsé:", { type: event.event, reference: event.reference, amount: event.amount });
-      } catch (parseError) {
-        console.error("[MONCASH] Erreur parsing body test:", parseError);
-        return webhookJson(false, "invalid_body", undefined, 400);
+    // Vérification IP (optionnel - ajouter les IP MonCash dans .env)
+    const allowedWebhookIPs = process.env.MONCASH_WEBHOOK_IPS?.split(",") || [];
+    if (allowedWebhookIPs.length > 0) {
+      const clientIP = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+      const isAllowed = allowedWebhookIPs.some(allowedIP => clientIP.includes(allowedIP.trim()));
+      if (!isAllowed) {
+        console.error("[MONCASH] IP non autorisée:", clientIP);
+        return webhookJson(false, "unauthorized", undefined, 401);
       }
-
-      // Traiter l'événement test
-      const outcome = await dispatchEvent(event);
-
-      if (outcome.httpSuccess) {
-        console.log("[MONCASH] Test terminé avec succès:", outcome.message);
-        return webhookJson(true, outcome.message, { testMode: true });
-      }
-
-      console.log("[MONCASH] Erreur traitement test:", outcome.message);
-      return webhookJson(false, outcome.message, { testMode: true });
     }
 
-    // Mode production : vérifier signature
+    // Vérification obligatoire de la signature (pas de mode test sans signature)
     if (!signature || !timestamp) {
-      console.error("[MONCASH] Headers signature/timestamp manquants en mode production");
+      console.error("[MONCASH] Headers signature/timestamp manquants");
       return webhookJson(false, "unauthorized", undefined, 401);
     }
 

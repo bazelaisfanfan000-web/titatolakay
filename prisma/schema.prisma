@@ -1,0 +1,125 @@
+// WinCash - Schéma Prisma pour la plateforme de jeu de morpion 10x10
+// Base de données PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================================
+// UTILISATEUR
+// ========================================
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  password_hash String
+  phone         String?       @unique
+  full_name     String?
+  balance       Float         @default(0.00)
+  date_of_birth DateTime?
+  role          String        @default("player") // player, admin
+  referrer_id   String?       // ID du parrain (qui a invité l'utilisateur)
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+
+  // Relations
+  transactions  Transaction[]
+  matchesAsPlayer1 Match[]     @relation("Player1Matches")
+  matchesAsPlayer2 Match[]     @relation("Player2Matches")
+  referrer      User?         @relation("ReferrerReferrals", fields: [referrer_id], references: [id])
+  referrals    User[]         @relation("ReferrerReferrals")
+
+  @@index([email])
+  @@index([phone])
+  @@index([referrer_id])
+}
+
+// ========================================
+// TRANSACTION (Dépôts, Retraits, Matchs)
+// ========================================
+model Transaction {
+  id             String   @id @default(cuid())
+  user_id        String
+  type           TransactionType
+  amount_gross   Float    // Montant brut (avant frais)
+  fee            Float    @default(0.00) // Frais (3% dépôt, 5% retrait)
+  amount_net     Float    // Montant net (après frais)
+  status         TransactionStatus
+  reference_api  String?  // Référence API MonCashConnect
+  description    String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  // Relations
+  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([type])
+  @@index([status])
+  @@index([reference_api])
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  MATCH_WIN
+  MATCH_LOSS
+  REFERRAL_BONUS
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+}
+
+// ========================================
+// MATCH (Partie de morpion 10x10)
+// ========================================
+model Match {
+  id            String      @id @default(cuid())
+  player1_id    String
+  player2_id    String?
+  stake         Float       // Mise par joueur
+  total_pot     Float       // Cagnotte totale (stake * 2)
+  rake_amount   Float       // Commission plateforme (20% de total_pot)
+  winner_amount Float       // Montant pour le gagnant (80% de total_pot)
+  winner_id     String?     // ID du gagnant (nullable si en cours)
+  status        MatchStatus
+  grid_state    Json        // Grille 10x10 en JSON
+  current_turn  Int         @default(1) // 1 = player1, 2 = player2
+  created_at    DateTime    @default(now())
+  finished_at   DateTime?
+
+  // Relations
+  player1       User        @relation("Player1Matches", fields: [player1_id], references: [id])
+  player2       User?       @relation("Player2Matches", fields: [player2_id], references: [id])
+
+  @@index([player1_id])
+  @@index([player2_id])
+  @@index([status])
+  @@index([created_at])
+}
+
+enum MatchStatus {
+  WAITING   // En attente d'un second joueur
+  PLAYING   // Partie en cours
+  FINISHED  // Partie terminée
+  CANCELLED // Partie annulée
+}
+
+// ========================================
+// JACKPOT (Optionnel)
+// ========================================
+model Jackpot {
+  id             String    @id @default(cuid())
+  total_amount   Float     @default(0.00)
+  last_draw_date DateTime?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+}

@@ -148,7 +148,7 @@ export default function ReferralPage() {
   };
 
   const shareWhatsApp = () => {
-    const message = `🎮 Rejoins-moi sur WinCash et gagne de l'argent !\n\nInvitez vos amis et gagnez automatiquement 10% de leurs pertes pendant 6 mois.\n\nMon lien : ${referralLink}`;
+    const message = `🎮 Rejoins-moi sur WinCash et gagne de l'argent !\n\nInvitez vos amis et gagnez automatiquement 5% de leurs pertes pendant 6 mois.\n\nMon lien : ${referralLink}`;
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
@@ -159,20 +159,20 @@ export default function ReferralPage() {
   };
 
   const shareTelegram = () => {
-    const message = `🎮 Rejoins-moi sur WinCash !\n\nInvitez vos amis et gagnez automatiquement 10% de leurs pertes pendant 6 mois.\n\nMon lien : ${referralLink}`;
+    const message = `🎮 Rejoins-moi sur WinCash !\n\nInvitez vos amis et gagnez automatiquement 5% de leurs pertes pendant 6 mois.\n\nMon lien : ${referralLink}`;
     const url = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
 
   const shareTwitter = () => {
-    const message = `🎮 Rejoins-moi sur WinCash ! Gagnez automatiquement 10% des pertes de vos amis pendant 6 mois. ${referralLink}`;
+    const message = `🎮 Rejoins-moi sur WinCash ! Gagnez automatiquement 5% des pertes de vos amis pendant 6 mois. ${referralLink}`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
 
   const shareEmail = () => {
     const subject = "Gagnez de l'argent sur WinCash !";
-    const body = `Salut !\n\nJe t'invite à rejoindre WinCash, un jeu où tu peux gagner de l'argent.\n\nEn plus, si tu t'inscris via mon lien, je gagnerai automatiquement 10% de tes pertes pendant 6 mois.\n\nMon lien : ${referralLink}\n\nÀ bientôt !`;
+    const body = `Salut !\n\nJe t'invite à rejoindre WinCash, un jeu où tu peux gagner de l'argent.\n\nEn plus, si tu t'inscris via mon lien, je gagnerai automatiquement 5% de tes pertes pendant 6 mois.\n\nMon lien : ${referralLink}\n\nÀ bientôt !`;
     const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(url, "_blank");
   };
@@ -544,7 +544,7 @@ export default function ReferralPage() {
                   "
                 >
 
-                  Invitez vos amis et gagnez automatiquement <span className="text-purple-300 font-bold">10 % de leurs pertes</span> pendant <span className="text-purple-300 font-bold">6 mois</span>.
+                  Invitez vos amis et gagnez automatiquement <span className="text-purple-300 font-bold">5 % de leurs pertes</span> pendant <span className="text-purple-300 font-bold">6 mois</span>.
 
                 </p>
 
@@ -828,7 +828,7 @@ export default function ReferralPage() {
                   "
                 >
 
-                  Mon lien personnel
+                  Mon lien de parainage
 
                 </p>
 
@@ -882,278 +882,6 @@ export default function ReferralPage() {
                 </div>
 
               </div>
-
-            </div>
-
-          </section>
-
-
-          {/* ======================================
-              QR CODE
-          ====================================== */}
-
-          <section
-            className="
-              mt-6
-            "
-          >
-
-            <div
-              className="
-                overflow-hidden
-                rounded-2xl
-                border
-                border-white/[0.07]
-                bg-white/[0.025]
-                px-3.5
-                py-2.5
-              "
-            >
-
-              <p
-                className="
-                  text-[9px]
-                  leading-tight
-                  text-white/40
-                "
-              >
-
-                QR Code
-
-              </p>
-
-              {qrCodeUrl && (
-                <div
-                  className="
-                    mt-3
-                    flex
-                    justify-center
-                  "
-                >
-
-                  <img
-                    src={qrCodeUrl}
-                    alt="QR Code"
-                    className="
-                      h-32
-                      w-32
-                      rounded-xl
-                      border
-                      border-white/[0.1]
-                    "
-                  />
-
-                </div>
-              )}
-
-              <button
-                onClick={downloadQRCode}
-                disabled={!qrCodeUrl}
-                className="
-                  mt-3
-                  w-full
-                  flex
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-xl
-                  border
-                  border-white/[0.07]
-                  bg-white/[0.05]
-                  px-4
-                  py-2.5
-                  text-[11px]
-                  font-bold
-                  text-white/80
-                  transition-all
-                  hover:bg-white/[0.1]
-                  disabled:opacity-50
-                "
-              >
-
-                📥 Télécharger le QR Code
-
-              </button>
-
-            </div>
-
-          </section>
-
-
-          {/* ======================================
-              PARTAGE
-          ====================================== */}
-
-          <section
-            className="
-              mt-6
-            "
-          >
-
-            <p
-              className="
-                text-[9px]
-                leading-tight
-                text-white/40
-              "
-            >
-
-              Partager
-
-            </p>
-
-            <div
-              className="
-                mt-3
-                grid
-                grid-cols-3
-                gap-2
-              "
-            >
-
-              <button
-                onClick={shareWhatsApp}
-                disabled={!referralLink}
-                className="
-                  flex
-                  flex-col
-                  items-center
-                  gap-1.5
-                  rounded-xl
-                  border
-                  border-green-500/20
-                  bg-green-500/[0.05]
-                  p-2.5
-                  transition-all
-                  hover:bg-green-500/[0.1]
-                  disabled:opacity-50
-                "
-              >
-
-                <span className="text-lg">💬</span>
-                <span className="text-[9px] font-bold text-green-400">WhatsApp</span>
-
-              </button>
-
-              <button
-                onClick={shareFacebook}
-                disabled={!referralLink}
-                className="
-                  flex
-                  flex-col
-                  items-center
-                  gap-1.5
-                  rounded-xl
-                  border
-                  border-blue-600/20
-                  bg-blue-600/[0.05]
-                  p-2.5
-                  transition-all
-                  hover:bg-blue-600/[0.1]
-                  disabled:opacity-50
-                "
-              >
-
-                <span className="text-lg">📘</span>
-                <span className="text-[9px] font-bold text-blue-400">Facebook</span>
-
-              </button>
-
-              <button
-                onClick={shareTelegram}
-                disabled={!referralLink}
-                className="
-                  flex
-                  flex-col
-                  items-center
-                  gap-1.5
-                  rounded-xl
-                  border
-                  border-sky-500/20
-                  bg-sky-500/[0.05]
-                  p-2.5
-                  transition-all
-                  hover:bg-sky-500/[0.1]
-                  disabled:opacity-50
-                "
-              >
-
-                <span className="text-lg">✈️</span>
-                <span className="text-[9px] font-bold text-sky-400">Telegram</span>
-
-              </button>
-
-              <button
-                onClick={shareTwitter}
-                disabled={!referralLink}
-                className="
-                  flex
-                  flex-col
-                  items-center
-                  gap-1.5
-                  rounded-xl
-                  border
-                  border-gray-500/20
-                  bg-gray-500/[0.05]
-                  p-2.5
-                  transition-all
-                  hover:bg-gray-500/[0.1]
-                  disabled:opacity-50
-                "
-              >
-
-                <span className="text-lg">𝕏</span>
-                <span className="text-[9px] font-bold text-gray-400">X</span>
-
-              </button>
-
-              <button
-                onClick={shareEmail}
-                disabled={!referralLink}
-                className="
-                  flex
-                  flex-col
-                  items-center
-                  gap-1.5
-                  rounded-xl
-                  border
-                  border-orange-500/20
-                  bg-orange-500/[0.05]
-                  p-2.5
-                  transition-all
-                  hover:bg-orange-500/[0.1]
-                  disabled:opacity-50
-                "
-              >
-
-                <span className="text-lg">📧</span>
-                <span className="text-[9px] font-bold text-orange-400">Email</span>
-
-              </button>
-
-              <button
-                onClick={copyToClipboard}
-                disabled={!referralLink}
-                className="
-                  flex
-                  flex-col
-                  items-center
-                  gap-1.5
-                  rounded-xl
-                  border
-                  border-blue-400/20
-                  bg-blue-500/[0.05]
-                  p-2.5
-                  transition-all
-                  hover:bg-blue-500/[0.1]
-                  disabled:opacity-50
-                "
-              >
-
-                <span className="text-lg">📋</span>
-                <span className="text-[9px] font-bold text-blue-400">Copier</span>
-
-              </button>
 
             </div>
 
@@ -1359,7 +1087,7 @@ export default function ReferralPage() {
                     "
                   >
 
-                    Pendant 6 mois, vous recevez automatiquement 10% de ses pertes
+                    Pendant 6 mois, vous recevez automatiquement 5% de ses pertes
 
                   </p>
 

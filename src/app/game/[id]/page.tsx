@@ -1206,26 +1206,30 @@ export default function GamePage() {
     auth.currentUser;
 
 
+  // ==========================================
+  // CALCUL DU GAIN (COMMISSION 20% DE LA MISE)
+  // ==========================================
+
   const bet =
     Number(
       room.bet || 0
     );
-
 
   const pot =
     Number(
       room.pot || 0
     );
 
-
+  // Commission = 20% de la mise
   const commission =
-    Math.floor(
-      pot * 0.25
-    );
+    Math.round((bet * 0.2) * 100) / 100;
 
-
+  // Gain total = mise + (mise - commission) = 1.8 * mise
   const reward =
-    pot - commission;
+    Math.round((bet + (bet - commission)) * 100) / 100;
+
+  // Optionnel : log pour debug
+  // console.log("[GAME_PAGE] Calcul gain 20% :", { bet, pot, commission, reward });
 
 
   return (

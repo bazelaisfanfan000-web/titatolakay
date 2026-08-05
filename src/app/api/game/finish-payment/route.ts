@@ -139,7 +139,7 @@ export async function POST(request: Request) {
     });
 
     // ==========================
-    // CALCUL DU GAIN (NOUVEAU SYSTÈME)
+    // CALCUL DU GAIN (COMMISSION 20%)
     // ==========================
 
     const betValidation = validateBet(room.bet);
@@ -155,16 +155,18 @@ export async function POST(request: Request) {
 
     const bet = betValidation.value!;
 
-    // Commission = 50% de la mise du perdant
-    // Crédit gagnant = sa mise + (50% de la mise du perdant)
-    const commission = Math.round((bet * 0.5) * 100) / 100;
-    const winnerCredit = Math.round((bet + commission) * 100) / 100;
+    // Commission = 20% de la mise du perdant
+    // Gain net pour le gagnant = mise du perdant - commission
+    // Crédit total du gagnant = sa mise initiale + gain net
+    // Soit : mise + (mise - 0.2*mise) = 1.8 * mise
+    const commission = Math.round((bet * 0.2) * 100) / 100; // 20%
+    const winnerCredit = Math.round((bet + (bet - commission)) * 100) / 100;
 
-    console.log("[NEW_PAYMENT_SYSTEM] Calcul du gain:", {
+    console.log("[NEW_PAYMENT_SYSTEM] Calcul du gain (20%):", {
       bet,
       commission,
       winnerCredit,
-      formula: `${bet} + (${bet} * 0.5) = ${winnerCredit}`,
+      formula: `${bet} + (${bet} - ${commission}) = ${winnerCredit}`,
     });
 
     if (winnerCredit <= 0) {

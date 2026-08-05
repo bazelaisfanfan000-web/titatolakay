@@ -181,38 +181,6 @@ export async function POST(request: Request) {
 
     console.log("[WITHDRAW] Utilisateur authentifié:", userId);
 
-    // Vérification wagering avant retrait
-    const wageringUserSnap = await adminDB.ref(`users/${userId}`).once("value");
-    if (!wageringUserSnap.exists()) {
-      console.error("[WITHDRAW] Utilisateur introuvable:", userId);
-      return NextResponse.json(
-        { success: false, error: "Utilisateur introuvable" },
-        { status: 404 }
-      );
-    }
-
-    const user = wageringUserSnap.val();
-    const firstGamePlayed = user.firstGamePlayed === true;
-
-    // Vérifier si le joueur a joué sa première partie après le dépôt
-    if (!firstGamePlayed) {
-      console.log("[WITHDRAW] Première partie non jouée:", {
-        userId,
-        firstGamePlayed
-      });
-      
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: "Vous devez jouer 1 partie avec une mise de 50% de votre solde avant de retirer !",
-          gameRequired: true
-        },
-        { status: 403 }
-      );
-    }
-
-    console.log("[WITHDRAW] Première partie jouée, retrait autorisé:", { userId });
-
     const body: WithdrawRequest = await request.json();
     const { amount, moncashNumber } = body;
 
@@ -244,8 +212,8 @@ export async function POST(request: Request) {
     }
 
     // Vérifier que l'utilisateur existe
-    const userSnap = await adminDB.ref(`users/${userId}`).once("value");
-    if (!userSnap.exists()) {
+    const userSnap2 = await adminDB.ref(`users/${userId}`).once("value");
+    if (!userSnap2.exists()) {
       console.error("[WITHDRAW] Utilisateur inexistant:", userId);
       return NextResponse.json(
         { success: false, error: "Utilisateur inexistant" },
@@ -253,7 +221,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const userData = userSnap.val() as Record<string, unknown>;
+    const userData = userSnap2.val() as Record<string, unknown>;
     const currentBalance = Number(userData.balance || 0);
 
     if (currentBalance < amount) {
@@ -277,10 +245,6 @@ export async function POST(request: Request) {
     }
 
     console.log("[WITHDRAW] Solde débité avec succès:", debitResult);
-
-    // Réinitialiser firstGamePlayed après retrait réussi (pour le prochain dépôt)
-    await adminDB.ref(`users/${userId}/firstGamePlayed`).set(false);
-    console.log("[WITHDRAW] Reset firstGamePlayed après retrait:", { userId });
 
     // 2. Générer un ID de retrait unique
     const withdrawalId = crypto.randomUUID();
@@ -373,13 +337,13 @@ export async function POST(request: Request) {
         status: "failed",
         failedAt: Date.now(),
         error: moncashError instanceof Error ? moncashError.message : "Erreur inconnue",
-        failureReason: "Erreur API MonCashConnect",
+        failureReason: "Solde moncash marchant insifisant",
       });
 
       return NextResponse.json(
         {
           success: false,
-          error: "Erreur lors de la création du payout. Votre solde a été recrédité.",
+          error: "solde moncash marchant insifisant. Votre solde a été recrédité.",
         },
         { status: 500 }
       );

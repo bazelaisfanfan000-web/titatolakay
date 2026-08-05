@@ -28,7 +28,6 @@ import {
   limitToLast,
 } from "firebase/database";
 
-import WithdrawModal from "@/components/WithdrawModal";
 import WageringProgress from "@/components/WageringProgress";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -144,7 +143,7 @@ function WalletContent() {
 
   /*
   ==================================================
-  MODALE RETRAIT
+  MODALE RETRAIT (PERSONNALISÉE)
   ==================================================
   */
 
@@ -152,6 +151,39 @@ function WalletContent() {
     withdrawOpen,
     setWithdrawOpen,
   ] = useState(false);
+
+
+  const [
+    withdrawAmount,
+    setWithdrawAmount,
+  ] = useState("");
+
+
+  const [
+    withdrawPhone,
+    setWithdrawPhone,
+  ] = useState("");
+
+
+  const [
+    withdrawLoading,
+    setWithdrawLoading,
+  ] = useState(false);
+
+
+  const [
+    withdrawMessage,
+    setWithdrawMessage,
+  ] = useState<string | null>(null);
+
+
+  const [
+    withdrawMessageType,
+    setWithdrawMessageType,
+  ] = useState<
+    "error" |
+    "info"
+  >("info");
 
 
   /*
@@ -648,7 +680,7 @@ function WalletContent() {
 
   /*
   ==================================================
-  CRÉER PAIEMENT MONCASH
+  CRÉER PAIEMENT MONCASH (DÉPÔT)
   ==================================================
   */
 
@@ -885,6 +917,116 @@ function WalletContent() {
 
   /*
   ==================================================
+  GESTION RETRAIT (PERSONNALISÉ)
+  ==================================================
+  */
+
+  const openWithdraw = () => {
+    setWithdrawAmount("");
+    setWithdrawPhone("");
+    setWithdrawMessage(null);
+    setWithdrawMessageType("info");
+    setWithdrawOpen(true);
+  };
+
+  const closeWithdraw = () => {
+    if (withdrawLoading) return;
+    setWithdrawOpen(false);
+    setWithdrawAmount("");
+    setWithdrawPhone("");
+    setWithdrawMessage(null);
+    setWithdrawMessageType("info");
+  };
+
+  const handleWithdrawAmountChange = (value: string) => {
+    const cleanValue = value.replace(/[^0-9]/g, "");
+    setWithdrawAmount(cleanValue);
+    setWithdrawMessage(null);
+    setWithdrawMessageType("info");
+  };
+
+  const handleWithdraw = async () => {
+    if (!currentUser) {
+      setWithdrawMessage("Votre session a expiré. Reconnectez-vous.");
+      setWithdrawMessageType("error");
+      return;
+    }
+
+    const amount = Number(withdrawAmount);
+    if (!Number.isInteger(amount) || amount < 100) {
+      setWithdrawMessage("Le montant minimum de retrait est de 100 HTG.");
+      setWithdrawMessageType("error");
+      return;
+    }
+
+    if (amount > balance) {
+      setWithdrawMessage("Vous ne disposez pas de suffisamment de fonds.");
+      setWithdrawMessageType("error");
+      return;
+    }
+
+    // Validation du numéro MonCash
+    const phoneDigits = withdrawPhone.replace(/\D/g, '');
+    if (phoneDigits.length < 8) {
+      setWithdrawMessage("Veuillez saisir un numéro MonCash valide (8 chiffres minimum).");
+      setWithdrawMessageType("error");
+      return;
+    }
+
+    // Formater le numéro avec le préfixe +509
+    const formattedPhone = phoneDigits.length === 8 ? `+509${phoneDigits}` : withdrawPhone;
+
+    setWithdrawLoading(true);
+    setWithdrawMessage("Traitement en cours...");
+    setWithdrawMessageType("info");
+
+    try {
+      const token = await currentUser.getIdToken(true);
+      if (!token) {
+        setWithdrawMessage("Session expirée. Reconnectez-vous.");
+        setWithdrawMessageType("error");
+        return;
+      }
+
+      const response = await fetch("/api/wallet/withdraw", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount,
+          moncashNumber: formattedPhone, // Envoi du numéro formaté
+        }),
+        cache: "no-store",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        setWithdrawMessage(result?.error || "Échec du retrait. Veuillez réessayer.");
+        setWithdrawMessageType("error");
+        return;
+      }
+
+      setWithdrawMessage("✅ Retrait effectué ! Vous allez recevoir le montant net sur MonCash.");
+      setWithdrawMessageType("info");
+      setTimeout(() => {
+        closeWithdraw();
+      }, 2000);
+
+    } catch (err) {
+      console.error("Erreur retrait :", err);
+      setWithdrawMessage("Impossible de traiter votre demande. Vérifiez votre connexion.");
+      setWithdrawMessageType("error");
+    } finally {
+      setWithdrawLoading(false);
+    }
+  };
+
+
+  /*
+  ==================================================
   FORMATTAGE SOLDE
   ==================================================
   */
@@ -893,6 +1035,7 @@ function WalletContent() {
     balance.toLocaleString(
       "fr-FR"
     );
+
 
   /*
   ==================================================
@@ -1101,7 +1244,7 @@ function WalletContent() {
 
             <button
               type="button"
-              onClick={() => setWithdrawOpen(true)}
+              onClick={openWithdraw}
               disabled={balanceLoading || balance === 0}
               className="group relative overflow-hidden rounded-xl border border-blue-400/20 bg-white/[0.035] px-3 py-3 text-left shadow-[0_4px_0_rgba(20,60,140,0.25),0_8px_20px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-200 hover:border-blue-400/40 hover:bg-blue-600/10 active:translate-y-[2px] active:shadow-[0_2px_0_rgba(20,60,140,0.25),0_4px_12px_rgba(0,0,0,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -1336,6 +1479,34 @@ function WalletContent() {
 
               </div>
 
+              {/* ========================================
+                  FRAIS DE TRANSACTION
+              ======================================== */}
+
+              <div className="flex items-center gap-3 border-b border-white/[0.05] px-4 py-3.5">
+
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-sm">
+                  📊
+                </div>
+
+                <div className="min-w-0 flex-1">
+
+                  <p className="text-[11px] font-bold">
+                    Frais de transaction
+                  </p>
+
+                  <p className="mt-0.5 text-[9px] text-white/30">
+                    Dépôt (MonCash) : <span className="text-blue-300 font-bold">3%</span> · Retrait (MonCash) : <span className="text-blue-300 font-bold">5%</span>
+                  </p>
+
+                </div>
+
+                <span className="text-[9px] font-bold text-blue-400">
+                  HTG
+                </span>
+
+              </div>
+
 
               {/* SÉCURITÉ */}
 
@@ -1371,7 +1542,7 @@ function WalletContent() {
 
 
         {/* ==========================================
-            MODALE DÉPÔT
+            MODALE DÉPÔT (avec frais 3%)
         ========================================== */}
 
         {depositOpen && (
@@ -1512,6 +1683,22 @@ function WalletContent() {
 
                   </div>
 
+                  {/* AFFICHAGE DES FRAIS DE DÉPÔT (3%) */}
+                  {depositAmount && !isNaN(Number(depositAmount)) && Number(depositAmount) > 0 && (
+                    <div className="mt-2 rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2 shadow-[0_0_20px_rgba(30,100,255,0.1)]">
+                      <p className="text-[9px] font-medium text-white/80">
+                        <span className="text-blue-300">Frais de transfert MonCash (3%)</span> :
+                        <span className="ml-1 font-black text-white">{ (Number(depositAmount) * 0.03).toLocaleString('fr-FR') } HTG</span>
+                      </p>
+                      <p className="mt-1 text-[9px] font-bold">
+                        <span className="text-white/50">Vous recevrez : </span>
+                        <span className="font-black text-blue-400">{ (Number(depositAmount) * 0.97).toLocaleString('fr-FR') } HTG</span>
+                        <span className="text-white/50"> sur votre compte WinCash</span>
+                      </p>
+                    </div>
+                  )}
+
+
                 </div>
 
 
@@ -1577,6 +1764,195 @@ function WalletContent() {
                   Le paiement sera sécurisé par MonCash.
                   <br />
                   Votre solde sera crédité après confirmation du paiement.
+
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        )}
+
+
+        {/* ==========================================
+            MODALE RETRAIT (avec numéro MonCash et frais 5% affichés en gros)
+        ========================================== */}
+
+        {withdrawOpen && (
+
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-3 py-4 backdrop-blur-md">
+
+            <div className="w-full max-w-[430px] overflow-hidden rounded-[24px] border border-blue-500/20 bg-[#080808] shadow-[0_10px_50px_rgba(0,0,0,0.7)]">
+
+
+              <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-400/25 bg-blue-500/15 text-lg shadow-[0_3px_0_rgba(20,80,200,0.3)]">
+                    💸
+                  </div>
+
+                  <div>
+
+                    <h2 className="text-[15px] font-black">
+                      Retirer de l'argent
+                    </h2>
+
+                    <p className="mt-0.5 text-[9px] text-white/30">
+                      Transférer vers MonCash
+                    </p>
+
+                  </div>
+
+                </div>
+
+
+                <button
+                  type="button"
+                  onClick={closeWithdraw}
+                  disabled={withdrawLoading}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-sm text-white/50 transition hover:bg-white/[0.08] active:scale-95 disabled:opacity-40"
+                >
+                  ✕
+                </button>
+
+              </div>
+
+
+              <div className="px-5 pb-6 pt-5">
+
+                <p className="mb-3 text-[10px] font-bold text-white/45">
+                  Solde disponible : <span className="text-blue-300 font-black">{formattedBalance} HTG</span>
+                </p>
+
+                {/* Montant */}
+                <div>
+                  <label
+                    htmlFor="withdraw-amount"
+                    className="mb-2 block text-[10px] font-bold text-white/45"
+                  >
+                    Montant à retirer
+                  </label>
+
+                  <div className="relative">
+                    <input
+                      id="withdraw-amount"
+                      type="text"
+                      inputMode="numeric"
+                      value={withdrawAmount}
+                      onChange={(e) => {
+                        setWithdrawAmount(e.target.value.replace(/[^0-9]/g, ""));
+                        setWithdrawMessage(null);
+                      }}
+                      placeholder="Montant"
+                      disabled={withdrawLoading}
+                      className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 pr-16 text-[15px] font-black text-white outline-none transition placeholder:text-white/20 focus:border-blue-500/50 focus:bg-blue-600/5 disabled:opacity-50"
+                    />
+                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-white/30">
+                      HTG
+                    </span>
+                  </div>
+                </div>
+
+                {/* Numéro MonCash */}
+                <div className="mt-4">
+                  <label
+                    htmlFor="withdraw-phone"
+                    className="mb-2 block text-[10px] font-bold text-white/45"
+                  >
+                    Numéro MonCash
+                  </label>
+                  <input
+                    id="withdraw-phone"
+                    type="tel"
+                    inputMode="numeric"
+                    value={withdrawPhone}
+                    onChange={(e) => {
+                      setWithdrawPhone(e.target.value);
+                      setWithdrawMessage(null);
+                    }}
+                    placeholder="Ex: 38 12 34 56"
+                    disabled={withdrawLoading}
+                    className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 text-[15px] font-black text-white outline-none transition placeholder:text-white/20 focus:border-blue-500/50 focus:bg-blue-600/5 disabled:opacity-50"
+                  />
+                </div>
+
+                {/* AFFICHAGE DES FRAIS */}
+                {withdrawAmount && !isNaN(Number(withdrawAmount)) && Number(withdrawAmount) > 0 && (
+                  <div className="mt-4 rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2 shadow-[0_0_20px_rgba(30,100,255,0.1)]">
+                    <p className="text-[9px] font-medium text-white/80">
+                      <span className="text-blue-300">💸 Frais de retrait MonCash (5%)</span> :
+                      <span className="ml-1 font-black text-white">{(Number(withdrawAmount) * 0.05).toLocaleString('fr-FR')} HTG</span>
+                    </p>
+                    <p className="mt-1 text-[9px] font-bold">
+                      <span className="text-white/50">Vous recevrez sur MonCash : </span>
+                      <span className="font-black text-blue-400">{(Number(withdrawAmount) * 0.95).toLocaleString('fr-FR')} HTG</span>
+                    </p>
+                  </div>
+                )}
+
+
+                {withdrawMessage && (
+
+                  <div
+                    className={`mt-4 rounded-xl px-3 py-2.5 text-[9px] leading-4 ${
+                      withdrawMessageType === "error"
+                        ? "border border-red-500/20 bg-red-500/10 text-red-300"
+                        : "border border-blue-500/20 bg-blue-500/10 text-blue-300"
+                    }`}
+                  >
+
+                    {withdrawMessage}
+
+                  </div>
+
+                )}
+
+
+                <button
+                  type="button"
+                  onClick={handleWithdraw}
+                  disabled={withdrawLoading || !withdrawAmount || Number(withdrawAmount) <= 0}
+                  className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-600/20 text-[11px] font-black text-white shadow-[0_4px_0_rgba(20,80,200,0.4),0_10px_25px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all hover:border-blue-400/60 hover:bg-blue-600/30 active:translate-y-[2px] active:shadow-[0_2px_0_rgba(20,80,200,0.4)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+
+                  {withdrawLoading ? (
+
+                    <>
+
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+
+                      Traitement en cours...
+
+                    </>
+
+                  ) : (
+
+                    <>
+
+                      💸
+
+                      Confirmer le retrait
+
+                      <span className="text-blue-300">
+                        ›
+                      </span>
+
+                    </>
+
+                  )}
+
+                </button>
+
+
+                <p className="mt-3 text-center text-[8px] leading-4 text-white/20">
+
+                  Les frais de retrait (5%) sont déduits automatiquement.
+                  <br />
+                  Le transfert s'effectue vers votre compte MonCash.
 
                 </p>
 
@@ -1683,17 +2059,6 @@ function WalletContent() {
           </div>
 
         </nav>
-
-        {/* MODALE RETRAIT */}
-        <WithdrawModal
-          isOpen={withdrawOpen}
-          onClose={() => setWithdrawOpen(false)}
-          userId={currentUser?.uid || null}
-          currentBalance={balance}
-          onWithdrawSuccess={() => {
-            // Rafraîchir le solde après un retrait réussi
-          }}
-        />
 
       </div>
 

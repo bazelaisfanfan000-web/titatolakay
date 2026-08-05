@@ -77,10 +77,10 @@ export default function WageringProgress({ userId }: WageringProgressProps) {
           <Unlock size={14} className="text-green-400" />
           <div>
             <p className="text-[9px] font-bold text-green-300">
-              Retrait disponible
+              Deposer et retirer quand tu veux
             </p>
             <p className="text-[8px] text-white/60">
-              Aucun dépôt effectué - Pas de condition de mise requise
+              Ici votre argent est en paix💵😴 
             </p>
           </div>
         </div>

@@ -8,14 +8,14 @@ type FriendStatus =
 type Props = {
   winnerUid: string;
   myUid: string;
-  reward: number;
+  reward: number;      // ⚠️ Doit être calculé avec 20% de commission (ex: mise * 1.8)
   bet: number;
   pot: number;
-  commission: number;
+  commission: number;  // ⚠️ Doit être calculé avec 20% de commission (ex: mise * 0.2)
   friendStatus: FriendStatus;
   onAddFriend: () => void;
   onClose: () => void;
-  isForfeit?: boolean;   // ✅ NOUVEAU
+  isForfeit?: boolean;
 };
 
 export default function WinnerModal({
@@ -28,15 +28,11 @@ export default function WinnerModal({
   friendStatus,
   onAddFriend,
   onClose,
-  isForfeit = false,   // ✅ NOUVEAU
+  isForfeit = false,
 }: Props) {
   const isWinner = winnerUid === myUid;
-
-  const isPending =
-    friendStatus === "pending";
-
-  const isFriend =
-    friendStatus === "friend";
+  const isPending = friendStatus === "pending";
+  const isFriend = friendStatus === "friend";
 
   return (
     <div
@@ -79,26 +75,10 @@ export default function WinnerModal({
           sm:shadow-2xl
         "
       >
-        {/* ========================================
-            PETIT INDICATEUR MOBILE
-        ======================================== */}
+        {/* Indicateur mobile */}
+        <div className="mx-auto mb-5 h-1 w-12 rounded-full bg-white/20 sm:hidden" />
 
-        <div
-          className="
-            mx-auto
-            mb-5
-            h-1
-            w-12
-            rounded-full
-            bg-white/20
-            sm:hidden
-          "
-        />
-
-        {/* ========================================
-            ICÔNE DU RÉSULTAT
-        ======================================== */}
-
+        {/* Icône */}
         <div
           className="
             mx-auto
@@ -123,10 +103,7 @@ export default function WinnerModal({
           {isWinner ? "🏆" : "😢"}
         </div>
 
-        {/* ========================================
-            TITRE
-        ======================================== */}
-
+        {/* Titre */}
         <h2
           className="
             mb-2
@@ -144,10 +121,7 @@ export default function WinnerModal({
             : "DÉFAITE"}
         </h2>
 
-        {/* ========================================
-            MESSAGE (avec personnalisation forfait)
-        ======================================== */}
-
+        {/* Message */}
         <p
           className="
             mb-4
@@ -164,10 +138,7 @@ export default function WinnerModal({
             : "Votre adversaire a gagné"}
         </p>
 
-        {/* ========================================
-            INFORMATIONS DE LA PARTIE
-        ======================================== */}
-
+        {/* Informations */}
         <div
           className="
             mb-3
@@ -180,8 +151,7 @@ export default function WinnerModal({
             sm:p-4
           "
         >
-          {/* MISE */}
-
+          {/* Mise */}
           <div
             className="
               flex
@@ -194,31 +164,15 @@ export default function WinnerModal({
               px-1
             "
           >
-            <span
-              className="
-                text-xs
-                font-medium
-                text-white/60
-                sm:text-sm
-              "
-            >
+            <span className="text-xs font-medium text-white/60 sm:text-sm">
               💵 Mise
             </span>
-
-            <b
-              className="
-                text-sm
-                font-black
-                text-white
-                sm:text-base
-              "
-            >
+            <b className="text-sm font-black text-white sm:text-base">
               {bet} HTG
             </b>
           </div>
 
-          {/* POT TOTAL */}
-
+          {/* Pot */}
           <div
             className="
               flex
@@ -231,31 +185,15 @@ export default function WinnerModal({
               px-1
             "
           >
-            <span
-              className="
-                text-xs
-                font-medium
-                text-white/60
-                sm:text-sm
-              "
-            >
+            <span className="text-xs font-medium text-white/60 sm:text-sm">
               🏦 Pot total
             </span>
-
-            <b
-              className="
-                text-sm
-                font-black
-                text-white
-                sm:text-base
-              "
-            >
+            <b className="text-sm font-black text-white sm:text-base">
               {pot} HTG
             </b>
           </div>
 
-          {/* COMMISSION */}
-
+          {/* Commission */}
           <div
             className="
               flex
@@ -266,34 +204,16 @@ export default function WinnerModal({
               px-1
             "
           >
-            <span
-              className="
-                text-xs
-                font-medium
-                text-red-400/80
-                sm:text-sm
-              "
-            >
+            <span className="text-xs font-medium text-red-400/80 sm:text-sm">
               🏛️ Commission
             </span>
-
-            <b
-              className="
-                text-sm
-                font-black
-                text-red-400
-                sm:text-base
-              "
-            >
+            <b className="text-sm font-black text-red-400 sm:text-base">
               -{commission} HTG
             </b>
           </div>
         </div>
 
-        {/* ========================================
-            GAIN OU PERTE
-        ======================================== */}
-
+        {/* Gain / Perte */}
         {isWinner ? (
           <div
             className="
@@ -310,18 +230,9 @@ export default function WinnerModal({
               sm:p-4
             "
           >
-            <p
-              className="
-                mb-1
-                text-xs
-                font-medium
-                text-white/60
-                sm:text-sm
-              "
-            >
+            <p className="mb-1 text-xs font-medium text-white/60 sm:text-sm">
               💰 Gain reçu
             </p>
-
             <p
               className="
                 text-3xl
@@ -350,18 +261,9 @@ export default function WinnerModal({
               sm:p-4
             "
           >
-            <p
-              className="
-                mb-1
-                text-xs
-                font-medium
-                text-white/60
-                sm:text-sm
-              "
-            >
+            <p className="mb-1 text-xs font-medium text-white/60 sm:text-sm">
               💸 Perte
             </p>
-
             <p
               className="
                 text-3xl
@@ -376,10 +278,7 @@ export default function WinnerModal({
           </div>
         )}
 
-        {/* ========================================
-            DEMANDER EN AMI
-        ======================================== */}
-
+        {/* Demander en ami */}
         {!isFriend ? (
           <button
             type="button"
@@ -424,13 +323,11 @@ export default function WinnerModal({
           >
             {isPending ? (
               <>
-                📩
-                <span>Demande envoyée</span>
+                📩 <span>Demande envoyée</span>
               </>
             ) : (
               <>
-                🤝
-                <span>Demander en ami</span>
+                🤝 <span>Demander en ami</span>
               </>
             )}
           </button>
@@ -456,15 +353,11 @@ export default function WinnerModal({
               sm:mb-3
             "
           >
-            👥
-            <span>Vous êtes maintenant amis</span>
+            👥 <span>Vous êtes maintenant amis</span>
           </div>
         )}
 
-        {/* ========================================
-            RETOUR AU TABLEAU DE BORD
-        ======================================== */}
-
+        {/* Retour dashboard */}
         <button
           type="button"
           onClick={onClose}
@@ -504,10 +397,6 @@ export default function WinnerModal({
           ⬅️
           <span className="ml-2">Retour au tableau de bord</span>
         </button>
-
-        {/* ========================================
-            ESPACE POUR LES PETITS ÉCRANS
-        ======================================== */}
 
         <div className="h-[env(safe-area-inset-bottom)] sm:hidden" />
       </div>
