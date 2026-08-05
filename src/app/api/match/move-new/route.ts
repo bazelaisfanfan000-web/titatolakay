@@ -4,7 +4,10 @@ import { isValidMove, applyMove, checkGameStatus } from "@/lib/gameLogic";
 
 const prisma = new PrismaClient();
 
-export async function PUT(request: Request) {
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { matchId, row, col, playerSymbol } = body;
