@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { isValidMove, applyMove, checkGameStatus } from "@/lib/gameLogic";
 
@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  const prisma = getPrisma();
   try {
     const body = await request.json();
     const { matchId, row, col, playerSymbol } = body;
