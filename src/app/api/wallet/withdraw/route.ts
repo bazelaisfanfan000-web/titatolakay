@@ -308,7 +308,7 @@ export async function POST(request: Request) {
 
       if (errorMsg.includes("invalid_amount")) {
         userErrorMessage =
-          "Le montant net après frais n'est pas valide (doit être un nombre entier). Veuillez retirer un montant multiple de 20 HTG (ex: 100, 200, 360...).";
+          "Le montant n'est pas accepté par MonCash. Essayez un montant différent entre 100 et 10000 HTG.";
       } else if (errorMsg.includes("insufficient_balance") || errorMsg.includes("insufficient balance")) {
         userErrorMessage =
           "Solde MonCash marchand insuffisant. Votre solde a été recrédité. Réessayez dans quelques heures.";
