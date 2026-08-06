@@ -6,7 +6,7 @@
  * 1. Valide userId, amount, moncashNumber
  * 2. Réserve le solde via transaction Firebase (débit atomique du montant brut)
  * 3. Crée une entrée de retrait avec status "pending"
- * 4. Appelle MonCashConnect /v1/payout-create avec le montant net (brut - 5% de frais)
+ * 4. Appelle MonCashConnect /v1/payout-create avec le montant net (entier)
  * 5. En cas de succès: met à jour payoutReference
  * 6. En cas d'échec: recrédite le solde (rollback), met status "failed"
  */
@@ -160,13 +160,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const phoneRegex = /^\+509\d{8}$/;
+    // Format du numéro : accepter +509XXXXXXXX ou 509XXXXXXXX
+    const phoneRegex = /^\+?509\d{8}$/;
     if (!phoneRegex.test(moncashNumber)) {
       return NextResponse.json(
-        { success: false, error: "Numéro MonCash invalide (format: +509XXXXXXXX)" },
+        { success: false, error: "Numéro MonCash invalide (format: +509XXXXXXXX ou 509XXXXXXXX)" },
         { status: 400 }
       );
     }
+
+    // Nettoyer le numéro (enlever le + si présent)
+    const cleanNumber = moncashNumber.replace(/^\+/, "");
 
     // Vérifier le solde
     const userSnap = await adminDB.ref(`users/${userId}`).once("value");
@@ -187,8 +191,9 @@ export async function POST(request: Request) {
     }
 
     // ---- Calcul des frais ----
-    const fee = Math.round((amount * WITHDRAWAL_FEE_RATE) * 100) / 100;
-    const netAmount = Math.round((amount - fee) * 100) / 100;
+    // netAmount doit être un entier (exigence MonCashConnect)
+    const netAmount = Math.floor(amount * (1 - WITHDRAWAL_FEE_RATE));
+    const fee = amount - netAmount; // frais réels
 
     // Vérification : le net doit être strictement positif
     if (netAmount <= 0) {
@@ -198,7 +203,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log("[WITHDRAW] Calcul frais:", { amount, fee, netAmount });
+    console.log("[WITHDRAW] Calcul frais (net arrondi à l'entier inférieur):", { amount, fee, netAmount });
 
     // 1. Débiter le solde (montant brut)
     const debitResult = await debitBalanceAtomically(userId, amount);
@@ -220,9 +225,9 @@ export async function POST(request: Request) {
       payoutReference: null,
       amount,          // brut
       fee,
-      netAmount,       // net envoyé
+      netAmount,       // net envoyé (entier)
       status: "pending",
-      moncashNumber,
+      moncashNumber: cleanNumber, // stocker sans +
       createdAt: Date.now(),
       completedAt: null,
       failedAt: null,
@@ -233,13 +238,13 @@ export async function POST(request: Request) {
     await adminDB.ref(`withdrawals/${userId}/${withdrawalId}`).set(withdrawalData);
     console.log("[WITHDRAW] Entrée de retrait créée:", withdrawalId);
 
-    // 4. Appeler MonCashConnect avec le montant net
+    // 4. Appeler MonCashConnect avec le montant net (entier) et le numéro nettoyé
     let payoutReference: string | null = null;
     try {
       console.log("[WITHDRAW] Appel MonCashConnect API avec montant net:", netAmount);
       const payoutResult = await createMonCashPayout({
         amount: netAmount,
-        moncashNumber: moncashNumber,
+        moncashNumber: cleanNumber, // sans le +
         referenceId: referenceId,
       });
 
@@ -275,7 +280,7 @@ export async function POST(request: Request) {
       } else {
         throw new Error("Erreur création payout - réponse inattendue");
       }
-    } catch (moncashError) {
+    } catch (moncashError: any) {
       console.error("[WITHDRAW] Erreur MonCashConnect API:", moncashError);
 
       // ROLLBACK : recréditer le solde (montant brut)
@@ -293,13 +298,33 @@ export async function POST(request: Request) {
         status: "failed",
         failedAt: Date.now(),
         error: moncashError instanceof Error ? moncashError.message : "Erreur inconnue",
-        failureReason: "Solde moncash marchand insuffisant ou erreur API",
+        failureReason: moncashError.message || "Erreur API",
       });
+
+      // --- Message d'erreur personnalisé selon le type d'erreur ---
+      let userErrorMessage = "Erreur inconnue lors du traitement du retrait.";
+      const errorMsg = moncashError.message || "";
+
+      if (errorMsg.includes("invalid_amount")) {
+        userErrorMessage =
+          "Le montant net après frais n'est pas valide (doit être un nombre entier). Veuillez retirer un multiple de 20 HTG (ex: 100, 200, 360...).";
+      } else if (errorMsg.includes("insufficient_balance") || errorMsg.includes("insufficient balance")) {
+        userErrorMessage =
+          "Solde MonCash marchand insuffisant. Votre solde a été recrédité. Réessayez dans quelques heures.";
+      } else if (errorMsg.includes("invalid_moncash_number")) {
+        userErrorMessage = "Numéro MonCash invalide. Vérifiez le format (509XXXXXXXX).";
+      } else if (errorMsg.includes("kyc_required")) {
+        userErrorMessage = "Vérification d'identité requise pour effectuer des retraits. Contactez le support.";
+      } else if (errorMsg.includes("duplicate_reference")) {
+        userErrorMessage = "Cette demande de retrait a déjà été traitée. Vérifiez votre historique.";
+      } else {
+        userErrorMessage = errorMsg || "Erreur API MonCashConnect. Réessayez plus tard.";
+      }
 
       return NextResponse.json(
         {
           success: false,
-          error: "Solde MonCash marchand insuffisant. Votre solde a été recrédité.",
+          error: userErrorMessage,
         },
         { status: 500 }
       );
