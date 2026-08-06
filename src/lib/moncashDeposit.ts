@@ -1,5 +1,6 @@
 /**
  * Dépôts MonCash — résolution par index, idempotence webhook, crédit atomique
+ * (Version corrigée)
  */
 
 import crypto from "crypto";
@@ -10,9 +11,7 @@ import { createDepositLedgerEntry } from "./ledger";
 
 const MAX_TX_RETRIES = 5;
 const TX_RETRY_DELAY_MS = 150;
-
-// [FIX] Correction N°2 : Augmentation du timeout du lock de 120s à 600s (10 minutes)
-const LOCK_TIMEOUT_MS = 600_000; // 10 minutes
+const LOCK_TIMEOUT_MS = 600_000; // 10 minutes (corrigé)
 
 export interface DepositIndexEntry {
   userId: string;
@@ -20,7 +19,7 @@ export interface DepositIndexEntry {
   referenceId?: string;
   moncashReference?: string;
   amount?: number;
-  netAmount?: number;
+  netAmount?: number; // AJOUTÉ
   status: string;
   createdAt?: number;
 }
@@ -48,88 +47,77 @@ export function depositIndexKeys(referenceId: string, moncashReference?: string)
   return [...keys];
 }
 
+// --- FONCTION CORRIGÉE writeDepositIndexEntries ---
 export async function writeDepositIndexEntries(
   referenceId: string,
   data: DepositIndexEntry,
   moncashReference?: string
 ): Promise<void> {
+  // S'assurer que depositId est défini
+  const canonicalDepositId = data.depositId || referenceId;
+
+  // Récupérer netAmount, le recalculer si absent ou égal au brut
+  const grossAmount = data.amount || 0;
+  let netAmount = data.netAmount;
+  if (netAmount === undefined || netAmount === null || netAmount === grossAmount) {
+    const fee = Math.round((grossAmount * 0.03) * 100) / 100;
+    netAmount = Math.round((grossAmount - fee) * 100) / 100;
+  }
+
   const keys = depositIndexKeys(referenceId, moncashReference);
+  const baseEntry: DepositIndexEntry = {
+    ...data,
+    depositId: canonicalDepositId,
+    referenceId: data.referenceId ?? referenceId,
+    netAmount,
+    amount: grossAmount,
+  };
+
+  // Ajouter moncashReference si présent
+  const resolvedMoncashRef = moncashReference ?? data.moncashReference;
+  if (resolvedMoncashRef) {
+    baseEntry.moncashReference = resolvedMoncashRef;
+  }
+
   const updates: Record<string, DepositIndexEntry> = {};
   for (const key of keys) {
-    const entry: DepositIndexEntry = {
-      ...data,
-      referenceId: data.referenceId ?? referenceId,
-    };
-    
-    // N'inclure moncashReference que s'il a une valeur définie
-    const resolvedMoncashReference = moncashReference ?? data.moncashReference;
-    if (resolvedMoncashReference) {
-      entry.moncashReference = resolvedMoncashReference;
-    }
-    
-    updates[`deposit_index/${key}`] = entry;
+    updates[`deposit_index/${key}`] = baseEntry;
   }
   await adminDB.ref().update(updates);
+
+  console.log("[INDEX] Entrées d'index écrites:", {
+    keys: Array.from(keys),
+    depositId: canonicalDepositId,
+    amount: grossAmount,
+    netAmount,
+  });
 }
 
-export async function resolveDepositByReference(
-  reference: string
-): Promise<ResolvedDeposit | null> {
-  console.log("[MONCASH] Recherche dépôt par référence:", reference);
-  
-  const candidates = [
-    sanitizeFirebaseKey(reference),
-    reference,
-  ].filter((k, i, arr) => k && arr.indexOf(k) === i);
+// --- RÉSOLUTION PAR INDEX ---
+export async function resolveDepositByReference(referenceId: string): Promise<ResolvedDeposit | null> {
+  const key = sanitizeFirebaseKey(referenceId);
+  const indexSnapshot = await adminDB.ref(`deposit_index/${key}`).once("value");
 
-  for (const key of candidates) {
-    console.log("[MONCASH] Tentative recherche dans deposit_index:", key);
-    const indexSnap = await adminDB.ref(`deposit_index/${key}`).once("value");
-    if (!indexSnap.exists()) {
-      console.log("[MONCASH] Index non trouvé pour:", key);
-      continue;
-    }
-
-    const indexData = indexSnap.val() as DepositIndexEntry;
-    console.log("[MONCASH] Index trouvé:", { 
-      userId: indexData.userId, 
-      depositId: indexData.depositId,
-      status: indexData.status 
-    });
-    
-    if (!indexData.userId || !indexData.depositId) {
-      console.error("[MONCASH] Index invalide (userId ou depositId manquant):", indexData);
-      continue;
-    }
-
-    const depositSnap = await adminDB
-      .ref(`deposits/${indexData.userId}/${indexData.depositId}`)
-      .once("value");
-
-    if (!depositSnap.exists()) {
-      console.error("[MONCASH] Dépôt introuvable dans deposits:", {
-        userId: indexData.userId,
-        depositId: indexData.depositId
-      });
-      continue;
-    }
-
-    console.log("[MONCASH] Dépôt trouvé:", {
-      userId: indexData.userId,
-      depositId: indexData.depositId,
-      depositData: depositSnap.val()
-    });
-
-    return {
-      userId: indexData.userId,
-      depositId: indexData.depositId,
-      deposit: depositSnap.val(),
-      indexKey: key,
-    };
+  if (!indexSnapshot.exists()) {
+    console.log("[INDEX] Dépôt non trouvé dans l'index:", referenceId);
+    return null;
   }
 
-  console.error("[MONCASH] Dépôt non trouvé pour aucune des clés candidates:", candidates);
-  return null;
+  const indexEntry = indexSnapshot.val() as DepositIndexEntry;
+  const { userId, depositId } = indexEntry;
+
+  const depositSnapshot = await adminDB.ref(`deposits/${userId}/${depositId}`).once("value");
+  if (!depositSnapshot.exists()) {
+    console.error("[INDEX] Dépôt introuvable dans Firebase:", { userId, depositId });
+    return null;
+  }
+
+  return {
+    userId,
+    depositId,
+    deposit: depositSnapshot.val(),
+    indexKey: key,
+  };
 }
 
 export type WebhookClaimResult =

@@ -11,6 +11,8 @@ import {
 
 import {
   getAuth,
+  setPersistence,
+  browserLocalPersistence,
 } from "firebase/auth";
 
 import {
@@ -88,6 +90,18 @@ export const analytics =
 
 export const auth =
   getAuth(app);
+
+// Configuration de la persistance : localStorage pour ne jamais déconnecter automatiquement
+// La session persiste même après fermeture du navigateur
+if (typeof window !== "undefined") {
+  setPersistence(auth, browserLocalPersistence)
+    .then(() => {
+      console.log("[FIREBASE] Persistence set to LOCAL (never auto-logout)");
+    })
+    .catch((error) => {
+      console.error("[FIREBASE] Error setting persistence:", error);
+    });
+}
 
 console.log("[FIREBASE] Auth initialized:", auth.app.name);
 

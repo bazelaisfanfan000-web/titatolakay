@@ -5,7 +5,7 @@
  */
 
 import { adminDB } from "./firebaseAdmin";
-import { creditWallet, debitWallet, lockBalance, unlockBalance } from "./wallet";
+import { creditWallet, debitWallet } from "./wallet";
 import { createLedgerEntry, updateLedgerStatus } from "./ledger";
 import type { TransactionType, TransactionStatus, TransactionSource } from "@/types/wallet";
 
