@@ -115,7 +115,7 @@ export default function WithdrawPage() {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="0"
-                    min="100"
+                    min="110"
                     max={currentBalance}
                     inputMode="numeric"
                     className="h-12 w-full rounded-xl border border-white/[0.08] bg-black/40 px-3 pr-14 text-sm font-bold text-white outline-none transition placeholder:text-white/20 focus:border-blue-500/40"
@@ -192,7 +192,7 @@ export default function WithdrawPage() {
               <button
                 type="button"
                 onClick={handleWithdraw}
-                disabled={loading || amountGross < 100 || amountGross > currentBalance || !moncashNumber}
+                disabled={loading || amountGross < 110 || amountGross > currentBalance || !moncashNumber}
                 className="flex h-12 w-full items-center justify-center rounded-xl border border-green-400/40 bg-green-500/20 text-center text-xs font-black text-green-100 shadow-[0_4px_0_rgba(22,101,52,0.8),0_0_18px_rgba(34,197,94,0.12)] backdrop-blur-md transition-all hover:border-green-300/60 hover:bg-green-500/30 hover:shadow-[0_5px_0_rgba(22,101,52,0.8),0_0_25px_rgba(34,197,94,0.2)] active:translate-y-[3px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? "Chargement..." : "Confirmer"}

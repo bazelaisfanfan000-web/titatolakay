@@ -20,7 +20,7 @@ import crypto from "crypto";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MIN_WITHDRAWAL = 100; // HTG - Minimum requis par MonCash
+const MIN_WITHDRAWAL = 110; // HTG - Minimum requis
 const MAX_WITHDRAWAL = 10000; // HTG - Maximum autorisé
 const WITHDRAWAL_FEE_RATE = 0.05; // 5% de frais
 
@@ -192,8 +192,9 @@ export async function POST(request: Request) {
 
     // ---- Calcul des frais ----
     // Nous prenons 5% de commission, l'utilisateur reçoit 95% sur son compte MonCash
+    // Envoyer le montant brut à MonCash pour éviter l'erreur invalid_amount
     const fee = Math.round((amount * WITHDRAWAL_FEE_RATE) * 100) / 100; // Commission 5%
-    const netAmount = Math.round(amount - fee); // Montant envoyé à MonCash (95% du brut)
+    const netAmount = Math.round(amount); // Envoyer le montant brut à MonCash
 
     console.log("[WITHDRAW] Calcul frais:", { amount, fee, netAmount });
 
@@ -235,7 +236,7 @@ export async function POST(request: Request) {
     try {
       console.log("[WITHDRAW] Appel MonCashConnect API avec montant brut:", netAmount);
       const payoutResult = await createMonCashPayout({
-        amount: netAmount, // Envoyer le montant brut (MonCash appliquera ses propres frais)
+        amount: netAmount, // Envoyer le montant brut pour éviter invalid_amount
         moncashNumber: cleanNumber,
         referenceId: referenceId,
       });
