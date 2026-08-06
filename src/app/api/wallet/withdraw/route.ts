@@ -191,10 +191,10 @@ export async function POST(request: Request) {
     }
 
     // ---- Calcul des frais ----
-    // Prendre 5% de frais, envoyer 95% sur MonCash
-    // Envoyer le montant brut à MonCashConnect (l'API appliquera ses propres frais)
-    const fee = Math.round((amount * WITHDRAWAL_FEE_RATE) * 100) / 100;
-    const netAmount = Math.round(amount - fee); // Montant que l'utilisateur recevra
+    // On applique 5% de frais : le destinataire reçoit 95% du montant brut.
+    // Le net doit être un entier pour respecter l'API MonCashConnect.
+    const fee = Math.round((amount * WITHDRAWAL_FEE_RATE) * 100) / 100; // Frais en HTG (décimal possible)
+    const netAmount = Math.round(amount - fee); // Arrondi à l'entier le plus proche
 
     // Vérification : le net doit être strictement positif
     if (netAmount <= 0) {
@@ -239,13 +239,13 @@ export async function POST(request: Request) {
     await adminDB.ref(`withdrawals/${userId}/${withdrawalId}`).set(withdrawalData);
     console.log("[WITHDRAW] Entrée de retrait créée:", withdrawalId);
 
-    // 4. Appeler MonCashConnect avec le montant brut (MonCash appliquera ses propres frais)
+    // 4. Appeler MonCashConnect avec le MONTANT NET (le destinataire recevra ce montant)
     let payoutReference: string | null = null;
     try {
-      console.log("[WITHDRAW] Appel MonCashConnect API avec montant brut:", amount);
+      console.log("[WITHDRAW] Appel MonCashConnect API avec montant net:", netAmount);
       const payoutResult = await createMonCashPayout({
-        amount: Math.round(amount), // Envoyer le montant brut arrondi
-        moncashNumber: cleanNumber, // sans le +
+        amount: netAmount, // ✅ CORRECT : on envoie le net (ex: 95 pour 100)
+        moncashNumber: cleanNumber,
         referenceId: referenceId,
       });
 
@@ -308,7 +308,7 @@ export async function POST(request: Request) {
 
       if (errorMsg.includes("invalid_amount")) {
         userErrorMessage =
-          "Le montant n'est pas accepté par MonCash. Essayez un montant comme 100, 200, 300, 400, 500 HTG...";
+          "Le montant net après frais n'est pas valide (doit être un nombre entier). Veuillez retirer un montant multiple de 20 HTG (ex: 100, 200, 360...).";
       } else if (errorMsg.includes("insufficient_balance") || errorMsg.includes("insufficient balance")) {
         userErrorMessage =
           "Solde MonCash marchand insuffisant. Votre solde a été recrédité. Réessayez dans quelques heures.";
