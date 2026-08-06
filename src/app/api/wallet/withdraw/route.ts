@@ -234,7 +234,14 @@ export async function POST(request: Request) {
 
     console.log("[WITHDRAW] Validation OK, début du processus:", { userId, amount, moncashNumber });
 
-    // 1. Débiter le solde de manière atomique
+    // Calcul des frais (5%)
+    const feeRate = 0.05;
+    const fee = Math.round((amount * feeRate) * 100) / 100;
+    const netAmount = Math.round((amount - fee) * 100) / 100;
+
+    console.log("[WITHDRAW] Calcul frais:", { amount, feeRate, fee, netAmount });
+
+    // 1. Débiter le solde de manière atomique (montant brut)
     const debitResult = await debitBalanceAtomically(userId, amount);
     if (!debitResult.success) {
       console.error("[WITHDRAW] Échec débit solde:", debitResult.error);
@@ -256,6 +263,8 @@ export async function POST(request: Request) {
       referenceId,
       payoutReference: null,
       amount,
+      fee,
+      netAmount,
       status: "pending",
       moncashNumber,
       createdAt: Date.now(),
@@ -263,19 +272,17 @@ export async function POST(request: Request) {
       failedAt: null,
       error: null,
       failureReason: null,
-      fee_htg: null,
-      net_htg: null,
     };
 
     await adminDB.ref(`withdrawals/${userId}/${withdrawalId}`).set(withdrawalData);
     console.log("[WITHDRAW] Entrée de retrait créée:", withdrawalId);
 
-    // 4. Appeler MonCashConnect API
+    // 4. Appeler MonCashConnect API avec le montant net
     let payoutReference: string | null = null;
     try {
-      console.log("[WITHDRAW] Appel MonCashConnect API...");
+      console.log("[WITHDRAW] Appel MonCashConnect API avec montant net:", netAmount);
       const payoutResult = await createMonCashPayout({
-        amount: amount,
+        amount: netAmount,
         moncashNumber: moncashNumber,
         referenceId: referenceId,
       });
@@ -287,15 +294,15 @@ export async function POST(request: Request) {
         // Mettre à jour le retrait avec la référence
         await adminDB.ref(`withdrawals/${userId}/${withdrawalId}`).update({
           payoutReference,
-          fee_htg: payoutResult.payout.fee_htg,
-          net_htg: payoutResult.payout.net_htg,
+          status: "completed",
+          completedAt: Date.now(),
         });
 
-        // Créer l'entrée ledger
+        // Créer l'entrée ledger avec le montant net
         if (payoutReference) {
           const ledgerResult = await createWithdrawalLedgerEntry(
             userId,
-            amount,
+            netAmount,
             debitResult.oldBalance,
             debitResult.newBalance,
             payoutReference,
@@ -312,6 +319,9 @@ export async function POST(request: Request) {
           success: true,
           message: "Retrait initié avec succès",
           withdrawalId,
+          amountGross: amount,
+          fee: fee,
+          netAmount: netAmount,
         });
 
       } else {
@@ -321,7 +331,7 @@ export async function POST(request: Request) {
     } catch (moncashError) {
       console.error("[WITHDRAW] Erreur MonCashConnect API:", moncashError);
 
-      // ROLLBACK: Recréditer le solde
+      // ROLLBACK: Recréditer le solde (montant brut)
       console.log("[WITHDRAW] Début rollback...");
       const rollbackResult = await creditBalanceAtomically(userId, amount);
 

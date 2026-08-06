@@ -17,6 +17,7 @@ export interface DepositIndexEntry {
   referenceId?: string;
   moncashReference?: string;
   amount?: number;
+  netAmount?: number;
   status: string;
   createdAt?: number;
 }
