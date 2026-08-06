@@ -301,7 +301,23 @@ export async function completeMonCashDeposit(params: {
     const deposit = resolved.deposit;
     const status = String(deposit.status ?? "");
     const expectedAmount = Number(deposit.amount);
-    const netAmount = Number(deposit.netAmount || deposit.amountNet || expectedAmount);
+
+    // ---- CORRECTION ICI ----
+    // Récupérer le netAmount ou le recalculer si absent ou égal au brut
+    let netAmount = Number(deposit.netAmount || deposit.amountNet || expectedAmount);
+
+    // Si netAmount est égal au brut (pas de frais déduits) ou absent (valeur 0), on recalcule avec 3%
+    if (netAmount === expectedAmount || netAmount <= 0) {
+      const feeRate = 0.03; // 3% de frais
+      const fee = Math.round((expectedAmount * feeRate) * 100) / 100;
+      netAmount = Math.round((expectedAmount - fee) * 100) / 100;
+      console.log("[MONCASH] netAmount recalculé car absent/incorrect:", {
+        expectedAmount,
+        fee,
+        netAmount,
+      });
+    }
+    // ---- FIN CORRECTION ----
 
     if (status === "completed") {
       await markWebhookProcessed(reference);

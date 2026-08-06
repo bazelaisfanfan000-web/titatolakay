@@ -4,9 +4,9 @@
  * 
  * Flow:
  * 1. Valide userId, amount, moncashNumber
- * 2. Réserve le solde via transaction Firebase (débit atomique)
+ * 2. Réserve le solde via transaction Firebase (débit atomique du montant brut)
  * 3. Crée une entrée de retrait avec status "pending"
- * 4. Appelle MonCashConnect /v1/payout-create
+ * 4. Appelle MonCashConnect /v1/payout-create avec le montant net (brut - 5% de frais)
  * 5. En cas de succès: met à jour payoutReference
  * 6. En cas d'échec: recrédite le solde (rollback), met status "failed"
  */
@@ -22,22 +22,15 @@ export const dynamic = "force-dynamic";
 
 const MIN_WITHDRAWAL = 100; // HTG - Minimum requis par MonCash
 const MAX_WITHDRAWAL = 10000; // HTG - Maximum autorisé
+const WITHDRAWAL_FEE_RATE = 0.05; // 5% de frais
 
 interface WithdrawRequest {
   amount: number;
   moncashNumber: string;
 }
 
-interface WithdrawResponse {
-  success: boolean;
-  message?: string;
-  error?: string;
-  withdrawalId?: string;
-}
-
 /**
- * Débite le solde de manière atomique
- * Utilise une transaction Firebase pour garantir l'atomicité
+ * Débite le solde de manière atomique (montant brut)
  */
 async function debitBalanceAtomically(
   userId: string,
@@ -47,7 +40,6 @@ async function debitBalanceAtomically(
 
   console.log("[WITHDRAW] Début débit solde atomique:", { userId, amount });
 
-  // D'abord vérifier si l'utilisateur existe
   const userSnapshot = await userRef.once("value");
   if (!userSnapshot.exists()) {
     console.error("[WITHDRAW] Utilisateur inexistant:", userId);
@@ -56,20 +48,15 @@ async function debitBalanceAtomically(
 
   const userData = userSnapshot.val();
   const currentBalance = Number(userData.balance || 0);
-  console.log("[WITHDRAW] Données utilisateur:", { userId, currentBalance, userData });
+  console.log("[WITHDRAW] Solde actuel:", { userId, currentBalance });
 
   if (currentBalance < amount) {
     console.error("[WITHDRAW] Solde insuffisant:", { currentBalance, amount });
     return { success: false, error: "Solde insuffisant" };
   }
 
-  // Transaction sur l'objet utilisateur complet
   const result = await userRef.transaction((current: Record<string, unknown> | null) => {
-    console.log("[WITHDRAW] Transaction callback - current:", current);
-    
-    // Si current est null, créer l'objet avec le solde initial
     if (!current) {
-      console.log("[WITHDRAW] Transaction - current est null, création objet");
       return {
         balance: currentBalance - amount,
         updatedAt: Date.now(),
@@ -77,26 +64,13 @@ async function debitBalanceAtomically(
     }
 
     const cur = Number(current.balance || 0);
-    console.log("[WITHDRAW] Transaction - Solde actuel:", { cur, amount });
-    
-    if (cur < amount) {
-      console.error("[WITHDRAW] Transaction - Solde insuffisant:", { cur, amount });
-      return; // Annuler la transaction
-    }
-
-    const newBalance = cur - amount;
-    console.log("[WITHDRAW] Transaction - Débit solde:", { cur, amount, newBalance });
+    if (cur < amount) return; // annule
 
     return {
       ...current,
-      balance: newBalance,
+      balance: cur - amount,
       updatedAt: Date.now(),
     };
-  });
-
-  console.log("[WITHDRAW] Résultat transaction:", { 
-    committed: result.committed, 
-    snapshot: result.snapshot.exists() 
   });
 
   if (!result.committed) {
@@ -123,13 +97,8 @@ async function creditBalanceAtomically(
 
   console.log("[WITHDRAW] Rollback - recrédit solde:", { userId, amount });
 
-  // Transaction sur l'objet utilisateur complet
   const result = await userRef.transaction((current: Record<string, unknown> | null) => {
-    console.log("[WITHDRAW] Rollback transaction callback - current:", current);
-    
-    // Si current est null, créer l'objet avec le solde initial
     if (!current) {
-      console.log("[WITHDRAW] Rollback - current est null, création objet");
       return {
         balance: amount,
         updatedAt: Date.now(),
@@ -137,13 +106,9 @@ async function creditBalanceAtomically(
     }
 
     const cur = Number(current.balance || 0);
-    const newBalance = cur + amount;
-
-    console.log("[WITHDRAW] Rollback - Recrédit solde:", { cur, amount, newBalance });
-
     return {
       ...current,
-      balance: newBalance,
+      balance: cur + amount,
       updatedAt: Date.now(),
     };
   });
@@ -163,10 +128,9 @@ export async function POST(request: Request) {
   console.log("[WITHDRAW] Requête retrait reçue");
 
   try {
-    // Vérifier l'authentification Firebase
+    // Authentification
     const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.error("[WITHDRAW] Auth header manquant");
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json(
         { success: false, error: "Non authentifié" },
         { status: 401 }
@@ -174,19 +138,15 @@ export async function POST(request: Request) {
     }
 
     const token = authHeader.substring(7);
-    
-    // Vérifier le token Firebase avec Admin SDK
     const decodedToken = await adminAuth.verifyIdToken(token);
     const userId = decodedToken.uid;
-
     console.log("[WITHDRAW] Utilisateur authentifié:", userId);
 
     const body: WithdrawRequest = await request.json();
     const { amount, moncashNumber } = body;
 
-    // Validation
+    // Validation des champs
     if (!amount || !moncashNumber) {
-      console.error("[WITHDRAW] Champs manquants:", { amount, moncashNumber });
       return NextResponse.json(
         { success: false, error: "Champs manquants" },
         { status: 400 }
@@ -194,77 +154,73 @@ export async function POST(request: Request) {
     }
 
     if (amount < MIN_WITHDRAWAL || amount > MAX_WITHDRAWAL) {
-      console.error("[WITHDRAW] Montant invalide:", amount);
       return NextResponse.json(
         { success: false, error: `Le montant doit être entre ${MIN_WITHDRAWAL} et ${MAX_WITHDRAWAL} HTG` },
         { status: 400 }
       );
     }
 
-    // Valider le numéro MonCash
     const phoneRegex = /^\+509\d{8}$/;
     if (!phoneRegex.test(moncashNumber)) {
-      console.error("[WITHDRAW] Numéro MonCash invalide:", moncashNumber);
       return NextResponse.json(
         { success: false, error: "Numéro MonCash invalide (format: +509XXXXXXXX)" },
         { status: 400 }
       );
     }
 
-    // Vérifier que l'utilisateur existe
-    const userSnap2 = await adminDB.ref(`users/${userId}`).once("value");
-    if (!userSnap2.exists()) {
-      console.error("[WITHDRAW] Utilisateur inexistant:", userId);
+    // Vérifier le solde
+    const userSnap = await adminDB.ref(`users/${userId}`).once("value");
+    if (!userSnap.exists()) {
       return NextResponse.json(
         { success: false, error: "Utilisateur inexistant" },
         { status: 404 }
       );
     }
 
-    const userData = userSnap2.val() as Record<string, unknown>;
+    const userData = userSnap.val() as Record<string, unknown>;
     const currentBalance = Number(userData.balance || 0);
-
     if (currentBalance < amount) {
-      console.error("[WITHDRAW] Solde insuffisant:", { currentBalance, amount });
       return NextResponse.json(
         { success: false, error: "Solde insuffisant" },
         { status: 400 }
       );
     }
 
-    console.log("[WITHDRAW] Validation OK, début du processus:", { userId, amount, moncashNumber });
-
-    // Calcul des frais (5%)
-    const feeRate = 0.05;
-    const fee = Math.round((amount * feeRate) * 100) / 100;
+    // ---- Calcul des frais ----
+    const fee = Math.round((amount * WITHDRAWAL_FEE_RATE) * 100) / 100;
     const netAmount = Math.round((amount - fee) * 100) / 100;
 
-    console.log("[WITHDRAW] Calcul frais:", { amount, feeRate, fee, netAmount });
+    // Vérification : le net doit être strictement positif
+    if (netAmount <= 0) {
+      return NextResponse.json(
+        { success: false, error: "Le montant net après frais est nul ou négatif" },
+        { status: 400 }
+      );
+    }
 
-    // 1. Débiter le solde de manière atomique (montant brut)
+    console.log("[WITHDRAW] Calcul frais:", { amount, fee, netAmount });
+
+    // 1. Débiter le solde (montant brut)
     const debitResult = await debitBalanceAtomically(userId, amount);
     if (!debitResult.success) {
-      console.error("[WITHDRAW] Échec débit solde:", debitResult.error);
       return NextResponse.json(
         { success: false, error: debitResult.error },
         { status: 500 }
       );
     }
 
-    console.log("[WITHDRAW] Solde débité avec succès:", debitResult);
-
-    // 2. Générer un ID de retrait unique
+    // 2. Générer les identifiants
     const withdrawalId = crypto.randomUUID();
     const referenceId = `withdraw_${Date.now()}_${crypto.randomBytes(8).toString("hex")}`;
 
-    // 3. Créer l'entrée de retrait avec status "pending"
+    // 3. Créer l'entrée de retrait (pending)
     const withdrawalData = {
       withdrawalId,
       referenceId,
       payoutReference: null,
-      amount,
+      amount,          // brut
       fee,
-      netAmount,
+      netAmount,       // net envoyé
       status: "pending",
       moncashNumber,
       createdAt: Date.now(),
@@ -277,7 +233,7 @@ export async function POST(request: Request) {
     await adminDB.ref(`withdrawals/${userId}/${withdrawalId}`).set(withdrawalData);
     console.log("[WITHDRAW] Entrée de retrait créée:", withdrawalId);
 
-    // 4. Appeler MonCashConnect API avec le montant net
+    // 4. Appeler MonCashConnect avec le montant net
     let payoutReference: string | null = null;
     try {
       console.log("[WITHDRAW] Appel MonCashConnect API avec montant net:", netAmount);
@@ -291,53 +247,43 @@ export async function POST(request: Request) {
         payoutReference = payoutResult.payout.reference;
         console.log("[WITHDRAW] Payout créé avec succès:", payoutReference);
 
-        // Mettre à jour le retrait avec la référence
+        // Mettre à jour le retrait
         await adminDB.ref(`withdrawals/${userId}/${withdrawalId}`).update({
           payoutReference,
           status: "completed",
           completedAt: Date.now(),
         });
 
-        // Créer l'entrée ledger avec le montant net
-        if (payoutReference) {
-          const ledgerResult = await createWithdrawalLedgerEntry(
-            userId,
-            netAmount,
-            debitResult.oldBalance,
-            debitResult.newBalance,
-            payoutReference,
-            withdrawalId
-          );
+        // Ledger
+        await createWithdrawalLedgerEntry(
+          userId,
+          netAmount,
+          debitResult.oldBalance,
+          debitResult.newBalance,
+          payoutReference,
+          withdrawalId
+        );
 
-          if (!ledgerResult.success) {
-            console.error("[WITHDRAW] Erreur création ledger:", ledgerResult.error);
-          }
-        }
-
-        console.log("[WITHDRAW] Retrait complété avec succès");
         return NextResponse.json({
           success: true,
           message: "Retrait initié avec succès",
           withdrawalId,
           amountGross: amount,
-          fee: fee,
-          netAmount: netAmount,
+          fee,
+          netAmount,
         });
-
       } else {
-        throw new Error("Erreur création payout");
+        throw new Error("Erreur création payout - réponse inattendue");
       }
-
     } catch (moncashError) {
       console.error("[WITHDRAW] Erreur MonCashConnect API:", moncashError);
 
-      // ROLLBACK: Recréditer le solde (montant brut)
+      // ROLLBACK : recréditer le solde (montant brut)
       console.log("[WITHDRAW] Début rollback...");
       const rollbackResult = await creditBalanceAtomically(userId, amount);
-
       if (!rollbackResult.success) {
         console.error("[WITHDRAW] CRITICAL: Rollback échoué!", rollbackResult.error);
-        // Envoyer une alerte admin ici
+        // Ici, envoyer une alerte admin
       } else {
         console.log("[WITHDRAW] Rollback réussi");
       }
@@ -347,18 +293,17 @@ export async function POST(request: Request) {
         status: "failed",
         failedAt: Date.now(),
         error: moncashError instanceof Error ? moncashError.message : "Erreur inconnue",
-        failureReason: "Solde moncash marchant insifisant",
+        failureReason: "Solde moncash marchand insuffisant ou erreur API",
       });
 
       return NextResponse.json(
         {
           success: false,
-          error: "solde moncash marchant insifisant. Votre solde a été recrédité.",
+          error: "Solde MonCash marchand insuffisant. Votre solde a été recrédité.",
         },
         { status: 500 }
       );
     }
-
   } catch (error) {
     console.error("[WITHDRAW] Erreur inattendue:", error);
     return NextResponse.json(
