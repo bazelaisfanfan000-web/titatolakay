@@ -191,10 +191,9 @@ export async function POST(request: Request) {
     }
 
     // ---- Calcul des frais ----
-    // L'utilisateur peut retirer n'importe quel montant entre 100 et 10000 HTG
-    // MonCashConnect appliquera ses propres frais
-    const fee = Math.round((amount * WITHDRAWAL_FEE_RATE) * 100) / 100; // Frais affichés à l'utilisateur
-    const netAmount = Math.round(amount); // Envoyer le montant brut arrondi
+    // Nous prenons 5% de commission, l'utilisateur reçoit 95% sur son compte MonCash
+    const fee = Math.round((amount * WITHDRAWAL_FEE_RATE) * 100) / 100; // Commission 5%
+    const netAmount = Math.round(amount - fee); // Montant envoyé à MonCash (95% du brut)
 
     console.log("[WITHDRAW] Calcul frais:", { amount, fee, netAmount });
 
