@@ -300,6 +300,7 @@ export async function completeMonCashDeposit(params: {
     const deposit = resolved.deposit;
     const status = String(deposit.status ?? "");
     const expectedAmount = Number(deposit.amount);
+    const netAmount = Number(deposit.netAmount || deposit.amountNet || expectedAmount);
 
     if (status === "completed") {
       await markWebhookProcessed(reference);
@@ -350,7 +351,7 @@ export async function completeMonCashDeposit(params: {
       }
     }
 
-    const credit = await creditWalletWithRetry(resolved.userId, expectedAmount);
+    const credit = await creditWalletWithRetry(resolved.userId, netAmount);
     if (!credit.success) {
       await releaseWebhookProcessing(reference);
       return { ok: false, retryable: true, message: "processing" };
@@ -361,7 +362,7 @@ export async function completeMonCashDeposit(params: {
 
     const walletTx = {
       type: "deposit",
-      amount: expectedAmount,
+      amount: netAmount,
       referenceId: reference,
       depositId: resolved.depositId,
       userId: resolved.userId,
@@ -376,7 +377,7 @@ export async function completeMonCashDeposit(params: {
     await adminDB.ref(`deposits/${resolved.userId}/${resolved.depositId}`).update({
       status: "completed",
       moncashTransactionId: reference,
-      netAmount: expectedAmount,
+      netAmount: netAmount,
       completedAt: completedAtMs,
     });
 
@@ -394,7 +395,7 @@ export async function completeMonCashDeposit(params: {
 
     const ledgerResult = await createDepositLedgerEntry(
       resolved.userId,
-      expectedAmount,
+      netAmount,
       credit.oldBalance,
       credit.newBalance,
       reference,

@@ -95,17 +95,24 @@ export async function POST(request: Request) {
     const depositPath = `deposits/${userId}/${referenceId}`;
     const depositRef = adminDB.ref(depositPath);
 
+    // Calcul des frais (3%)
+    const feeRate = 0.03;
+    const fee = Math.round((amount * feeRate) * 100) / 100;
+    const netAmount = Math.round((amount - fee) * 100) / 100;
+
     const depositData = {
       id: referenceId,
       referenceId,
       userId,
       amount,
+      fee,
+      netAmount,
       status: "pending",
       idempotencyKey,
       createdAt: Date.now(),
     };
 
-    console.log("[DEPOSIT_API] Création du dépôt Firebase:", { depositPath, referenceId });
+    console.log("[DEPOSIT_API] Création du dépôt Firebase:", { depositPath, referenceId, amount, fee, netAmount });
 
     await depositRef.set(depositData);
 
@@ -114,6 +121,7 @@ export async function POST(request: Request) {
       depositId: referenceId,
       referenceId,
       amount,
+      netAmount,
       status: "pending",
       createdAt: Date.now(),
     });
