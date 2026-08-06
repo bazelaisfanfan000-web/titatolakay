@@ -24,12 +24,15 @@ export default function WithdrawPage() {
     const numAmount = parseFloat(amount) || 0;
     const withdrawFeeRate = 0.05; // 5%
     const calculatedFee = Math.round((numAmount * withdrawFeeRate) * 100) / 100;
-    const calculatedNet = Math.round((numAmount - calculatedFee) * 100) / 100;
+    const calculatedNet = Math.floor(numAmount - calculatedFee); // Arrondi à l'entier inférieur
 
     setAmountGross(numAmount);
     setFee(calculatedFee);
     setAmountNet(calculatedNet);
   }, [amount]);
+
+  // Vérifier si le montant net est un multiple de 20
+  const isValidAmount = amountNet > 0 && amountNet % 20 === 0;
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,12 +131,24 @@ export default function WithdrawPage() {
 
                 {/* Affichage du montant reçu */}
                 {amountGross > 0 && (
-                  <div className="mt-2 flex items-center gap-2 text-[10px] text-green-400">
-                    <span>💳</span>
-                    <span className="font-bold">
-                      Vous recevrez {amountNet.toFixed(0)} HTG sur votre compte MonCash
-                    </span>
-                  </div>
+                  <>
+                    {!isValidAmount && (
+                      <div className="mt-2 flex items-center gap-2 text-[10px] text-yellow-400">
+                        <span>⚠️</span>
+                        <span className="font-bold">
+                          Le montant net ({amountNet} HTG) doit être un multiple de 20 HTG. Essayez 100, 200, 300 HTG...
+                        </span>
+                      </div>
+                    )}
+                    {isValidAmount && (
+                      <div className="mt-2 flex items-center gap-2 text-[10px] text-green-400">
+                        <span>💳</span>
+                        <span className="font-bold">
+                          Vous recevrez {amountNet} HTG sur votre compte MonCash
+                        </span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -192,7 +207,7 @@ export default function WithdrawPage() {
               <button
                 type="button"
                 onClick={handleWithdraw}
-                disabled={loading || amountGross < 100 || amountGross > currentBalance || !moncashNumber}
+                disabled={loading || amountGross < 100 || amountGross > currentBalance || !moncashNumber || !isValidAmount}
                 className="flex h-12 w-full items-center justify-center rounded-xl border border-green-400/40 bg-green-500/20 text-center text-xs font-black text-green-100 shadow-[0_4px_0_rgba(22,101,52,0.8),0_0_18px_rgba(34,197,94,0.12)] backdrop-blur-md transition-all hover:border-green-300/60 hover:bg-green-500/30 hover:shadow-[0_5px_0_rgba(22,101,52,0.8),0_0_25px_rgba(34,197,94,0.2)] active:translate-y-[3px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? "Chargement..." : "Confirmer"}

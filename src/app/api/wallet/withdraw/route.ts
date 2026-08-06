@@ -191,7 +191,7 @@ export async function POST(request: Request) {
     }
 
     // ---- Calcul des frais ----
-    // netAmount doit être un entier (exigence MonCashConnect)
+    // netAmount doit être un entier et multiple de 20 (exigence MonCashConnect)
     const netAmount = Math.floor(amount * (1 - WITHDRAWAL_FEE_RATE));
     const fee = amount - netAmount; // frais réels
 
@@ -199,6 +199,17 @@ export async function POST(request: Request) {
     if (netAmount <= 0) {
       return NextResponse.json(
         { success: false, error: "Le montant net après frais est nul ou négatif" },
+        { status: 400 }
+      );
+    }
+
+    // Vérification : le net doit être un multiple de 20 (exigence MonCashConnect)
+    if (netAmount % 20 !== 0) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Le montant net après frais (${netAmount} HTG) doit être un multiple de 20 HTG. Veuillez retirer un montant comme 100, 200, 300, 400, 500 HTG...` 
+        },
         { status: 400 }
       );
     }
