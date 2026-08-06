@@ -192,9 +192,9 @@ export async function POST(request: Request) {
 
     // ---- Calcul des frais ----
     // Prendre 5% de frais, envoyer 95% sur MonCash
-    // Le montant net doit être un entier (exigence MonCashConnect)
+    // Envoyer le montant brut à MonCashConnect (l'API appliquera ses propres frais)
     const fee = Math.round((amount * WITHDRAWAL_FEE_RATE) * 100) / 100;
-    const netAmount = Math.round(amount - fee); // Arrondi à l'entier pour MonCashConnect
+    const netAmount = Math.round(amount - fee); // Montant que l'utilisateur recevra
 
     // Vérification : le net doit être strictement positif
     if (netAmount <= 0) {
@@ -239,12 +239,12 @@ export async function POST(request: Request) {
     await adminDB.ref(`withdrawals/${userId}/${withdrawalId}`).set(withdrawalData);
     console.log("[WITHDRAW] Entrée de retrait créée:", withdrawalId);
 
-    // 4. Appeler MonCashConnect avec le montant net (entier) et le numéro nettoyé
+    // 4. Appeler MonCashConnect avec le montant brut (MonCash appliquera ses propres frais)
     let payoutReference: string | null = null;
     try {
-      console.log("[WITHDRAW] Appel MonCashConnect API avec montant net:", netAmount);
+      console.log("[WITHDRAW] Appel MonCashConnect API avec montant brut:", amount);
       const payoutResult = await createMonCashPayout({
-        amount: netAmount,
+        amount: Math.round(amount), // Envoyer le montant brut arrondi
         moncashNumber: cleanNumber, // sans le +
         referenceId: referenceId,
       });
@@ -308,7 +308,7 @@ export async function POST(request: Request) {
 
       if (errorMsg.includes("invalid_amount")) {
         userErrorMessage =
-          "Le montant net après frais n'est pas valide (doit être un nombre entier). Veuillez retirer un multiple de 20 HTG (ex: 100, 200, 360...).";
+          "Le montant n'est pas accepté par MonCash. Essayez un montant comme 100, 200, 300, 400, 500 HTG...";
       } else if (errorMsg.includes("insufficient_balance") || errorMsg.includes("insufficient balance")) {
         userErrorMessage =
           "Solde MonCash marchand insuffisant. Votre solde a été recrédité. Réessayez dans quelques heures.";

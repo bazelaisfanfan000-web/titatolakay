@@ -24,7 +24,7 @@ export default function WithdrawPage() {
     const numAmount = parseFloat(amount) || 0;
     const withdrawFeeRate = 0.05; // 5%
     const calculatedFee = Math.round((numAmount * withdrawFeeRate) * 100) / 100;
-    const calculatedNet = Math.round(numAmount - calculatedFee); // Arrondi à l'entier
+    const calculatedNet = Math.round(numAmount - calculatedFee); // Montant que l'utilisateur recevra
 
     setAmountGross(numAmount);
     setFee(calculatedFee);
