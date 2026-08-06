@@ -82,6 +82,20 @@ export default function WithdrawPage() {
             Transférer vers votre compte MonCash
           </p>
 
+          {/* Info VIP PIP */}
+          <div className="mb-4 rounded-xl border border-green-500/20 bg-green-500/10 px-4 py-3 text-center">
+            <p className="text-[10px] font-bold text-green-400">
+              💸 Vous recevrez votre argent sur le compte VIP PIP
+            </p>
+          </div>
+
+          {/* Info minimum */}
+          <div className="mb-4 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-center">
+            <p className="text-[10px] font-bold text-blue-400">
+              Montant minimum de retrait : 110 HTG
+            </p>
+          </div>
+
           {/* Succès */}
           {success ? (
             <div className="flex flex-col items-center justify-center py-12">
