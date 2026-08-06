@@ -89,8 +89,11 @@ export default function WithdrawPage() {
               <p className="text-[13px] font-bold text-white mb-1">
                 Retrait initié avec succès
               </p>
-              <p className="text-[10px] text-white/40">
+              <p className="text-[10px] text-white/40 mb-3">
                 Votre demande est en traitement
+              </p>
+              <p className="text-[10px] text-green-400 font-bold">
+                💸 Vous recevrez votre argent sur le compte VIP PIP
               </p>
             </div>
           ) : (
