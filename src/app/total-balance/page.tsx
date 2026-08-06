@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Wallet, Users, Loader2, Mail, Calendar, Home, Ban, ArrowDownLeft, ArrowUpRight, User } from "lucide-react";
+import { Wallet, Users, Loader2, Mail, Calendar, Home, Ban, ArrowDownLeft, ArrowUpRight, User, Bell, FileText, CreditCard, Share2, Copy, TrendingUp, BarChart3, Settings, Gift } from "lucide-react";
 
 interface User {
   id: string;
@@ -11,7 +11,7 @@ interface User {
   createdAtDate?: string;
 }
 
-type TabType = "users" | "banned" | "deposits" | "withdrawals" | "home";
+type TabType = "home" | "users" | "banned" | "deposits" | "withdrawals" | "notifications" | "requests" | "subscription" | "referral";
 
 export default function TotalBalancePage() {
   const [totalBalance, setTotalBalance] = useState<number | null>(null);
@@ -19,7 +19,7 @@ export default function TotalBalancePage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>("users");
+  const [activeTab, setActiveTab] = useState<TabType>("home");
 
   useEffect(() => {
     async function fetchTotalBalance() {
@@ -45,6 +45,10 @@ export default function TotalBalancePage() {
   const tabs = [
     { id: "home" as TabType, label: "Accueil", icon: Home },
     { id: "users" as TabType, label: "Utilisateurs", icon: User },
+    { id: "notifications" as TabType, label: "Notifications", icon: Bell },
+    { id: "requests" as TabType, label: "Demandes", icon: FileText },
+    { id: "subscription" as TabType, label: "Abonnement", icon: CreditCard },
+    { id: "referral" as TabType, label: "Parrainage", icon: Gift },
     { id: "banned" as TabType, label: "Banned", icon: Ban },
     { id: "deposits" as TabType, label: "Dépôts", icon: ArrowDownLeft },
     { id: "withdrawals" as TabType, label: "Retraits", icon: ArrowUpRight },
@@ -55,38 +59,139 @@ export default function TotalBalancePage() {
       case "home":
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl p-6 border border-blue-500/30">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-300 text-lg">Solde Total</span>
-                  <Wallet className="w-6 h-6 text-blue-400" />
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-white mb-2">Tableau de bord</h1>
+              <p className="text-gray-300 text-lg">Bonjour, Fanfan</p>
+              <p className="text-gray-400 text-sm mt-1">Vue d'ensemble de vos paiements MonCash</p>
+              <button className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                <Share2 className="w-4 h-4" />
+                Recevez de l'argent
+              </button>
+            </div>
+
+            {/* 4 Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Solde Disponible */}
+              <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl p-6 border border-blue-500/30">
+                <h3 className="text-sm font-medium text-gray-300 mb-2">SOLDE DISPONIBLE</h3>
+                <p className="text-3xl font-bold text-white mb-1">{totalBalance?.toLocaleString("fr-HT")} HTG</p>
+                <p className="text-xs text-gray-400 mb-4">Disponible pour retrait</p>
+                <div className="flex gap-2">
+                  <button className="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm transition-colors">
+                    Déposer
+                  </button>
+                  <button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg text-sm transition-colors">
+                    Retirer
+                  </button>
                 </div>
-                <p className="text-4xl font-bold text-white">
-                  {totalBalance?.toLocaleString("fr-HT")} HTG
-                </p>
               </div>
 
-              <div className="bg-gradient-to-r from-green-500/20 to-teal-500/20 rounded-xl p-6 border border-green-500/30">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-300 text-lg">Nombre d'Utilisateurs</span>
-                  <Users className="w-6 h-6 text-green-400" />
+              {/* Plan Actuel */}
+              <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-xl p-6 border border-purple-500/30">
+                <h3 className="text-sm font-medium text-gray-300 mb-2">PLAN ACTUEL</h3>
+                <p className="text-3xl font-bold text-white mb-1">Pro</p>
+                <p className="text-xs text-gray-400 mb-4">0 % MCC — frais passerelle tiers uniquement</p>
+                <button className="w-full bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm transition-colors">
+                  Retirer
+                </button>
+              </div>
+
+              {/* Transactions 30J */}
+              <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl p-6 border border-green-500/30">
+                <h3 className="text-sm font-medium text-gray-300 mb-2">TRANSACTIONS (30J)</h3>
+                <p className="text-3xl font-bold text-white mb-1">{totalUsers || 0}</p>
+                <p className="text-xs text-gray-400 mb-4">{(totalBalance || 0).toLocaleString("fr-HT")} HTG échangés</p>
+                <button className="w-full bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm transition-colors">
+                  Mettre à niveau
+                </button>
+              </div>
+
+              {/* Utilisé Aujourd'hui */}
+              <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-xl p-6 border border-orange-500/30">
+                <h3 className="text-sm font-medium text-gray-300 mb-2">UTILISÉ AUJOURD'HUI</h3>
+                <p className="text-3xl font-bold text-white mb-1">0 HTG</p>
+                <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
+                  <div className="bg-orange-500 h-2 rounded-full" style={{ width: "0%" }}></div>
                 </div>
-                <p className="text-4xl font-bold text-white">
-                  {totalUsers?.toLocaleString("fr-HT")}
-                </p>
+                <p className="text-xs text-gray-400">0 % de 50 000 HTG</p>
               </div>
             </div>
 
-            <div className="bg-gray-700/30 rounded-lg p-4 border border-gray-600/30">
+            {/* Advanced Analytics */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Volume des paiements */}
+              <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" />
+                    Volume des paiements
+                  </h3>
+                  <span className="text-sm text-gray-400">14 derniers jours</span>
+                </div>
+                <p className="text-2xl font-bold text-white mb-4">{(totalBalance || 0).toLocaleString("fr-HT")} HTG traitées</p>
+                <div className="h-32 bg-gray-700/50 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-8 h-8 text-gray-500" />
+                  <span className="text-gray-500 ml-2">Graphique à venir</span>
+                </div>
+              </div>
+
+              {/* Paiements récents */}
+              <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5" />
+                  Paiements récents
+                </h3>
+                <div className="space-y-3">
+                  {users.slice(0, 5).map((user) => (
+                    <div key={user.id} className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+                          <User className="w-4 h-4 text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-white font-medium">{user.email || "N/A"}</p>
+                          <p className="text-xs text-gray-400 font-mono">{user.id.slice(0, 12)}...</p>
+                        </div>
+                      </div>
+                      <p className="text-sm font-semibold text-green-400">
+                        +{user.balance.toLocaleString("fr-HT")} HTG
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Legal Disclaimer */}
+            <div className="bg-gray-800/30 rounded-lg p-4 border border-gray-700">
               <p className="text-sm text-gray-400 text-center">
-                Moyenne par utilisateur:{" "}
-                <span className="text-white font-semibold">
-                  {totalUsers && totalUsers > 0 && totalBalance !== null
-                    ? (totalBalance / totalUsers).toFixed(2)
-                    : "0"}{" "}
-                  HTG
-                </span>
+                MonCashConnect ne prend aucune commission. Les frais de dépôt (3 %) et de retrait (5 %) proviennent de prestataires tiers.
               </p>
+            </div>
+
+            {/* User Profile */}
+            <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold">BF</span>
+                  </div>
+                  <div>
+                    <p className="text-white font-semibold">Bazolet</p>
+                    <p className="text-sm text-gray-400">bazelaisfanfan10@gmail.com</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                    Demander une nouvelle fonctionnalité
+                  </button>
+                  <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2">
+                    <Copy className="w-4 h-4" />
+                    Copier le lien
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -162,6 +267,18 @@ export default function TotalBalancePage() {
           </div>
         );
 
+      case "notifications":
+      case "requests":
+      case "subscription":
+      case "referral":
+        return (
+          <div className="bg-gray-800/50 rounded-xl p-8 border border-gray-700 text-center">
+            <Settings className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">Section en développement</h3>
+            <p className="text-gray-400">Cette fonctionnalité sera bientôt disponible.</p>
+          </div>
+        );
+
       case "banned":
         return (
           <div className="bg-gray-800/50 rounded-xl p-8 border border-gray-700 text-center">
@@ -198,18 +315,6 @@ export default function TotalBalancePage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-4">
       <div className="w-full">
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-full mb-4">
-              <Wallet className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Solde Total des Utilisateurs
-            </h1>
-            <p className="text-gray-300">
-              Tableau de bord administratif
-            </p>
-          </div>
-
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="w-12 h-12 text-blue-400 animate-spin mb-4" />
@@ -224,6 +329,9 @@ export default function TotalBalancePage() {
               {/* Sidebar Navigation */}
               <div className="lg:w-64 flex-shrink-0">
                 <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700 space-y-2">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">
+                    COMPTE
+                  </div>
                   {tabs.map((tab) => {
                     const Icon = tab.icon;
                     return (
