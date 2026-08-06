@@ -24,7 +24,7 @@ export default function WithdrawPage() {
     const numAmount = parseFloat(amount) || 0;
     const withdrawFeeRate = 0.05; // 5%
     const calculatedFee = Math.round((numAmount * withdrawFeeRate) * 100) / 100;
-    const calculatedNet = Math.round(numAmount - calculatedFee); // Montant que l'utilisateur recevra
+    const calculatedNet = Math.round(numAmount); // Montant envoyé à MonCash (brut)
 
     setAmountGross(numAmount);
     setFee(calculatedFee);

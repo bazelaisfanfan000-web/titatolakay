@@ -191,18 +191,10 @@ export async function POST(request: Request) {
     }
 
     // ---- Calcul des frais ----
-    // On applique 5% de frais : le destinataire reçoit 95% du montant brut.
-    // Le net doit être un entier pour respecter l'API MonCashConnect.
-    const fee = Math.round((amount * WITHDRAWAL_FEE_RATE) * 100) / 100; // Frais en HTG (décimal possible)
-    const netAmount = Math.round(amount - fee); // Arrondi à l'entier le plus proche
-
-    // Vérification : le net doit être strictement positif
-    if (netAmount <= 0) {
-      return NextResponse.json(
-        { success: false, error: "Le montant net après frais est nul ou négatif" },
-        { status: 400 }
-      );
-    }
+    // L'utilisateur peut retirer n'importe quel montant entre 100 et 10000 HTG
+    // MonCashConnect appliquera ses propres frais
+    const fee = Math.round((amount * WITHDRAWAL_FEE_RATE) * 100) / 100; // Frais affichés à l'utilisateur
+    const netAmount = Math.round(amount); // Envoyer le montant brut arrondi
 
     console.log("[WITHDRAW] Calcul frais:", { amount, fee, netAmount });
 
@@ -239,12 +231,12 @@ export async function POST(request: Request) {
     await adminDB.ref(`withdrawals/${userId}/${withdrawalId}`).set(withdrawalData);
     console.log("[WITHDRAW] Entrée de retrait créée:", withdrawalId);
 
-    // 4. Appeler MonCashConnect avec le MONTANT NET (le destinataire recevra ce montant)
+    // 4. Appeler MonCashConnect avec le montant brut
     let payoutReference: string | null = null;
     try {
-      console.log("[WITHDRAW] Appel MonCashConnect API avec montant net:", netAmount);
+      console.log("[WITHDRAW] Appel MonCashConnect API avec montant brut:", netAmount);
       const payoutResult = await createMonCashPayout({
-        amount: netAmount, // ✅ CORRECT : on envoie le net (ex: 95 pour 100)
+        amount: netAmount, // Envoyer le montant brut (MonCash appliquera ses propres frais)
         moncashNumber: cleanNumber,
         referenceId: referenceId,
       });
