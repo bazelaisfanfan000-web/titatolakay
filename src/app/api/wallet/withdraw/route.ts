@@ -191,9 +191,9 @@ export async function POST(request: Request) {
     }
 
     // ---- Calcul des frais ----
-    // netAmount doit être un entier et multiple de 20 (exigence MonCashConnect)
-    const netAmount = Math.floor(amount * (1 - WITHDRAWAL_FEE_RATE));
-    const fee = amount - netAmount; // frais réels
+    // Prendre 5% de frais, envoyer 95% sur MonCash
+    const fee = Math.round((amount * WITHDRAWAL_FEE_RATE) * 100) / 100;
+    const netAmount = Math.round((amount - fee) * 100) / 100;
 
     // Vérification : le net doit être strictement positif
     if (netAmount <= 0) {
@@ -203,18 +203,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Vérification : le net doit être un multiple de 20 (exigence MonCashConnect)
-    if (netAmount % 20 !== 0) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: `Le montant net après frais (${netAmount} HTG) doit être un multiple de 20 HTG. Veuillez retirer un montant comme 100, 200, 300, 400, 500 HTG...` 
-        },
-        { status: 400 }
-      );
-    }
-
-    console.log("[WITHDRAW] Calcul frais (net arrondi à l'entier inférieur):", { amount, fee, netAmount });
+    console.log("[WITHDRAW] Calcul frais:", { amount, fee, netAmount });
 
     // 1. Débiter le solde (montant brut)
     const debitResult = await debitBalanceAtomically(userId, amount);
