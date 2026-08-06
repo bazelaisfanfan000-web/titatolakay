@@ -133,11 +133,11 @@ export default function CreateRoomPage() {
 
       if (
         !bet ||
-        Number(bet) < 25
+        Number(bet) < 10
       ) {
 
         throw new Error(
-          "La mise minimum est de 25 HTG."
+          "La mise minimum est de 10 HTG."
         );
 
       }

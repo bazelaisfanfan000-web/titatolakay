@@ -11,16 +11,16 @@ export async function POST(request: Request) {
     const { stake, gameType = "titato" } = body;
 
     // Validation de la mise
-    if (!stake || stake < 25) {
+    if (!stake || stake < 10) {
       return NextResponse.json(
-        { success: false, error: "La mise minimum est de 25 HTG" },
+        { success: false, error: "La mise minimum est de 10 HTG" },
         { status: 400 }
       );
     }
 
-    if (stake > 5000) {
+    if (stake > 10000) {
       return NextResponse.json(
-        { success: false, error: "La mise maximum est de 5 000 HTG" },
+        { success: false, error: "La mise maximum est de 10 000 HTG" },
         { status: 400 }
       );
     }

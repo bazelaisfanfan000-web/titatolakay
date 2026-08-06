@@ -11,6 +11,9 @@ import { createDepositLedgerEntry } from "./ledger";
 const MAX_TX_RETRIES = 5;
 const TX_RETRY_DELAY_MS = 150;
 
+// [FIX] Correction N°2 : Augmentation du timeout du lock de 120s à 600s (10 minutes)
+const LOCK_TIMEOUT_MS = 600_000; // 10 minutes
+
 export interface DepositIndexEntry {
   userId: string;
   depositId: string;
@@ -150,7 +153,8 @@ export async function claimProcessedWebhook(reference: string): Promise<WebhookC
       }
       if (current?.status === "processing") {
         const started = current.timestamp ?? 0;
-        if (Date.now() - started < 120_000) {
+        // [FIX] Correction N°2 : Utilisation de LOCK_TIMEOUT_MS (10 min) au lieu de 120_000
+        if (Date.now() - started < LOCK_TIMEOUT_MS) {
           return;
         }
       }
@@ -250,7 +254,19 @@ export async function creditWalletWithRetry(
     }
   }
 
-  console.error("[MONCASH] Échec crédit wallet après toutes les tentatives:", { userId, lastError });
+  // [FIX] Correction N°4 : Monitoring renforcé
+  console.error("[MONCASH] ⚠️ CRITIQUE - Échec crédit wallet après 5 tentatives !", { userId, lastError });
+  // [FIX] Placeholder pour alerte (Slack/Discord/Email) - À activer selon vos besoins
+  // try {
+  //   await fetch(process.env.SLACK_WEBHOOK_URL, {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify({
+  //       text: `🚨 ALERTE CRITIQUE : Échec crédit wallet pour userId=${userId}, erreur=${lastError}`
+  //     })
+  //   });
+  // } catch (alertErr) { console.error("Échec envoi alerte Slack", alertErr); }
+
   return { success: false, error: lastError };
 }
 
@@ -335,8 +351,13 @@ export async function completeMonCashDeposit(params: {
     }
 
     const receivedAmount = Number(amountFromWebhook);
-    if (receivedAmount !== expectedAmount) {
-      console.error("[MONCASH] Montant mismatch", { reference });
+    // [FIX] Correction N°3 : Comparaison des flottants avec tolérance (0.01 HTG)
+    if (Math.abs(receivedAmount - expectedAmount) > 0.01) {
+      console.error("[MONCASH] Montant mismatch (tolérance dépassée)", { 
+        received: receivedAmount, 
+        expected: expectedAmount,
+        diff: Math.abs(receivedAmount - expectedAmount) 
+      });
       await releaseWebhookProcessing(reference);
       return { ok: false, retryable: false, message: "amount_mismatch" };
     }
@@ -366,6 +387,17 @@ export async function completeMonCashDeposit(params: {
         await releaseWebhookProcessing(reference);
         return { ok: false, retryable: true, message: "processing" };
       }
+    }
+
+    // [FIX] Correction N°2 : Double-vérification juste avant le crédit pour éviter le double paiement
+    const finalStatusCheck = await adminDB
+      .ref(`deposits/${resolved.userId}/${resolved.depositId}/status`)
+      .once("value");
+
+    if (finalStatusCheck.val() === "completed") {
+      console.warn("[MONCASH] Dépôt déjà marqué completed juste avant crédit, annulation du double crédit", reference);
+      await markWebhookProcessed(reference);
+      return { ok: true, duplicate: true };
     }
 
     const credit = await creditWalletWithRetry(resolved.userId, netAmount);

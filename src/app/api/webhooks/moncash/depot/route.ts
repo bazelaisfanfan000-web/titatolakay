@@ -21,6 +21,7 @@ import { creditWallet } from "@/lib/wallet";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// [FIX] Ajout du paramètre 'status' pour contrôler le code HTTP
 function webhookJson(
   success: boolean,
   message: string,
@@ -50,6 +51,8 @@ export async function GET() {
   });
 }
 
+// [FIX] Ces fonctions ne sont plus utilisées (déduplication gérée par processed_webhooks)
+// Mais on les garde pour compatibilité (elles ne sont pas appelées)
 async function isDuplicateEvent(eventType: string, reference: string): Promise<boolean> {
   const eventId = `${sanitizeFirebaseKey(eventType)}_${sanitizeFirebaseKey(reference)}`;
   const snap = await adminDB.ref(`processed_events/${eventId}`).once("value");
@@ -71,6 +74,7 @@ async function markEventProcessed(
   });
 }
 
+// [FIX] Correction : Ajout du flag retryable dans le type de retour
 async function dispatchEvent(event: {
   event: string;
   reference: string;
@@ -78,14 +82,14 @@ async function dispatchEvent(event: {
   completedAt?: string;
   failureReason?: string;
   recipient_account_masked?: string;
-}): Promise<{ httpSuccess: boolean; message: string }> {
+}): Promise<{ httpSuccess: boolean; message: string; retryable?: boolean }> {
   const eventType = event.event;
 
   switch (eventType) {
     case "payment.completed": {
       const amount = Number(event.amount);
       if (!Number.isFinite(amount) || amount <= 0) {
-        return { httpSuccess: false, message: "invalid_amount" };
+        return { httpSuccess: false, message: "invalid_amount", retryable: false };
       }
       console.log("[MONCASH] Paiement validé", { reference: event.reference });
       
@@ -93,14 +97,16 @@ async function dispatchEvent(event: {
         reference: event.reference,
         amountFromWebhook: amount,
         completedAt: event.completedAt,
-        verifyWithMonCashApi: true, // Activé pour vérification avec API MonCash
+        verifyWithMonCashApi: true,
       });
       
       if (!result.ok) {
         console.log("[MONCASH] Résultat traitement:", result);
+        // On propage le retryable depuis le résultat
         return {
-          httpSuccess: result.retryable,
+          httpSuccess: false, // On force à false pour les erreurs
           message: result.message,
+          retryable: result.retryable, // important
         };
       }
       
@@ -108,7 +114,11 @@ async function dispatchEvent(event: {
         reference: event.reference, 
         duplicate: result.duplicate 
       });
-      return { httpSuccess: true, message: result.duplicate ? "already_processed" : "completed" };
+      return { 
+        httpSuccess: true, 
+        message: result.duplicate ? "already_processed" : "completed",
+        retryable: false
+      };
     }
 
     case "payment.failed":
@@ -117,21 +127,21 @@ async function dispatchEvent(event: {
         event.reference,
         event.failureReason || "Paiement échoué ou expiré"
       );
-      return { httpSuccess: true, message: "failed_recorded" };
+      return { httpSuccess: true, message: "failed_recorded", retryable: false };
 
     case "payout.completed":
       console.log("[MONCASH] Payout complété reçu:", { reference: event.reference });
       await handlePayoutCompleted(event);
-      return { httpSuccess: true, message: "payout_completed" };
+      return { httpSuccess: true, message: "payout_completed", retryable: false };
 
     case "payout.failed":
       console.log("[MONCASH] Payout échoué reçu:", { reference: event.reference });
       await handlePayoutFailed(event);
-      return { httpSuccess: true, message: "payout_failed" };
+      return { httpSuccess: true, message: "payout_failed", retryable: false };
 
     default:
       console.warn("[MONCASH] Type d'événement inconnu:", eventType);
-      return { httpSuccess: true, message: "ignored" };
+      return { httpSuccess: true, message: "ignored", retryable: false };
   }
 }
 
@@ -143,7 +153,7 @@ export async function POST(request: Request) {
     const signature = request.headers.get("x-mcc-signature");
     const timestamp = request.headers.get("x-mcc-timestamp");
 
-    // Vérification IP (optionnel - ajouter les IP MonCash dans .env)
+    // Vérification IP
     const allowedWebhookIPs = process.env.MONCASH_WEBHOOK_IPS?.split(",") || [];
     if (allowedWebhookIPs.length > 0) {
       const clientIP = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
@@ -154,7 +164,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Vérification obligatoire de la signature (pas de mode test sans signature)
+    // Vérification signature
     if (!signature || !timestamp) {
       console.error("[MONCASH] Headers signature/timestamp manquants");
       return webhookJson(false, "unauthorized", undefined, 401);
@@ -193,20 +203,28 @@ export async function POST(request: Request) {
 
     console.log("[MONCASH] Événement reçu:", { type: event.event, reference: event.reference });
 
-    // La déduplication est gérée par completeMonCashDeposit via processed_webhooks
-    // Plus besoin de vérifier processed_events ici
+    // Traitement
     const outcome = await dispatchEvent(event);
 
+    // [FIX] Correction N°1 : Gestion des codes HTTP selon retryable
     if (outcome.httpSuccess) {
-      console.log("[MONCASH] Terminé", { message: outcome.message });
+      console.log("[MONCASH] Terminé avec succès", { message: outcome.message });
       return webhookJson(true, outcome.message);
+    } else {
+      // Erreur : on vérifie si elle est récupérable
+      if (outcome.retryable === true) {
+        console.warn("[MONCASH] Erreur récupérable, renvoi 500 pour réessai", { message: outcome.message });
+        return webhookJson(false, outcome.message, undefined, 500);
+      } else {
+        // Erreur définitive (ex: unknown_reference, amount_mismatch)
+        console.error("[MONCASH] Erreur définitive, renvoi 200 pour ne pas réessayer", { message: outcome.message });
+        return webhookJson(false, outcome.message, undefined, 200);
+      }
     }
-
-    console.log("[MONCASH] Erreur traitement (retryable:", outcome.message === "processing", ")", { message: outcome.message });
-    return webhookJson(false, outcome.message === "processing" ? "processing" : outcome.message);
   } catch (error) {
-    console.error("[MONCASH] Erreur webhook:", error);
-    return webhookJson(false, "processing");
+    console.error("[MONCASH] Erreur webhook (non gérée):", error);
+    // En cas d'erreur inattendue, on renvoie 500 pour que MonCash réessaie
+    return webhookJson(false, "internal_error", undefined, 500);
   }
 }
 
@@ -226,7 +244,6 @@ async function handlePayoutCompleted(event: {
 
   console.log("[PAYOUT] Traitement payout.completed:", { reference, amount });
 
-  // Trouver le retrait par référence
   const withdrawal = await findWithdrawalByPayoutReference(reference);
   
   if (!withdrawal) {
@@ -236,22 +253,20 @@ async function handlePayoutCompleted(event: {
 
   const { userId, withdrawalId, withdrawal: withdrawalData } = withdrawal;
 
-  // Vérifier que le retrait est en pending
   if (withdrawalData.status !== "pending") {
     console.log("[PAYOUT] Retrait déjà traité:", withdrawalData.status);
     return;
   }
 
-  // Vérifier le montant
-  if (amount && Number(amount) !== withdrawalData.amount) {
-    console.error("[PAYOUT] Montant mismatch:", {
+  // [FIX] Utilisation d'une tolérance pour la comparaison des montants
+  if (amount && Math.abs(Number(amount) - withdrawalData.amount) > 0.01) {
+    console.error("[PAYOUT] Montant mismatch (tolérance dépassée):", {
       expected: withdrawalData.amount,
       received: amount,
     });
     return;
   }
 
-  // Mettre à jour le statut à completed
   await updateWithdrawalStatus(userId, withdrawalId, "completed", {
     completedAt: completedAt ? new Date(completedAt).getTime() : Date.now(),
   });
@@ -272,7 +287,6 @@ async function handlePayoutFailed(event: {
 
   console.log("[PAYOUT] Traitement payout.failed:", { reference, amount, failureReason });
 
-  // Trouver le retrait par référence
   const withdrawal = await findWithdrawalByPayoutReference(reference);
   
   if (!withdrawal) {
@@ -282,25 +296,31 @@ async function handlePayoutFailed(event: {
 
   const { userId, withdrawalId, withdrawal: withdrawalData } = withdrawal;
 
-  // Vérifier que le retrait est en pending
   if (withdrawalData.status !== "pending") {
     console.log("[PAYOUT] Retrait déjà traité:", withdrawalData.status);
     return;
   }
 
-  // Recréditer le solde (rollback)
   console.log("[PAYOUT] Recrédit du solde:", { userId, amount: withdrawalData.amount });
   const creditResult = await creditWallet(userId, withdrawalData.amount, reference);
 
   if (!creditResult.success) {
     console.error("[PAYOUT] CRITICAL: Recrédit échoué!", creditResult.error);
-    // Envoyer une alerte admin ici
+    // [FIX] Placeholder pour alerte (Slack/Discord/Email)
+    // try {
+    //   await fetch(process.env.SLACK_WEBHOOK_URL, {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify({
+    //       text: `🚨 CRITICAL: Échec recrédit pour retrait ${reference}, userId=${userId}`
+    //     })
+    //   });
+    // } catch (alertErr) { /* ignore */ }
     return;
   }
 
   console.log("[PAYOUT] Solde recrédité avec succès:", creditResult);
 
-  // Mettre à jour le statut à failed
   await updateWithdrawalStatus(userId, withdrawalId, "failed", {
     failedAt: Date.now(),
     failureReason: failureReason || "Payout échoué",
