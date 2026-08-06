@@ -1729,7 +1729,7 @@ export default function VyloPage() {
             }`}
           >
 
-            🔍 Explorer
+            🔍 Recherche un amie 
 
           </button>
 

@@ -126,7 +126,7 @@ export function validateBet(rawValue: any): {
   ==================================================
   */
   
-  const MIN_BET = 25;
+  const MIN_BET = 10;
   const MAX_BET = 10000;
 
   if (numValue < MIN_BET) {

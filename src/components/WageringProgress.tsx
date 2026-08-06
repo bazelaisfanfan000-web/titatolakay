@@ -80,7 +80,7 @@ export default function WageringProgress({ userId }: WageringProgressProps) {
               Deposer et retirer quand tu veux
             </p>
             <p className="text-[8px] text-white/60">
-              Ici votre argent est en paix💵😴 
+              Ici votre argent est en paix et en securite💵😴 
             </p>
           </div>
         </div>

@@ -35,8 +35,8 @@ export const withdrawalSchema = z.object({
  */
 export const createGameSchema = z.object({
   bet: z.number()
-    .min(25, 'La mise minimum est de 25 HTG')
-    .max(5000, 'La mise maximum est de 5000 HTG')
+    .min(10, 'La mise minimum est de 10 HTG')
+    .max(10000, 'La mise maximum est de 10 000 HTG')
     .int('La mise doit être un entier'),
   maxPlayers: z.number()
     .min(2, 'Minimum 2 joueurs')
@@ -84,8 +84,8 @@ export const adminRewardSchema = z.object({
 export const revengeRequestSchema = z.object({
   opponentUid: z.string().min(1, 'UID de l\'opposant requis'),
   betAmount: z.number()
-    .min(25, 'La mise minimum est de 25 HTG')
-    .max(5000, 'La mise maximum est de 5000 HTG')
+    .min(10, 'La mise minimum est de 10 HTG')
+    .max(10000, 'La mise maximum est de 10 000 HTG')
     .int('La mise doit être un entier'),
 });
 

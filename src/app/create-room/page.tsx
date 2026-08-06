@@ -437,7 +437,7 @@ export default function CreateRoomPage() {
 
               <p className="mt-2 text-[9px] text-white/25">
 
-                La même mise sera demandée à ton adversaire.
+                Mise minimum 10HTG.
 
               </p>
 
