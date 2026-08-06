@@ -192,8 +192,9 @@ export async function POST(request: Request) {
 
     // ---- Calcul des frais ----
     // Prendre 5% de frais, envoyer 95% sur MonCash
+    // Le montant net doit être un entier (exigence MonCashConnect)
     const fee = Math.round((amount * WITHDRAWAL_FEE_RATE) * 100) / 100;
-    const netAmount = Math.round((amount - fee) * 100) / 100;
+    const netAmount = Math.round(amount - fee); // Arrondi à l'entier pour MonCashConnect
 
     // Vérification : le net doit être strictement positif
     if (netAmount <= 0) {
