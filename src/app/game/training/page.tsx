@@ -566,6 +566,8 @@ export default function TrainingPage() {
         }
         if (count === winLength) return true;
       }
+    }
+    return false;
   };
 
   const resetGame = () => {
