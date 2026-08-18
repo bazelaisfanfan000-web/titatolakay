@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { auth } from "@/lib/firebase";
@@ -28,7 +28,7 @@ const games: Game[] = [
   },
 ];
 
-export default function GamesPage() {
+function GamesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
@@ -207,5 +207,13 @@ export default function GamesPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function GamesPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0e1a] text-white px-4 py-6 flex items-center justify-center">Chargement...</div>}>
+      <GamesContent />
+    </Suspense>
   );
 }

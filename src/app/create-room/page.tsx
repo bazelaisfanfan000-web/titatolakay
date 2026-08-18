@@ -3,6 +3,7 @@
 import {
   useState,
   useEffect,
+  Suspense,
 } from "react";
 
 import {
@@ -25,7 +26,7 @@ PAGE CRÉER UNE PARTIE Wincash
 ========================================
 */
 
-export default function CreateRoomPage() {
+function CreateRoomContent() {
 
   const { t } = useLanguage();
   const searchParams = useSearchParams();
@@ -785,4 +786,12 @@ export default function CreateRoomPage() {
 
   );
 
+}
+
+export default function CreateRoomPage() {
+  return (
+    <Suspense fallback={<div>Chargement...</div>}>
+      <CreateRoomContent />
+    </Suspense>
+  );
 }
