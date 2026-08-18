@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { adminDB } from '@/lib/firebaseAdmin';
 
 // Initialiser Resend avec la clé API depuis les variables d'environnement
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -71,21 +72,17 @@ export async function notifierTousLesJoueurs(
   
   console.log(`🚀 Début notification email pour ${createur} avec mise ${mise} HTG`);
   console.log(`🔑 Clé API Resend:`, process.env.RESEND_API_KEY ? 'Configurée' : 'NON CONFIGURÉE');
-  console.log(`🔗 Firebase URL:`, process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ? 'Configurée' : 'NON CONFIGURÉE');
   
   try {
-    // Récupérer tous les utilisateurs depuis Firebase Realtime Database
-    const firebaseUrl = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
-    if (!firebaseUrl) {
-      throw new Error('NEXT_PUBLIC_FIREBASE_DATABASE_URL non défini');
+    // Récupérer tous les utilisateurs depuis Firebase Realtime Database via Admin SDK
+    const usersSnapshot = await adminDB.ref('users').once('value');
+    
+    if (!usersSnapshot.exists()) {
+      console.log('Aucun utilisateur trouvé dans Firebase');
+      return { succes: 0, total: 0, duree: Date.now() - startTime };
     }
-
-    const response = await fetch(`${firebaseUrl}/users.json`);
-    if (!response.ok) {
-      throw new Error('Erreur récupération utilisateurs depuis Firebase');
-    }
-
-    const users = await response.json();
+    
+    const users = usersSnapshot.val();
     
     // Extraire tous les emails valides
     const emails: string[] = [];
