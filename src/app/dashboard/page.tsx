@@ -1071,6 +1071,114 @@ export default function Dashboard() {
 
               </button>
 
+              {/* MODE ENTRAÎNEMENT */}
+
+              <button
+                type="button"
+                onClick={() =>
+                  router.push("/game")
+                }
+                className="
+                  flex
+                  min-h-[68px]
+                  w-full
+                  items-center
+                  gap-3
+                  rounded-2xl
+                  border
+                  border-purple-400/30
+                  bg-purple-500/[0.10]
+                  px-3.5
+                  py-2.5
+                  text-left
+                  shadow-[0_4px_0_rgba(147,51,234,0.65),0_0_18px_rgba(147,51,234,0.08)]
+                  backdrop-blur-md
+                  transition-all
+                  hover:border-purple-300/50
+                  hover:bg-purple-500/[0.16]
+                  hover:shadow-[0_5px_0_rgba(147,51,234,0.7),0_0_24px_rgba(147,51,234,0.14)]
+                  active:translate-y-[3px]
+                  active:shadow-none
+                "
+              >
+
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-purple-300/25
+                    bg-purple-400/[0.10]
+                    text-lg
+                    shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]
+                  "
+                >
+
+                  🎯
+
+                </div>
+
+
+                <div
+                  className="
+                    min-w-0
+                    flex-1
+                  "
+                >
+
+                  <h4
+                    className="
+                      text-[13px]
+                      font-black
+                      leading-tight
+                      text-purple-100
+                    "
+                  >
+
+                    Mode Entraînement
+
+                  </h4>
+
+
+                  <p
+                    className="
+                      mt-1
+                      truncate
+                      text-[9px]
+                      leading-tight
+                      text-purple-100/40
+                    "
+                  >
+
+                    Jouez contre le bot, 3 niveaux disponibles.
+
+                  </p>
+
+                </div>
+
+
+                <span
+                  className="
+                    shrink-0
+                    pr-1
+                    text-2xl
+                    font-light
+                    leading-none
+                    text-purple-200/50
+                  "
+                >
+
+                  ›
+
+                </span>
+
+              </button>
+
             </div>
 
           </section>
