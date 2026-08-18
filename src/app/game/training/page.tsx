@@ -23,7 +23,7 @@ export default function TrainingPage() {
   };
 
   const handleCellClick = (row: number, col: number) => {
-    if (!playerTurn || board[row][col] !== "" || winner) return;
+    if (!playerTurn || board[row][col] !== "" || winner !== null) return;
 
     const newBoard = [...board.map(row => [...row])];
     newBoard[row][col] = "X";
@@ -38,12 +38,23 @@ export default function TrainingPage() {
     }
 
     // Tour du bot après délai
-    setTimeout(() => botMove(newBoard), 500);
+    setTimeout(() => {
+      botMove(newBoard);
+    }, 500);
   };
 
   const botMove = (currentBoard: string[][]) => {
-    if (winner) return;
+    if (winner !== null) {
+      console.log("Bot move cancelled - game already won");
+      return;
+    }
 
+    if (!difficulty) {
+      console.log("Bot move cancelled - no difficulty set");
+      return;
+    }
+
+    console.log("Bot is thinking...", difficulty);
     let newBoard = [...currentBoard.map(row => [...row])];
     let moveMade = false;
 
@@ -180,8 +191,25 @@ export default function TrainingPage() {
       }
     }
 
+    // Fallback ultime - jouer n'importe où si rien n'a fonctionné
+    if (!moveMade) {
+      console.log("All strategies failed, using ultimate fallback");
+      for (let r = 0; r < 10; r++) {
+        for (let c = 0; c < 10; c++) {
+          if (newBoard[r][c] === "") {
+            newBoard[r][c] = "O";
+            moveMade = true;
+            break;
+          }
+        }
+        if (moveMade) break;
+      }
+    }
+
     setBoard(newBoard);
     setPlayerTurn(true);
+
+    console.log("Bot made move at", moveMade ? "valid position" : "no position");
 
     if (checkWin(newBoard, "O")) {
       setWinner("O");
