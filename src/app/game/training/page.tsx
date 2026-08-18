@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
-type Difficulty = "easy" | "medium" | "hard";
+type Difficulty = "easy" | "medium" | "impossible";
 
 export default function TrainingPage() {
   const router = useRouter();
@@ -19,7 +19,7 @@ export default function TrainingPage() {
   const difficultySettings = {
     easy: { name: "Facile", color: "green", description: "Bot aléatoire", emoji: "😀" },
     medium: { name: "Moyen", color: "yellow", description: "Bot stratégique", emoji: "👿" },
-    hard: { name: "Difficile", color: "red", description: "Bot expert", emoji: "👹" },
+    impossible: { name: "Impossible", color: "red", description: "Bot invincible", emoji: "🔥" },
   };
 
   const handleCellClick = (row: number, col: number) => {
@@ -129,9 +129,9 @@ export default function TrainingPage() {
           moveMade = true;
         }
       }
-    } else if (difficulty === "hard") {
-      // Difficile - Stratégie experte avec Minimax et évaluation avancée
-      const bestMove = findBestMoveMinimax(newBoard, 4); // Profondeur 4 pour performance
+    } else if (difficulty === "impossible") {
+      // Impossible - Stratégie invincible avec Minimax profond
+      const bestMove = findBestMoveMinimax(newBoard, 6); // Profondeur 6 pour invincibilité
       if (bestMove) {
         const [r, c] = bestMove;
         newBoard[r][c] = "O";
@@ -142,7 +142,7 @@ export default function TrainingPage() {
       if (!moveMade) {
         // 1. Essayer de gagner immédiatement
         moveMade = tryWinOrBlock(newBoard, "O");
-        // 2. Bloquer toutes les menaces du joueur
+        // 2. Bloquer TOUTES les menaces du joueur
         if (!moveMade) {
           const threats = findThreats(newBoard, "X");
           if (threats.length > 0) {
@@ -226,47 +226,6 @@ export default function TrainingPage() {
     }
   };
 
-  // Trouver toutes les menaces (4 alignés qui peuvent devenir 5)
-  const findThreats = (board: string[][], symbol: string): [number, number][] => {
-    const threats: [number, number][] = [];
-    const n = 10;
-    const winLength = 5;
-
-    // Vérifier toutes les directions
-    for (let r = 0; r < n; r++) {
-      for (let c = 0; c < n; c++) {
-        if (board[r][c] === "") {
-          // Simuler placement
-          board[r][c] = symbol;
-          if (checkWin(board, symbol)) {
-            threats.push([r, c]);
-          }
-          board[r][c] = "";
-        }
-      }
-    }
-    return threats;
-  };
-
-  // Créer une fourchette (deux menaces simultanées)
-  const createFork = (board: string[][]): boolean => {
-    const n = 10;
-    for (let r = 0; r < n; r++) {
-      for (let c = 0; c < n; c++) {
-        if (board[r][c] === "") {
-          board[r][c] = "O";
-          const threats = findThreats(board, "O");
-          board[r][c] = "";
-          if (threats.length >= 2) {
-            board[r][c] = "O";
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  };
-
   // Créer une menace simple (3 alignés) pour le niveau moyen
   const createSimpleThreat = (board: string[][]): boolean => {
     const n = 10;
@@ -313,6 +272,47 @@ export default function TrainingPage() {
     return false;
   };
 
+  // Trouver toutes les menaces (4 alignés qui peuvent devenir 5)
+  const findThreats = (board: string[][], symbol: string): [number, number][] => {
+    const threats: [number, number][] = [];
+    const n = 10;
+    const winLength = 5;
+
+    // Vérifier toutes les directions
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (board[r][c] === "") {
+          // Simuler placement
+          board[r][c] = symbol;
+          if (checkWin(board, symbol)) {
+            threats.push([r, c]);
+          }
+          board[r][c] = "";
+        }
+      }
+    }
+    return threats;
+  };
+
+  // Créer une fourchette (deux menaces simultanées)
+  const createFork = (board: string[][]): boolean => {
+    const n = 10;
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (board[r][c] === "") {
+          board[r][c] = "O";
+          const threats = findThreats(board, "O");
+          board[r][c] = "";
+          if (threats.length >= 2) {
+            board[r][c] = "O";
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
   // Trouver le meilleur coin
   const findBestCorner = (board: string[][]): [number, number] | null => {
     const corners = [
@@ -351,7 +351,7 @@ export default function TrainingPage() {
     return false;
   };
 
-  // Minimax avec Alpha-Beta Pruning pour le niveau difficile
+  // Minimax avec Alpha-Beta Pruning pour le niveau impossible
   const findBestMoveMinimax = (board: string[][], depth: number): [number, number] | null => {
     let bestScore = -Infinity;
     let bestMove: [number, number] | null = null;
@@ -606,20 +606,31 @@ export default function TrainingPage() {
           <div className="space-y-3">
             {(Object.keys(difficultySettings) as Difficulty[]).map((diff) => {
               const settings = difficultySettings[diff];
+              const isImpossible = diff === "impossible";
+              
               return (
                 <motion.button
                   key={diff}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setDifficulty(diff)}
-                  className={`w-full rounded-2xl border-2 border-${settings.color}-500/40 bg-${settings.color}-500/10 px-6 py-4 text-left transition-all hover:border-${settings.color}-500/60 hover:bg-${settings.color}-500/20`}
+                  className={`w-full rounded-2xl border-2 border-${settings.color}-500/40 bg-${settings.color}-500/10 px-6 py-4 text-left transition-all hover:border-${settings.color}-500/60 hover:bg-${settings.color}-500/20 relative overflow-hidden ${
+                    isImpossible ? "animate-pulse shadow-[0_0_30px_rgba(239,68,68,0.5)]" : ""
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{settings.emoji}</span>
+                  {isImpossible && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-500/20 to-transparent animate-[shimmer_2s_infinite]" />
+                  )}
+                  
+                  <div className="relative flex items-center gap-3">
+                    <span className={`text-3xl ${isImpossible ? "animate-bounce" : ""}`}>{settings.emoji}</span>
                     <div>
-                      <p className="text-sm font-black text-white">{settings.name}</p>
+                      <p className={`text-sm font-black text-white ${isImpossible ? "text-orange-400" : ""}`}>{settings.name}</p>
                       <p className="text-[9px] text-white/60">{settings.description}</p>
                     </div>
+                    {isImpossible && (
+                      <span className="ml-auto text-2xl animate-spin">🔥</span>
+                    )}
                   </div>
                 </motion.button>
               );
