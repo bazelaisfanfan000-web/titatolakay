@@ -274,7 +274,7 @@ export default function Home() {
                   boxShadow: "0 12px 40px rgba(168,85,247,0.15)"
                 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => router.push("/game")}
+                onClick={() => router.push("/game/training")}
                 className="
                   group
                   relative

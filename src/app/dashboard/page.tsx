@@ -1076,7 +1076,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() =>
-                  router.push("/game")
+                  router.push("/game/training")
                 }
                 className="
                   flex
