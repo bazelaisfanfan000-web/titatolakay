@@ -15,6 +15,7 @@ export default function TrainingPage() {
   const [playerTurn, setPlayerTurn] = useState(true);
   const [winner, setWinner] = useState<string | null>(null);
   const [score, setScore] = useState({ player: 0, bot: 0 });
+  const [botThinking, setBotThinking] = useState(false);
 
   const difficultySettings = {
     easy: { name: "Facile", color: "green", description: "Bot aléatoire", emoji: "😀" },
@@ -23,24 +24,43 @@ export default function TrainingPage() {
   };
 
   const handleCellClick = (row: number, col: number) => {
-    if (!playerTurn || board[row][col] !== "" || winner !== null) return;
+    if (!playerTurn || board[row][col] !== "" || winner !== null || botThinking) return;
 
     const newBoard = [...board.map(row => [...row])];
     newBoard[row][col] = "X";
     setBoard(newBoard);
     setPlayerTurn(false);
+    setBotThinking(true);
 
     // Vérifier victoire
     if (checkWin(newBoard, "X")) {
       setWinner("X");
       setScore(prev => ({ ...prev, player: prev.player + 1 }));
+      setBotThinking(false);
       return;
     }
 
     // Tour du bot après délai
     setTimeout(() => {
-      botMove(newBoard);
-    }, 500);
+      try {
+        botMove(newBoard);
+      } catch (error) {
+        console.error("Bot move error:", error);
+        // Fallback: jouer aléatoirement si erreur
+        const fallbackBoard = [...newBoard.map(row => [...row])];
+        for (let r = 0; r < 10; r++) {
+          for (let c = 0; c < 10; c++) {
+            if (fallbackBoard[r][c] === "") {
+              fallbackBoard[r][c] = "O";
+              setBoard(fallbackBoard);
+              setPlayerTurn(true);
+              setBotThinking(false);
+              return;
+            }
+          }
+        }
+      }
+    }, 200);
   };
 
   const botMove = (currentBoard: string[][]) => {
@@ -217,6 +237,7 @@ export default function TrainingPage() {
 
     setBoard(newBoard);
     setPlayerTurn(true);
+    setBotThinking(false);
 
     console.log("Bot made move at", moveMade ? "valid position" : "no position");
 
