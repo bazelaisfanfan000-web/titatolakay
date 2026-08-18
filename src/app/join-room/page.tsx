@@ -55,6 +55,22 @@ type Room = {
 
 /*
 ====================================================
+FONCTION POUR OBTENIR LE NOM DU JEU
+====================================================
+*/
+
+function getGameName(gameType: string): string {
+  switch (gameType) {
+    case "titato":
+      return "Tic-Tac-Toe";
+    default:
+      return "Jeu inconnu";
+  }
+}
+
+
+/*
+====================================================
 PAGE REJOINDRE UNE PARTIE
 ====================================================
 */
@@ -149,18 +165,10 @@ export default function JoinGame() {
 
                 /*
                 ----------------------------------
-                SEULEMENT Wincash
+                SEULEMENT JEUX SUPPORTÉS
                 ----------------------------------
                 */
 
-                if (
-                  room.gameType &&
-                  room.gameType !== "titato"
-                ) {
-
-                  return;
-
-                }
 
 
                 /*
@@ -832,7 +840,7 @@ export default function JoinGame() {
                         "
                       >
 
-                        Wincash · 1 VS 1
+                        {getGameName(room.gameType)} · 1 VS 1
 
                       </p>
 

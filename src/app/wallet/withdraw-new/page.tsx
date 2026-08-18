@@ -221,7 +221,7 @@ export default function WithdrawPage() {
           <div className="mt-4 flex items-center justify-center gap-2">
             <span className="text-[9px] text-white/20">ℹ️</span>
             <p className="text-center text-[9px] text-white/25">
-              Les frais de 5% sont appliqués par MonCashConnect
+              Les frais de 5% sont appliqués par MonCash
             </p>
           </div>
         </div>

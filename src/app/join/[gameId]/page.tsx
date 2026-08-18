@@ -63,6 +63,22 @@ type Room = {
 
 /*
 ====================================================
+FONCTION POUR OBTENIR LE NOM DU JEU
+====================================================
+*/
+
+function getGameName(gameType: string): string {
+  switch (gameType) {
+    case "titato":
+      return "Tic-Tac-Toe";
+    default:
+      return "Jeu inconnu";
+  }
+}
+
+
+/*
+====================================================
 PAGE REJOINDRE UNE PARTIE SPÉCIFIQUE
 ====================================================
 */
@@ -701,7 +717,7 @@ export default function JoinGameById() {
                     "
                   >
 
-                    Wincash · {room.mode.toUpperCase()}
+                    {getGameName(room.gameType)} · {room.mode.toUpperCase()}
 
                   </p>
 

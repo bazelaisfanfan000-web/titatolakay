@@ -63,6 +63,12 @@ export default function CountdownPage() {
   ] = useState("Partie Wincash");
 
 
+  const [
+    gameType,
+    setGameType,
+  ] = useState<string | null>(null);
+
+
   /*
   ==================================================
   RÉCUPÉRER LE TEMPS DE DÉPART
@@ -208,6 +214,15 @@ export default function CountdownPage() {
 
 
           /*
+          TYPE DE JEU
+          */
+
+          setGameType(
+            room.gameType || "titato"
+          );
+
+
+          /*
           TEMPS DE DÉPART
           */
 
@@ -289,15 +304,10 @@ export default function CountdownPage() {
     const timer =
       setTimeout(
         () => {
-
-          router.replace(
-            `/game/${id}`
-          );
-
+          router.replace(`/game/${id}`);
         },
         700
       );
-
 
     return () => {
 
@@ -311,6 +321,7 @@ export default function CountdownPage() {
     ready,
     id,
     router,
+    gameType,
   ]);
 
 

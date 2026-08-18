@@ -152,7 +152,7 @@ export async function POST(request: Request) {
     updates[`rooms/${roomId}/updatedAt`] = Date.now();
     updates[`rooms/${roomId}/countdownAt`] = Date.now(); // Pour le compte à rebours
 
-    // Initialiser l'état du jeu
+    // Initialiser l'état du jeu Tic-Tac-Toe
     updates[`rooms/${roomId}/game/status`] = "countdown";
     updates[`rooms/${roomId}/game/turn`] = "X";
     updates[`rooms/${roomId}/game/turnStartedAt`] = Date.now();

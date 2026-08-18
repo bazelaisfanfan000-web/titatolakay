@@ -187,13 +187,8 @@ export default function RoomPage() {
           if (
             data.status === "playing"
           ) {
-
-            router.replace(
-              `/game/${id}`
-            );
-
+            router.replace(`/game/${id}`);
             return;
-
           }
 
         }

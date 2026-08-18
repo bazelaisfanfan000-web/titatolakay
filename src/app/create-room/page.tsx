@@ -2,10 +2,12 @@
 
 import {
   useState,
+  useEffect,
 } from "react";
 
 import {
   useRouter,
+  useSearchParams,
 } from "next/navigation";
 
 import {
@@ -26,6 +28,7 @@ PAGE CRÉER UNE PARTIE Wincash
 export default function CreateRoomPage() {
 
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
 
   /*
   ======================================
@@ -35,6 +38,38 @@ export default function CreateRoomPage() {
 
   const router =
     useRouter();
+
+
+  /*
+  ======================================
+  GAME TYPE
+  ======================================
+  */
+
+  const [gameType, setGameType] = useState<string | null>(null);
+
+
+  /*
+  ======================================
+  LIRE PARAMÈTRES URL
+  ======================================
+  */
+
+  useEffect(() => {
+    const gameParam = searchParams.get("game");
+    const nameParam = searchParams.get("name");
+    const betParam = searchParams.get("bet");
+
+    if (gameParam) {
+      setGameType(gameParam);
+    }
+    if (nameParam) {
+      setName(nameParam);
+    }
+    if (betParam) {
+      setBet(betParam);
+    }
+  }, [searchParams]);
 
 
   /*
@@ -528,12 +563,24 @@ export default function CreateRoomPage() {
 
             <button
               type="button"
-              onClick={
-                createRoom
-              }
-              disabled={
-                loading
-              }
+              onClick={() => {
+                if (gameType) {
+                  // Si un jeu est sélectionné, créer la partie
+                  createRoom();
+                } else {
+                  // Sinon, rediriger vers la sélection de jeux
+                  if (!name || !bet) {
+                    setError("Tous les champs sont obligatoires");
+                    return;
+                  }
+                  if (Number(bet) < 10) {
+                    setError("La mise minimum est de 10 HTG");
+                    return;
+                  }
+                  router.push(`/games?name=${encodeURIComponent(name)}&bet=${bet}`);
+                }
+              }}
+              disabled={loading}
               className="
                 flex
                 h-12
@@ -563,7 +610,9 @@ export default function CreateRoomPage() {
 
               {loading
                 ? t.loading
-                : `🎮 ${t.createRoom}`}
+                : gameType 
+                  ? `🎮 ${t.createRoom}`
+                  : `🎮 ${t.createRoom}`}
 
             </button>
 
