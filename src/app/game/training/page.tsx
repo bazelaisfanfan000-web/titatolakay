@@ -225,9 +225,16 @@ export default function TrainingPage() {
           <h1 className="mb-2 text-center text-[21px] font-black tracking-tight">
             Mode Entraînement
           </h1>
-          <p className="mb-8 text-center text-[11px] text-white/40">
+          <p className="mb-4 text-center text-[11px] text-white/40">
             Choisissez votre niveau de difficulté
           </p>
+
+          {/* Warning - No real money */}
+          <div className="mb-6 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-center">
+            <p className="text-[10px] font-bold text-yellow-400">
+              ⚠️ Pas d'argent réel - Mode entraînement gratuit
+            </p>
+          </div>
 
           {/* Score */}
           <div className="mb-8 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-center">
@@ -306,7 +313,7 @@ export default function TrainingPage() {
         </div>
 
         {/* Turn indicator */}
-        <div className="mb-4 text-center">
+        <div className="mb-2 text-center">
           <p className="text-[11px] text-white/60">
             {winner
               ? winner === "X"
@@ -318,6 +325,13 @@ export default function TrainingPage() {
           </p>
         </div>
 
+        {/* Warning - No real money */}
+        <div className="mb-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-center">
+          <p className="text-[9px] font-bold text-yellow-400">
+            ⚠️ Pas d'argent réel - Mode entraînement
+          </p>
+        </div>
+
         {/* Board */}
         <div className="mb-4 grid grid-cols-10 gap-0.5">
           {board.map((row, r) =>
@@ -325,7 +339,7 @@ export default function TrainingPage() {
               <button
                 key={`${r}-${c}`}
                 onClick={() => handleCellClick(r, c)}
-                disabled={!playerTurn || cell !== "" || winner}
+                disabled={(!playerTurn || cell !== "" || winner !== null) as boolean}
                 className={`aspect-square rounded-sm border border-white/[0.08] bg-white/[0.02] text-xs Font-bold transition-all hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:hover:bg-white/[0.02] ${
                   cell === "X" ? "text-blue-400" : cell === "O" ? "text-red-400" : ""
                 }`}
