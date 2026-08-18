@@ -35,6 +35,8 @@ export async function envoyerEmail(
       </div>
     `;
 
+    console.log(`📧 Envoi email à ${emailDestinataire} avec clé API:`, process.env.RESEND_API_KEY ? 'Configurée' : 'NON CONFIGURÉE');
+
     const { data, error } = await resend.emails.send({
       from: 'WinCashX <noreply@wincashx.com>',
       to: emailDestinataire,
@@ -66,6 +68,10 @@ export async function notifierTousLesJoueurs(
   mise: number
 ): Promise<{ succes: number; total: number; duree: number }> {
   const startTime = Date.now();
+  
+  console.log(`🚀 Début notification email pour ${createur} avec mise ${mise} HTG`);
+  console.log(`🔑 Clé API Resend:`, process.env.RESEND_API_KEY ? 'Configurée' : 'NON CONFIGURÉE');
+  console.log(`🔗 Firebase URL:`, process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ? 'Configurée' : 'NON CONFIGURÉE');
   
   try {
     // Récupérer tous les utilisateurs depuis Firebase Realtime Database
