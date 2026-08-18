@@ -16,6 +16,7 @@ export default function TrainingPage() {
   const [winner, setWinner] = useState<string | null>(null);
   const [score, setScore] = useState({ player: 0, bot: 0 });
   const [botThinking, setBotThinking] = useState(false);
+  const [showVictoryScreen, setShowVictoryScreen] = useState(false);
 
   const difficultySettings = {
     easy: { name: "Facile", color: "green", description: "Bot aléatoire", emoji: "😀" },
@@ -37,6 +38,7 @@ export default function TrainingPage() {
       setWinner("X");
       setScore(prev => ({ ...prev, player: prev.player + 1 }));
       setBotThinking(false);
+      setShowVictoryScreen(true);
       return;
     }
 
@@ -564,9 +566,6 @@ export default function TrainingPage() {
         }
         if (count === winLength) return true;
       }
-    }
-
-    return false;
   };
 
   const resetGame = () => {
@@ -580,6 +579,30 @@ export default function TrainingPage() {
     setBoard(Array.from({ length: 10 }, () => Array(10).fill("")));
     setPlayerTurn(true);
     setWinner(null);
+  };
+
+  const handleNewGame = () => {
+    setBoard(Array.from({ length: 10 }, () => Array(10).fill("")));
+    setWinner(null);
+    setPlayerTurn(true);
+    setShowVictoryScreen(false);
+  };
+
+  const handleChangeDifficulty = () => {
+    setShowVictoryScreen(false);
+    setDifficulty(null);
+  };
+
+  const shareWhatsApp = () => {
+    const text = "🎮 J'ai battu le bot sur WinCashX ! Rejoins-moi pour gagner de l'argent réel en jouant au Tic-Tac-Toe ! 💰 https://wincashx.com";
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const shareTelegram = () => {
+    const text = "🎮 J'ai battu le bot sur WinCashX ! Rejoins-moi pour gagner de l'argent réel en jouant au Tic-Tac-Toe ! 💰 https://wincashx.com";
+    const url = `https://t.me/share/url?url=${encodeURIComponent('https://wincashx.com')}&text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   };
 
   if (!difficulty) {
@@ -754,6 +777,109 @@ export default function TrainingPage() {
           </p>
         </div>
       </div>
+
+      {/* Victory Screen Overlay */}
+      {showVictoryScreen && winner === "X" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+        >
+          <motion.div
+            initial={{ scale: 0.5, y: 50 }}
+            animate={{ scale: 1, y: 0 }}
+            transition={{ type: "spring", damping: 15 }}
+            className="mx-4 max-w-sm rounded-2xl border border-green-500/30 bg-gradient-to-br from-green-900/20 to-blue-900/20 p-6 text-center shadow-2xl"
+          >
+            {/* Trophy Animation */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring" }}
+              className="mb-4 text-6xl"
+            >
+              🏆
+            </motion.div>
+
+            {/* Congratulations Text */}
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="mb-2 text-2xl font-black text-green-400"
+            >
+              Félicitations !
+            </motion.h2>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mb-6 text-sm text-white/70"
+            >
+              Vous avez battu le bot en mode {difficultySettings[difficulty].name} !
+            </motion.p>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleNewGame}
+                className="w-full rounded-xl bg-gradient-to-r from-green-500 to-blue-500 px-4 py-3 text-sm font-bold text-white shadow-lg transition hover:shadow-green-500/25"
+              >
+                🎮 Nouvelle Partie
+              </motion.button>
+
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleChangeDifficulty}
+                className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-bold text-white/80 transition hover:bg-white/20"
+              >
+                ⚡ Changer Niveau
+              </motion.button>
+
+              {/* Share Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="pt-4"
+              >
+                <p className="mb-3 text-xs text-white/50">
+                  Partagez votre victoire avec vos amis :
+                </p>
+                <div className="flex gap-2">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={shareWhatsApp}
+                    className="flex-1 rounded-xl bg-green-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-green-500"
+                  >
+                    📱 WhatsApp
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={shareTelegram}
+                    className="flex-1 rounded-xl bg-blue-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-400"
+                  >
+                    ✈️ Telegram
+                  </motion.button>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </main>
   );
 }
