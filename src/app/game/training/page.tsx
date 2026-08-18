@@ -17,9 +17,9 @@ export default function TrainingPage() {
   const [score, setScore] = useState({ player: 0, bot: 0 });
 
   const difficultySettings = {
-    easy: { name: "Facile", color: "green", description: "Bot aléatoire" },
-    medium: { name: "Moyen", color: "yellow", description: "Bot stratégique" },
-    hard: { name: "Difficile", color: "red", description: "Bot expert" },
+    easy: { name: "Facile", color: "green", description: "Bot aléatoire", emoji: "😀" },
+    medium: { name: "Moyen", color: "yellow", description: "Bot stratégique", emoji: "👿" },
+    hard: { name: "Difficile", color: "red", description: "Bot expert", emoji: "👹" },
   };
 
   const handleCellClick = (row: number, col: number) => {
@@ -49,7 +49,7 @@ export default function TrainingPage() {
 
     // Stratégie selon difficulté
     if (difficulty === "easy") {
-      // Mouvement aléatoire
+      // Facile - Mouvement aléatoire avec préférence pour les cases adjacentes
       const emptyCells: [number, number][] = [];
       newBoard.forEach((row, r) => {
         row.forEach((cell, c) => {
@@ -57,15 +57,40 @@ export default function TrainingPage() {
         });
       });
       if (emptyCells.length > 0) {
-        const [r, c] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-        newBoard[r][c] = "O";
-        moveMade = true;
+        // 30% de chance de jouer intelligemment, 70% aléatoire
+        if (Math.random() < 0.3) {
+          moveMade = tryWinOrBlock(newBoard, "O") || tryWinOrBlock(newBoard, "X");
+        }
+        if (!moveMade) {
+          const [r, c] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+          newBoard[r][c] = "O";
+          moveMade = true;
+        }
       }
     } else if (difficulty === "medium") {
-      // Essayer de gagner ou bloquer
-      moveMade = tryWinOrBlock(newBoard, "O") || tryWinOrBlock(newBoard, "X");
+      // Moyen - Stratégie défensive et offensive de base
+      // 1. Essayer de gagner
+      moveMade = tryWinOrBlock(newBoard, "O");
+      // 2. Bloquer le joueur
+      if (!moveMade) moveMade = tryWinOrBlock(newBoard, "X");
+      // 3. Jouer au centre
+      if (!moveMade && newBoard[5][5] === "") {
+        newBoard[5][5] = "O";
+        moveMade = true;
+      }
+      // 4. Jouer dans un coin
       if (!moveMade) {
-        // Sinon aléatoire
+        const corners = [[0, 0], [0, 9], [9, 0], [9, 9]];
+        for (const [r, c] of corners) {
+          if (newBoard[r][c] === "") {
+            newBoard[r][c] = "O";
+            moveMade = true;
+            break;
+          }
+        }
+      }
+      // 5. Jouer aléatoirement
+      if (!moveMade) {
         const emptyCells: [number, number][] = [];
         newBoard.forEach((row, r) => {
           row.forEach((cell, c) => {
@@ -79,28 +104,38 @@ export default function TrainingPage() {
         }
       }
     } else {
-      // Hard - Minimax simplifié
-      moveMade = tryWinOrBlock(newBoard, "O") || tryWinOrBlock(newBoard, "X");
+      // Difficile - Stratégie avancée avec Minimax simplifié
+      // 1. Essayer de gagner immédiatement
+      moveMade = tryWinOrBlock(newBoard, "O");
+      // 2. Bloquer toutes les menaces du joueur
       if (!moveMade) {
-        // Centre si disponible
-        if (newBoard[5][5] === "") {
-          newBoard[5][5] = "O";
+        const threats = findThreats(newBoard, "X");
+        if (threats.length > 0) {
+          const [r, c] = threats[0];
+          newBoard[r][c] = "O";
           moveMade = true;
         }
       }
+      // 3. Créer des menaces multiples (fork)
+      if (!moveMade) moveMade = createFork(newBoard);
+      // 4. Contrôler le centre
+      if (!moveMade && newBoard[5][5] === "") {
+        newBoard[5][5] = "O";
+        moveMade = true;
+      }
+      // 5. Jouer dans les coins stratégiques
       if (!moveMade) {
-        // Coin
-        const corners = [[0, 0], [0, 9], [9, 0], [9, 9]];
-        for (const [r, c] of corners) {
-          if (newBoard[r][c] === "") {
-            newBoard[r][c] = "O";
-            moveMade = true;
-            break;
-          }
+        const strategicCorners = findBestCorner(newBoard);
+        if (strategicCorners) {
+          const [r, c] = strategicCorners;
+          newBoard[r][c] = "O";
+          moveMade = true;
         }
       }
+      // 6. Jouer près des pièces existantes pour créer des lignes
+      if (!moveMade) moveMade = playNearExisting(newBoard);
+      // 7. Dernier recours : aléatoire
       if (!moveMade) {
-        // Aléatoire
         const emptyCells: [number, number][] = [];
         newBoard.forEach((row, r) => {
           row.forEach((cell, c) => {
@@ -122,6 +157,85 @@ export default function TrainingPage() {
       setWinner("O");
       setScore(prev => ({ ...prev, bot: prev.bot + 1 }));
     }
+  };
+
+  // Trouver toutes les menaces (4 alignés qui peuvent devenir 5)
+  const findThreats = (board: string[][], symbol: string): [number, number][] => {
+    const threats: [number, number][] = [];
+    const n = 10;
+    const winLength = 5;
+
+    // Vérifier toutes les directions
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (board[r][c] === "") {
+          // Simuler placement
+          board[r][c] = symbol;
+          if (checkWin(board, symbol)) {
+            threats.push([r, c]);
+          }
+          board[r][c] = "";
+        }
+      }
+    }
+    return threats;
+  };
+
+  // Créer une fourchette (deux menaces simultanées)
+  const createFork = (board: string[][]): boolean => {
+    const n = 10;
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (board[r][c] === "") {
+          board[r][c] = "O";
+          const threats = findThreats(board, "O");
+          board[r][c] = "";
+          if (threats.length >= 2) {
+            board[r][c] = "O";
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+  // Trouver le meilleur coin
+  const findBestCorner = (board: string[][]): [number, number] | null => {
+    const corners = [
+      [0, 0], [0, 9], [9, 0], [9, 9],
+      [0, 4], [0, 5], [9, 4], [9, 5],
+      [4, 0], [5, 0], [4, 9], [5, 9]
+    ];
+    for (const [r, c] of corners) {
+      if (board[r][c] === "") {
+        return [r, c];
+      }
+    }
+    return null;
+  };
+
+  // Jouer près des pièces existantes
+  const playNearExisting = (board: string[][]): boolean => {
+    const n = 10;
+    const directions = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+    
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (board[r][c] === "O") {
+          // Chercher une case vide adjacente
+          for (const [dr, dc] of directions) {
+            const nr = r + dr;
+            const nc = c + dc;
+            if (nr >= 0 && nr < n && nc >= 0 && nc < n && board[nr][nc] === "") {
+              board[nr][nc] = "O";
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
   };
 
   const tryWinOrBlock = (board: string[][], symbol: string): boolean => {
@@ -264,9 +378,7 @@ export default function TrainingPage() {
                   className={`w-full rounded-2xl border-2 border-${settings.color}-500/40 bg-${settings.color}-500/10 px-6 py-4 text-left transition-all hover:border-${settings.color}-500/60 hover:bg-${settings.color}-500/20`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">
-                      {diff === "easy" ? "🟢" : diff === "medium" ? "🟡" : "🔴"}
-                    </span>
+                    <span className="text-3xl">{settings.emoji}</span>
                     <div>
                       <p className="text-sm font-black text-white">{settings.name}</p>
                       <p className="text-[9px] text-white/60">{settings.description}</p>
