@@ -856,6 +856,9 @@ export default function TrainingPage() {
                 transition={{ delay: 0.7 }}
                 className="pt-4"
               >
+                <p className="mb-2 text-xs font-bold text-white/70">
+                  Partagez WinCashX à vos amis, ça ne coûte rien ! 🏆
+                </p>
                 <p className="mb-3 text-xs text-white/50">
                   Partagez votre victoire avec vos amis :
                 </p>
