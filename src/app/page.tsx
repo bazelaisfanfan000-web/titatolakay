@@ -108,7 +108,7 @@ export default function Home() {
                 <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.7)] animate-pulse" />
                 <span className="text-[8px] font-bold uppercase tracking-widest text-green-400">Disponible</span>
                 <span className="text-[7px] text-white/20">•</span>
-                <span className="text-[7px] text-white/30">Beta</span>
+                <span className="text-[7px] text-white/30">reel</span>
               </motion.div>
             </motion.div>
 

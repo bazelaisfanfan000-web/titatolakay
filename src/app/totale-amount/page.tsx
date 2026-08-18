@@ -1,0 +1,83 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Wallet, Loader2 } from "lucide-react";
+
+export default function TotaleAmountPage() {
+  const [totalBalance, setTotalBalance] = useState<number | null>(null);
+  const [totalUsers, setTotalUsers] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTotalBalance() {
+      try {
+        const response = await fetch("/api/public/total-balance");
+        if (!response.ok) {
+          throw new Error("Erreur lors de la récupération des données");
+        }
+        const data = await response.json();
+        setTotalBalance(data.totalBalance || 0);
+        setTotalUsers(data.totalUsers || 0);
+      } catch (err) {
+        console.error("Erreur:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchTotalBalance();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#030303] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-green-400 animate-spin" />
+          <p className="text-gray-300">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#030303] flex items-center justify-center p-4">
+      <div className="max-w-4xl w-full">
+        <div className="bg-white/[0.025] backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/[0.07]">
+          <h1 className="text-3xl font-bold text-white text-center mb-8">
+            Solde Total des Utilisateurs
+          </h1>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Solde Total */}
+            <div className="bg-gradient-to-br from-green-500/20 to-blue-500/20 rounded-xl p-8 border border-green-500/30 text-center">
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <Wallet className="w-8 h-8 text-green-400" />
+                </div>
+              </div>
+              <h2 className="text-lg font-medium text-gray-300 mb-2">Solde Total</h2>
+              <p className="text-4xl font-bold text-white mb-2">
+                {totalBalance?.toLocaleString("fr-HT")} HTG
+              </p>
+              <p className="text-sm text-gray-400">Montant total des utilisateurs inscrits</p>
+            </div>
+
+            {/* Nombre d'Utilisateurs */}
+            <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl p-8 border border-purple-500/30 text-center">
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-3xl">👥</span>
+                </div>
+              </div>
+              <h2 className="text-lg font-medium text-gray-300 mb-2">Utilisateurs Inscrits</h2>
+              <p className="text-4xl font-bold text-white mb-2">
+                {totalUsers?.toLocaleString("fr-HT")}
+              </p>
+              <p className="text-sm text-gray-400">Nombre total de comptes</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

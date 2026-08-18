@@ -1834,7 +1834,7 @@ function WalletContent() {
                     htmlFor="withdraw-amount"
                     className="mb-2 block text-[10px] font-bold text-white/45"
                   >
-                    Montant à retirer
+                    Montant à retirer minimum 110HTG
                   </label>
 
                   <div className="relative">

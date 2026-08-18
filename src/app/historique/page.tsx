@@ -307,7 +307,7 @@ export default function Historique() {
           {isPromo && (
             <div className="mb-4 flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-sm">
               <span className="text-[9px] font-bold text-amber-300">
-                🔥 Offre de lancement : retrait dès ×1,5 jusqu'au 03/09/2026 !
+                Partagez WinCashX à vos amis, ça ne coûte rien ! 🏆
               </span>
               <span className="text-[8px] text-amber-400/60">
                 {new Date(promoEnd).toLocaleDateString('fr-FR')}
