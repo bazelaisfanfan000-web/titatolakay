@@ -49,11 +49,6 @@ export default function TrainingPage() {
       return;
     }
 
-    if (!difficulty) {
-      console.log("Bot move cancelled - no difficulty set");
-      return;
-    }
-
     console.log("Bot is thinking...", difficulty);
     let newBoard = [...currentBoard.map(row => [...row])];
     let moveMade = false;
@@ -74,7 +69,7 @@ export default function TrainingPage() {
       if (!moveMade && Math.random() < 0.5) {
         moveMade = playNearExisting(newBoard);
       }
-      // 4. Sinon aléatoire
+      // 4. Sinon aléatoire (TOUJOURS jouer si rien d'autre)
       if (!moveMade) {
         const emptyCells: [number, number][] = [];
         newBoard.forEach((row, r) => {
@@ -120,7 +115,7 @@ export default function TrainingPage() {
       }
       // 6. Jouer près des pièces existantes
       if (!moveMade) moveMade = playNearExisting(newBoard);
-      // 7. Sinon aléatoire
+      // 7. Sinon aléatoire (TOUJOURS jouer si rien d'autre)
       if (!moveMade) {
         const emptyCells: [number, number][] = [];
         newBoard.forEach((row, r) => {
@@ -134,7 +129,7 @@ export default function TrainingPage() {
           moveMade = true;
         }
       }
-    } else {
+    } else if (difficulty === "hard") {
       // Difficile - Stratégie experte avec Minimax et évaluation avancée
       const bestMove = findBestMoveMinimax(newBoard, 4); // Profondeur 4 pour performance
       if (bestMove) {
@@ -188,6 +183,20 @@ export default function TrainingPage() {
             moveMade = true;
           }
         }
+      }
+    } else {
+      // Si la difficulté n'est pas définie, jouer aléatoirement
+      console.log("Unknown difficulty, playing randomly");
+      const emptyCells: [number, number][] = [];
+      newBoard.forEach((row, r) => {
+        row.forEach((cell, c) => {
+          if (cell === "") emptyCells.push([r, c]);
+        });
+      });
+      if (emptyCells.length > 0) {
+        const [r, c] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+        newBoard[r][c] = "O";
+        moveMade = true;
       }
     }
 
