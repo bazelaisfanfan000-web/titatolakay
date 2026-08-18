@@ -30,6 +30,11 @@ import {
 
 
 import {
+  notifierTousLesJoueurs,
+} from "@/lib/resend";
+
+
+import {
   rateLimitMiddleware,
   RATE_LIMIT_CONFIGS
 } from "@/lib/rateLimit";
@@ -639,6 +644,17 @@ export async function POST(
           })
           .catch(error => {
             console.error("[BROADCAST] Erreur notification:", error);
+          })
+      );
+
+      // Ajouter notification email via Resend (en arrière-plan, non bloquant)
+      notificationPromises.push(
+        notifierTousLesJoueurs(playerName, amount)
+          .then(result => {
+            console.log("[EMAIL] Notifications email terminées:", result);
+          })
+          .catch(error => {
+            console.error("[EMAIL] Erreur notifications email:", error);
           })
       );
     }
