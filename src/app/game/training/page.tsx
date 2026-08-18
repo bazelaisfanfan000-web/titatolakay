@@ -49,36 +49,54 @@ export default function TrainingPage() {
 
     // Stratégie selon difficulté
     if (difficulty === "easy") {
-      // Facile - Mouvement aléatoire avec préférence pour les cases adjacentes
-      const emptyCells: [number, number][] = [];
-      newBoard.forEach((row, r) => {
-        row.forEach((cell, c) => {
-          if (cell === "") emptyCells.push([r, c]);
+      // Facile - Stratégie de base avec logique simple
+      // 1. Essayer de gagner (30% de chance)
+      if (Math.random() < 0.3) {
+        moveMade = tryWinOrBlock(newBoard, "O");
+      }
+      // 2. Jouer au centre si disponible (40% de chance)
+      if (!moveMade && Math.random() < 0.4 && newBoard[5][5] === "") {
+        newBoard[5][5] = "O";
+        moveMade = true;
+      }
+      // 3. Jouer près des pièces existantes (créer des lignes)
+      if (!moveMade && Math.random() < 0.5) {
+        moveMade = playNearExisting(newBoard);
+      }
+      // 4. Sinon aléatoire
+      if (!moveMade) {
+        const emptyCells: [number, number][] = [];
+        newBoard.forEach((row, r) => {
+          row.forEach((cell, c) => {
+            if (cell === "") emptyCells.push([r, c]);
+          });
         });
-      });
-      if (emptyCells.length > 0) {
-        // 30% de chance de jouer intelligemment, 70% aléatoire
-        if (Math.random() < 0.3) {
-          moveMade = tryWinOrBlock(newBoard, "O") || tryWinOrBlock(newBoard, "X");
-        }
-        if (!moveMade) {
+        if (emptyCells.length > 0) {
           const [r, c] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
           newBoard[r][c] = "O";
           moveMade = true;
         }
       }
     } else if (difficulty === "medium") {
-      // Moyen - Stratégie défensive et offensive de base
-      // 1. Essayer de gagner
-      moveMade = tryWinOrBlock(newBoard, "O");
-      // 2. Bloquer le joueur
-      if (!moveMade) moveMade = tryWinOrBlock(newBoard, "X");
+      // Moyen - Stratégie intermédiaire
+      // 1. Essayer de gagner (80% de chance)
+      if (Math.random() < 0.8) {
+        moveMade = tryWinOrBlock(newBoard, "O");
+      }
+      // 2. Bloquer le joueur (70% de chance)
+      if (!moveMade && Math.random() < 0.7) {
+        moveMade = tryWinOrBlock(newBoard, "X");
+      }
       // 3. Jouer au centre
       if (!moveMade && newBoard[5][5] === "") {
         newBoard[5][5] = "O";
         moveMade = true;
       }
-      // 4. Jouer dans un coin
+      // 4. Créer des menaces simples (3 alignés)
+      if (!moveMade && Math.random() < 0.6) {
+        moveMade = createSimpleThreat(newBoard);
+      }
+      // 5. Jouer dans un coin
       if (!moveMade) {
         const corners = [[0, 0], [0, 9], [9, 0], [9, 9]];
         for (const [r, c] of corners) {
@@ -89,7 +107,9 @@ export default function TrainingPage() {
           }
         }
       }
-      // 5. Jouer aléatoirement
+      // 6. Jouer près des pièces existantes
+      if (!moveMade) moveMade = playNearExisting(newBoard);
+      // 7. Sinon aléatoire
       if (!moveMade) {
         const emptyCells: [number, number][] = [];
         newBoard.forEach((row, r) => {
@@ -203,6 +223,52 @@ export default function TrainingPage() {
           if (threats.length >= 2) {
             board[r][c] = "O";
             return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+  // Créer une menace simple (3 alignés) pour le niveau moyen
+  const createSimpleThreat = (board: string[][]): boolean => {
+    const n = 10;
+    const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (board[r][c] === "") {
+          for (const [dr, dc] of directions) {
+            // Vérifier si on peut créer 3 alignés
+            let count = 1;
+            let emptyAfter = false;
+            
+            // Vérifier dans une direction
+            for (let i = 1; i < 4; i++) {
+              const nr = r + dr * i;
+              const nc = c + dc * i;
+              if (nr >= 0 && nr < n && nc >= 0 && nc < n) {
+                if (board[nr][nc] === "O") count++;
+                else if (board[nr][nc] === "") emptyAfter = true;
+                else break;
+              }
+            }
+            
+            // Vérifier dans l'autre direction
+            for (let i = 1; i < 4; i++) {
+              const nr = r - dr * i;
+              const nc = c - dc * i;
+              if (nr >= 0 && nr < n && nc >= 0 && nc < n) {
+                if (board[nr][nc] === "O") count++;
+                else if (board[nr][nc] === "") emptyAfter = true;
+                else break;
+              }
+            }
+            
+            if (count >= 2 && emptyAfter) {
+              board[r][c] = "O";
+              return true;
+            }
           }
         }
       }
