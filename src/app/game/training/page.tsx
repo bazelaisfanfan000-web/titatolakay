@@ -104,48 +104,58 @@ export default function TrainingPage() {
         }
       }
     } else {
-      // Difficile - Stratégie avancée avec Minimax simplifié
-      // 1. Essayer de gagner immédiatement
-      moveMade = tryWinOrBlock(newBoard, "O");
-      // 2. Bloquer toutes les menaces du joueur
-      if (!moveMade) {
-        const threats = findThreats(newBoard, "X");
-        if (threats.length > 0) {
-          const [r, c] = threats[0];
-          newBoard[r][c] = "O";
-          moveMade = true;
-        }
-      }
-      // 3. Créer des menaces multiples (fork)
-      if (!moveMade) moveMade = createFork(newBoard);
-      // 4. Contrôler le centre
-      if (!moveMade && newBoard[5][5] === "") {
-        newBoard[5][5] = "O";
+      // Difficile - Stratégie experte avec Minimax et évaluation avancée
+      const bestMove = findBestMoveMinimax(newBoard, 4); // Profondeur 4 pour performance
+      if (bestMove) {
+        const [r, c] = bestMove;
+        newBoard[r][c] = "O";
         moveMade = true;
       }
-      // 5. Jouer dans les coins stratégiques
+      
+      // Fallback si Minimax échoue
       if (!moveMade) {
-        const strategicCorners = findBestCorner(newBoard);
-        if (strategicCorners) {
-          const [r, c] = strategicCorners;
-          newBoard[r][c] = "O";
+        // 1. Essayer de gagner immédiatement
+        moveMade = tryWinOrBlock(newBoard, "O");
+        // 2. Bloquer toutes les menaces du joueur
+        if (!moveMade) {
+          const threats = findThreats(newBoard, "X");
+          if (threats.length > 0) {
+            const [r, c] = threats[0];
+            newBoard[r][c] = "O";
+            moveMade = true;
+          }
+        }
+        // 3. Créer des menaces multiples (fork)
+        if (!moveMade) moveMade = createFork(newBoard);
+        // 4. Contrôler le centre
+        if (!moveMade && newBoard[5][5] === "") {
+          newBoard[5][5] = "O";
           moveMade = true;
         }
-      }
-      // 6. Jouer près des pièces existantes pour créer des lignes
-      if (!moveMade) moveMade = playNearExisting(newBoard);
-      // 7. Dernier recours : aléatoire
-      if (!moveMade) {
-        const emptyCells: [number, number][] = [];
-        newBoard.forEach((row, r) => {
-          row.forEach((cell, c) => {
-            if (cell === "") emptyCells.push([r, c]);
+        // 5. Jouer dans les coins stratégiques
+        if (!moveMade) {
+          const strategicCorners = findBestCorner(newBoard);
+          if (strategicCorners) {
+            const [r, c] = strategicCorners;
+            newBoard[r][c] = "O";
+            moveMade = true;
+          }
+        }
+        // 6. Jouer près des pièces existantes pour créer des lignes
+        if (!moveMade) moveMade = playNearExisting(newBoard);
+        // 7. Dernier recours : aléatoire
+        if (!moveMade) {
+          const emptyCells: [number, number][] = [];
+          newBoard.forEach((row, r) => {
+            row.forEach((cell, c) => {
+              if (cell === "") emptyCells.push([r, c]);
+            });
           });
-        });
-        if (emptyCells.length > 0) {
-          const [r, c] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-          newBoard[r][c] = "O";
-          moveMade = true;
+          if (emptyCells.length > 0) {
+            const [r, c] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+            newBoard[r][c] = "O";
+            moveMade = true;
+          }
         }
       }
     }
@@ -236,6 +246,130 @@ export default function TrainingPage() {
       }
     }
     return false;
+  };
+
+  // Minimax avec Alpha-Beta Pruning pour le niveau difficile
+  const findBestMoveMinimax = (board: string[][], depth: number): [number, number] | null => {
+    let bestScore = -Infinity;
+    let bestMove: [number, number] | null = null;
+    const n = 10;
+
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (board[r][c] === "") {
+          board[r][c] = "O";
+          const score = minimax(board, depth - 1, false, -Infinity, Infinity);
+          board[r][c] = "";
+          
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = [r, c];
+          }
+        }
+      }
+    }
+
+    return bestMove;
+  };
+
+  const minimax = (board: string[][], depth: number, isMaximizing: boolean, alpha: number, beta: number): number => {
+    // Vérifier si le jeu est terminé
+    if (checkWin(board, "O")) return 1000 + depth; // Gagner vite est mieux
+    if (checkWin(board, "X")) return -1000 - depth; // Perdre vite est pire
+    if (depth === 0) return evaluateBoard(board);
+
+    const n = 10;
+    const emptyCells: [number, number][] = [];
+    
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (board[r][c] === "") emptyCells.push([r, c]);
+      }
+    }
+
+    if (emptyCells.length === 0) return 0; // Match nul
+
+    if (isMaximizing) {
+      let maxScore = -Infinity;
+      for (const [r, c] of emptyCells) {
+        board[r][c] = "O";
+        const score = minimax(board, depth - 1, false, alpha, beta);
+        board[r][c] = "";
+        maxScore = Math.max(maxScore, score);
+        alpha = Math.max(alpha, score);
+        if (beta <= alpha) break;
+      }
+      return maxScore;
+    } else {
+      let minScore = Infinity;
+      for (const [r, c] of emptyCells) {
+        board[r][c] = "X";
+        const score = minimax(board, depth - 1, true, alpha, beta);
+        board[r][c] = "";
+        minScore = Math.min(minScore, score);
+        beta = Math.min(beta, score);
+        if (beta <= alpha) break;
+      }
+      return minScore;
+    }
+  };
+
+  // Évaluer le plateau pour le Minimax
+  const evaluateBoard = (board: string[][]): number => {
+    let score = 0;
+    const n = 10;
+
+    // Évaluer chaque ligne
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c <= n - 5; c++) {
+        const segment = [board[r][c], board[r][c+1], board[r][c+2], board[r][c+3], board[r][c+4]];
+        score += evaluateSegment(segment);
+      }
+    }
+
+    // Évaluer chaque colonne
+    for (let c = 0; c < n; c++) {
+      for (let r = 0; r <= n - 5; r++) {
+        const segment = [board[r][c], board[r+1][c], board[r+2][c], board[r+3][c], board[r+4][c]];
+        score += evaluateSegment(segment);
+      }
+    }
+
+    // Évaluer diagonales
+    for (let r = 0; r <= n - 5; r++) {
+      for (let c = 0; c <= n - 5; c++) {
+        const segment = [board[r][c], board[r+1][c+1], board[r+2][c+2], board[r+3][c+3], board[r+4][c+4]];
+        score += evaluateSegment(segment);
+      }
+    }
+
+    // Évaluer anti-diagonales
+    for (let r = 0; r <= n - 5; r++) {
+      for (let c = 4; c < n; c++) {
+        const segment = [board[r][c], board[r+1][c-1], board[r+2][c-2], board[r+3][c-3], board[r+4][c-4]];
+        score += evaluateSegment(segment);
+      }
+    }
+
+    return score;
+  };
+
+  // Évaluer un segment de 5 cases
+  const evaluateSegment = (segment: string[]): number => {
+    const oCount = segment.filter(c => c === "O").length;
+    const xCount = segment.filter(c => c === "X").length;
+    const emptyCount = segment.filter(c => c === "").length;
+
+    if (oCount === 5) return 1000;
+    if (xCount === 5) return -1000;
+    if (oCount === 4 && emptyCount === 1) return 100;
+    if (xCount === 4 && emptyCount === 1) return -100;
+    if (oCount === 3 && emptyCount === 2) return 10;
+    if (xCount === 3 && emptyCount === 2) return -10;
+    if (oCount === 2 && emptyCount === 3) return 1;
+    if (xCount === 2 && emptyCount === 3) return -1;
+
+    return 0;
   };
 
   const tryWinOrBlock = (board: string[][], symbol: string): boolean => {
