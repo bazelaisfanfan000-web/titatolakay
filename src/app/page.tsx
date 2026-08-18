@@ -181,7 +181,7 @@ export default function Home() {
             </motion.div>
 
             {/* ==========================================
-                BOUTONS PRINCIPAUX
+                BOUTON 3D TRANSPARENT BLEU
             ========================================== */}
             <div className="space-y-3">
               <motion.button
@@ -190,7 +190,7 @@ export default function Home() {
                   boxShadow: "0 12px 40px rgba(59,130,246,0.15)"
                 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => router.push("/create-room")}
+                onClick={() => router.push("/register")}
                 className="
                   group
                   relative
@@ -218,138 +218,35 @@ export default function Home() {
 
                 <div className="relative flex items-center justify-center gap-3">
                   <span className="text-lg">🎮</span>
-                  <div className="text-left">
-                    <p className="text-sm font-black text-white">Créer une partie</p>
-                    <p className="text-[9px] text-blue-400/60">Lancez votre propre défi</p>
+                  <div>
+                    <p className="text-sm font-black text-white">Commencer l'aventure</p>
+                    <p className="text-[9px] text-blue-400/60">Inscription gratuite</p>
                   </div>
                   <span className="text-blue-400/50 group-hover:translate-x-1 transition-transform">›</span>
                 </div>
               </motion.button>
 
               <motion.button
-                whileHover={{ 
-                  scale: 1.02,
-                  boxShadow: "0 12px 40px rgba(34,197,94,0.15)"
-                }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => router.push("/join-room")}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => router.push("/login")}
                 className="
-                  group
-                  relative
                   w-full
                   rounded-2xl
-                  border-2
-                  border-green-500/40
-                  bg-green-500/10
+                  border
+                  border-white/10
+                  bg-transparent
                   px-6
-                  py-4
+                  py-2.5
                   text-center
                   transition-all
-                  duration-200
-                  backdrop-blur-sm
-                  shadow-[0_8px_0_rgba(34,197,94,0.15),0_4px_20px_rgba(34,197,94,0.05)]
-                  hover:shadow-[0_6px_0_rgba(34,197,94,0.2),0_12px_40px_rgba(34,197,94,0.15)]
-                  hover:border-green-500/60
-                  hover:bg-green-500/20
-                  hover:translate-y-[-3px]
-                  active:shadow-[0_2px_0_rgba(34,197,94,0.1),0_4px_20px_rgba(34,197,94,0.05)]
-                  active:translate-y-[6px]
+                  hover:border-white/20
+                  hover:bg-white/5
+                  active:scale-[0.98]
                 "
               >
-                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent rounded-2xl" />
-
-                <div className="relative flex items-center justify-center gap-3">
-                  <span className="text-lg">🚀</span>
-                  <div className="text-left">
-                    <p className="text-sm font-black text-white">Rejoindre une partie</p>
-                    <p className="text-[9px] text-green-400/60">Trouvez une partie disponible</p>
-                  </div>
-                  <span className="text-green-400/50 group-hover:translate-x-1 transition-transform">›</span>
-                </div>
-              </motion.button>
-
-              <motion.button
-                whileHover={{ 
-                  scale: 1.02,
-                  boxShadow: "0 12px 40px rgba(168,85,247,0.15)"
-                }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => router.push("/game/training")}
-                className="
-                  group
-                  relative
-                  w-full
-                  rounded-2xl
-                  border-2
-                  border-purple-500/40
-                  bg-purple-500/10
-                  px-6
-                  py-4
-                  text-center
-                  transition-all
-                  duration-200
-                  backdrop-blur-sm
-                  shadow-[0_8px_0_rgba(168,85,247,0.15),0_4px_20px_rgba(168,85,247,0.05)]
-                  hover:shadow-[0_6px_0_rgba(168,85,247,0.2),0_12px_40px_rgba(168,85,247,0.15)]
-                  hover:border-purple-500/60
-                  hover:bg-purple-500/20
-                  hover:translate-y-[-3px]
-                  active:shadow-[0_2px_0_rgba(168,85,247,0.1),0_4px_20px_rgba(168,85,247,0.05)]
-                  active:translate-y-[6px]
-                "
-              >
-                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent rounded-2xl" />
-
-                <div className="relative flex items-center justify-center gap-3">
-                  <span className="text-lg">🎯</span>
-                  <div className="text-left">
-                    <p className="text-sm font-black text-white">Mode Entraînement</p>
-                    <p className="text-[9px] text-purple-400/60">Jouez contre le bot, 3 niveaux disponibles</p>
-                  </div>
-                  <span className="text-purple-400/50 group-hover:translate-x-1 transition-transform">›</span>
-                </div>
-              </motion.button>
-
-              <motion.button
-                whileHover={{ 
-                  scale: 1.02,
-                  boxShadow: "0 12px 40px rgba(234,179,8,0.15)"
-                }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => router.push("/referral")}
-                className="
-                  group
-                  relative
-                  w-full
-                  rounded-2xl
-                  border-2
-                  border-yellow-500/40
-                  bg-yellow-500/10
-                  px-6
-                  py-4
-                  text-center
-                  transition-all
-                  duration-200
-                  backdrop-blur-sm
-                  shadow-[0_8px_0_rgba(234,179,8,0.15),0_4px_20px_rgba(234,179,8,0.05)]
-                  hover:shadow-[0_6px_0_rgba(234,179,8,0.2),0_12px_40px_rgba(234,179,8,0.15)]
-                  hover:border-yellow-500/60
-                  hover:bg-yellow-500/20
-                  hover:translate-y-[-3px]
-                  active:shadow-[0_2px_0_rgba(234,179,8,0.1),0_4px_20px_rgba(234,179,8,0.05)]
-                  active:translate-y-[6px]
-                "
-              >
-                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent rounded-2xl" />
-
-                <div className="relative flex items-center justify-center gap-3">
-                  <span className="text-lg">🎁</span>
-                  <div className="text-left">
-                    <p className="text-sm font-black text-white">Inviter et gagner de l'argent</p>
-                    <p className="text-[9px] text-yellow-400/60">Invitez vos amis et gagnez 5% de leurs pertes</p>
-                  </div>
-                  <span className="text-yellow-400/50 group-hover:translate-x-1 transition-transform">›</span>
-                </div>
+                <p className="text-sm text-white/40">
+                  Déjà inscrit ? <span className="text-blue-400/60">Se connecter</span>
+                </p>
               </motion.button>
             </div>
 
@@ -389,6 +286,20 @@ export default function Home() {
                 📖 En savoir plus
               </button>
             </div>
+
+            {/* ==========================================
+                MESSAGE PROMOTIONNEL - PARTAGE
+            ========================================== */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.9, duration: 0.5 }}
+              className="mt-4 rounded-xl border border-green-500/20 bg-green-500/5 px-4 py-2 text-center"
+            >
+              <p className="text-[9px] font-bold text-green-400/80">
+                Partagez WinCashX à vos amis, ça ne coûte rien ! 🏆
+              </p>
+            </motion.div>
 
           </motion.div>
 

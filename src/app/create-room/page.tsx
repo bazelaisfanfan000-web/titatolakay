@@ -443,6 +443,15 @@ export default function CreateRoomPage() {
 
             </div>
 
+            {/* =================================
+                MESSAGE PROMOTIONNEL - PARTAGE
+            ================================= */}
+            <div className="mt-4 rounded-xl border border-green-500/20 bg-green-500/5 px-4 py-2 text-center">
+              <p className="text-[9px] font-bold text-green-400/80">
+                Partagez WinCashX à vos amis, ça ne coûte rien ! 🏆
+              </p>
+            </div>
+
 
             {/* =================================
                 RÉSUMÉ DU DUEL

@@ -29,6 +29,7 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useFriendRequestsCount } from "@/hooks/useFriendRequestsCount";
 import { Bell, X, Settings } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { motion } from "framer-motion";
 
 
 /*
@@ -1285,6 +1286,19 @@ export default function Dashboard() {
 
           </section>
 
+          {/* ========================================
+              MESSAGE PROMOTIONNEL - PARTAGE
+          ======================================== */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            className="mb-4 rounded-xl border border-green-500/20 bg-green-500/5 px-4 py-2 text-center"
+          >
+            <p className="text-[9px] font-bold text-green-400/80">
+              Partagez WinCashX à vos amis, ça ne coûte rien ! 🏆
+            </p>
+          </motion.div>
 
         </div>
 
